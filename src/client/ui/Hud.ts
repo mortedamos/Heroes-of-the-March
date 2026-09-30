@@ -146,7 +146,7 @@ export class Hud {
 
   constructor(private readonly root: HTMLElement, private readonly deps: HudDeps) {
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
-    this.setLogOpen(window.innerWidth >= 1100);
+    this.setLogOpen(false); // the log starts hidden; the Log button in the top bar opens it
     append(this.dock, this.prompt, this.hand);
     append(root, this.top, this.plates, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal);
     window.addEventListener('keydown', (e) => {
