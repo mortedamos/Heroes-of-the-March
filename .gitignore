@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+Thumbs.db
+.vite/
+coverage/
+# Local environment / secrets (never commit)
+.env
+.env.*
+!.env.example
+# Build scratch: everything in _build is local except the finished card art, which the game bundles.
+# (Also keeps out the crosswalk to third-party names and the Gemini working files in art-work/.)
+_build/*
+!_build/art/
+*.xlsx
+.claude/
+Heroes-of-the-March-cards.pdf
+source-docs/Heroes-of-the-March-rules.md
