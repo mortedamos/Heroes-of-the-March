@@ -1,0 +1,66 @@
+{
+  "_comment": "Balance changes applied on top of the spreadsheet by `npm run cards` (see docs/HERO-BALANCE.md). Keyed by card name. `stats` values replace the sheet's; `abilityText`/`triggerText` replace the printed text; `note` is shown to players as the reason for the revision.",
+  "Archmage Corvin Varro": {
+    "abilityText": "On your turn, any time you would draw a resource, you may draw an additional resource.",
+    "note": "Was any turn. With steady draws it fired every turn (50% win rate)."
+  },
+  "Pip Wanderfoot": {
+    "abilityText": "On any turn but your own you may claim a face-down resource card from another player as your own. If you have resource cards, a random one of yours takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
+    "note": "Now a swap rather than a pure steal (was a 47% win rate)."
+  },
+  "Queen Maren Ashcroft": {
+    "abilityText": "Before bidding on your turn, you may trade a resource card from your hand with a random card in another player's hand.",
+    "note": "Was usable on every turn (43% win rate)."
+  },
+  "Aelthir Moonveil": {
+    "stats": { "P": 5 },
+    "abilityText": "At the start of bidding on any turn, choose a companion of an opponent. That companion does not contribute any stats this turn.",
+    "triggerText": "When a Guile challenge is faced on another player's turn, draw a resource.",
+    "note": "Now chosen once the challenge is known; Physical 3 → 5 (was a 22% win rate). Trigger now keys off the encounter's stat (no more die)."
+  },
+  "Ysolde of the Wellspring": {
+    "triggerText": "When a Magic challenge is faced on another player's turn, draw a resource.",
+    "note": "Trigger now keys off the encounter's stat (no more die)."
+  },
+  "Elder Ilvena of the Conclave": {
+    "abilityName": "Ruling of the Conclave",
+    "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand. If you do, choose another player's companion: it must contribute its lowest stat this turn.",
+    "note": "New ability (the old one chose the die-roll challenge, which no longer exists)."
+  },
+  "Old Hiss": {
+    "name": "Cobra Chicken"
+  },
+  "Hesk of Two Homes": {
+    "stats": { "M": 7 },
+    "note": "Mental 4 → 7 (was a 23% win rate)."
+  },
+  "High Thane Brunna Stonefast": {
+    "abilityText": "You may ignore any opponent's ability that would force a hero or companion under your control to contribute a different stat, stop one of your companions contributing stats, or make one of your resource cards count as a negative.",
+    "triggerText": "When a Physical challenge is faced on another player's turn, draw a resource.",
+    "note": "Also blocks silences and negations (was a 23% win rate). Trigger now keys off the encounter's stat (no more die)."
+  },
+  "Urzha Half-Tusk": {
+    "stats": { "G": 8 },
+    "abilityText": "Once per turn, during bidding, you may discard the current encounter and any minions in play and draw a new encounter instead.",
+    "triggerText": "When an encounter is replaced, draw a resource.",
+    "note": "No roll needed; Guile 5 → 8 (was a 24% win rate). Trigger is now about replacing encounters (no more die)."
+  },
+  "Thorgar Twice-Buried": {
+    "abilityText": "You gain 1 to all stats. At the end of bidding, if you would not survive the encounter, you gain 5 instead.",
+    "note": "Now always helps a little (was a 24% win rate)."
+  },
+  "Professor Barnaby Pickwort": {
+    "stats": { "P": 4 },
+    "note": "Physical 2 → 4 (was a 25% win rate)."
+  },
+  "Warchief Grukka Ironjaw": {
+    "stats": { "P": 9 },
+    "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
+    "note": "Worded as once per turn (was 'at any time'); Physical 10 → 9 (drifted to 38% once the others were fixed)."
+  },
+  "Loremaster Oskar Grimgate": {
+    "abilityName": "The Book of Grudges",
+    "abilityText": "Once per turn, on any turn, when a face-down resource card is turned face up, you may have any numeric bonus it grants count as a negative instead.",
+    "note": "Now once per turn (was every card revealed on your turn); ability renamed The Book of Grudges."
+  }
+}

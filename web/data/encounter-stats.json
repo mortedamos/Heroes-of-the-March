@@ -1,0 +1,14 @@
+{
+  "_about": "Each encounter is faced on ONE stat: the stat with its highest printed difficulty. Where two or more stats tie for highest, this file picks the stat, balanced so Physical, Magic and Guile each come up on 19 of the 57 encounters. Every encounter that ties must be listed here (the card build fails otherwise).",
+  "M": [
+    "Ironbound Overseer", "The Barrow King", "Skarra Crowned (She Says)", "Crawling Remnant", "The Iron Architect",
+    "Skarra, Mistress of Wisps", "Mortedamos the Necromancer", "Skarra, Speaker at the Stones", "Iron Beetles",
+    "The Chained One", "The Dream-Warden", "The Umbral Lord", "The Grave-Hunger", "The Hollow Kin", "Skarra in a Stolen Face"
+  ],
+  "P": [
+    "The Barrow Legion", "Ironbound Vanguard", "Wyrmkin Warband", "Skeleton Host", "Wardhouse Gargoyles", "Rimeguard of the Frostfells"
+  ],
+  "G": [
+    "An Unremembered One", "Bone Reliquary Guard", "The Prisoner of the Ninth Ward", "The Brood-Queen of the Webwood", "Fen Wyrmkin"
+  ]
+}
