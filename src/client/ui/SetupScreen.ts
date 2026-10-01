@@ -7,6 +7,7 @@ import titleArt from '@art/ui__title_ridge.webp?url';
 import titleArtTall from '@art/ui__title_ridge_tall.webp?url';
 import { BUILD } from '../../build-info';
 import { h } from './dom';
+import { startTitleEffects } from './titleFx';
 
 export type HandModelChoice = 'steady' | 'refill';
 
@@ -133,6 +134,7 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
         draftOnReplace: draftOnReplace.checked,
       };
       savePrefs(choice);
+      stopFx();
       wrap.remove();
       resolve(choice);
     });
@@ -140,6 +142,8 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
     // The title picture (heroes on the ridge, the split Marchstone); the form sits over its quiet middle.
     wrap.style.setProperty('--title-art', `url(${titleArt})`);
     wrap.style.setProperty('--title-art-tall', `url(${titleArtTall})`); // for upright and near-square screens, where the wide picture would crop the heroes
+    // Fog drifting through the valley and embers rising from the stone; they stop when the screen closes.
+    const stopFx = startTitleEffects(wrap);
     root.appendChild(wrap);
     // On phones, focusing would pop the keyboard up over the form.
     if (!isTouch()) {

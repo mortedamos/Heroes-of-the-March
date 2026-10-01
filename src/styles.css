@@ -577,3 +577,33 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
   font-family: var(--display);
 }
 .setup h1 { letter-spacing: 0.04em; }
+
+/* Title screen atmosphere (see titleFx.ts): fog through the valley and embers; both sit behind the form. */
+.title-fx { position: absolute; left: 0; width: 100%; pointer-events: none; z-index: 0; }
+.setup .setup-card { position: relative; z-index: 1; }
+.title-embers { top: 0; height: 100%; }
+.title-fog { top: 46%; height: 34%; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent, #000 32%, #000 68%, transparent);
+  mask-image: linear-gradient(to bottom, transparent, #000 32%, #000 68%, transparent); }
+.fog-bank { position: absolute; top: 0; height: 100%; width: 230%; left: 0; }
+.fog-bank.a {
+  background:
+    radial-gradient(ellipse 14% 46% at 8% 55%, rgba(222, 210, 232, 0.30), transparent 70%),
+    radial-gradient(ellipse 18% 40% at 30% 42%, rgba(205, 196, 222, 0.26), transparent 70%),
+    radial-gradient(ellipse 15% 48% at 52% 60%, rgba(222, 210, 232, 0.28), transparent 70%),
+    radial-gradient(ellipse 20% 42% at 76% 46%, rgba(205, 196, 222, 0.24), transparent 70%),
+    radial-gradient(ellipse 13% 44% at 94% 58%, rgba(222, 210, 232, 0.28), transparent 70%);
+  animation: fog-drift-a 120s linear infinite alternate;
+}
+.fog-bank.b {
+  background:
+    radial-gradient(ellipse 16% 36% at 14% 40%, rgba(236, 224, 214, 0.20), transparent 70%),
+    radial-gradient(ellipse 14% 44% at 38% 58%, rgba(236, 224, 214, 0.22), transparent 70%),
+    radial-gradient(ellipse 18% 38% at 62% 44%, rgba(236, 224, 214, 0.20), transparent 70%),
+    radial-gradient(ellipse 15% 46% at 86% 56%, rgba(236, 224, 214, 0.22), transparent 70%);
+  animation: fog-drift-b 80s linear infinite alternate;
+}
+@keyframes fog-drift-a { from { transform: translateX(0); } to { transform: translateX(-56%); } }
+@keyframes fog-drift-b { from { transform: translateX(-52%); } to { transform: translateX(0); } }
+@media (max-aspect-ratio: 5/4) { .title-fog { top: 28%; height: 32%; } }
+@media (prefers-reduced-motion: reduce) { .fog-bank { animation: none; } }
