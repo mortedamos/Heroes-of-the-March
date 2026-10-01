@@ -10,7 +10,7 @@
   "scripts": {
     "cards": "node scripts/build-cards.ts",
     "dev": "vite",
-    "build": "npm run sfx && npm run typecheck && vite build",
+    "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
