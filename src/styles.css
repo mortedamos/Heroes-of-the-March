@@ -298,6 +298,34 @@ body.shape-short .card-btn.fan { transform: none; }
   position: fixed; inset: 0; z-index: 38; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
   background: rgba(6, 4, 2, 0.6); padding: 12px; cursor: pointer; overflow-y: auto;
 }
+/* The light behind a shown ability card (fixed, so it never makes the panel scroll). */
+.case-layer > :not(.case-light) { position: relative; z-index: 1; }
+.case-light { position: fixed; width: 0; height: 0; z-index: 0; pointer-events: none; }
+.case-rays {
+  position: absolute; left: 0; top: 0; width: 170vmax; height: 170vmax; transform: translate(-50%, -50%); border-radius: 50%;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 228, 150, 0.30) 0deg 5deg, rgba(255, 228, 150, 0) 5deg 17deg);
+  -webkit-mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,0.65) 14%, transparent 34%);
+  mask-image: radial-gradient(circle, #000 0%, rgba(0,0,0,0.65) 14%, transparent 34%);
+  animation: case-spin 48s linear infinite;
+}
+.case-halo {
+  position: absolute; left: 0; top: 0; width: 94vmin; height: 94vmin; transform: translate(-50%, -50%); border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 232, 160, 0.55) 0%, rgba(255, 205, 90, 0.28) 38%, rgba(255, 190, 60, 0) 68%);
+  animation: case-breathe 3.2s ease-in-out infinite;
+}
+.case-spark {
+  position: absolute; left: 0; top: 0; width: var(--s); height: var(--s); margin: calc(var(--s) / -2); border-radius: 50%;
+  background: #fff6cf; box-shadow: 0 0 8px 2px rgba(255, 224, 130, 0.95); opacity: 0;
+  animation: case-spark 2.4s ease-out infinite;
+}
+@keyframes case-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes case-breathe { 50% { opacity: 0.55; transform: translate(-50%, -50%) scale(1.07); } }
+@keyframes case-spark {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(var(--r0)) scale(0.4); }
+  18% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--r1)) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) { .case-rays { animation: none; } .case-spark { display: none; } }
 .case-title {
   text-align: center; color: #fff3cf; font-size: 16px; line-height: 1.4; max-width: min(520px, 94vw); padding: 10px 18px;
   background: rgba(20, 14, 6, 0.94); border: 1px solid var(--gold); border-radius: 10px; box-shadow: 0 6px 22px rgba(0,0,0,0.6);

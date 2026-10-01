@@ -1133,6 +1133,21 @@ export class Hud {
 
       // Fly in from the card's place on the table (FLIP): start over it, end at the middle.
       const target = cardEl.getBoundingClientRect();
+      // Light behind the card: slowly turning rays, a pulsing halo and sparkles drifting outward from its edge.
+      const light = h('div', { class: 'case-light', aria: { hidden: 'true' } }, h('div', { class: 'case-rays' }), h('div', { class: 'case-halo' }));
+      for (let i = 0; i < 22; i++) {
+        const spark = h('i', { class: 'case-spark' });
+        spark.style.setProperty('--a', `${Math.round(Math.random() * 360)}deg`);
+        spark.style.setProperty('--r0', `${Math.round(Math.max(target.width, target.height) * (0.42 + Math.random() * 0.12))}px`);
+        spark.style.setProperty('--r1', `${Math.round(Math.max(target.width, target.height) * (0.75 + Math.random() * 0.45))}px`);
+        spark.style.setProperty('--s', `${(3 + Math.random() * 5).toFixed(1)}px`);
+        spark.style.animationDuration = `${(1.6 + Math.random() * 1.8).toFixed(2)}s`;
+        spark.style.animationDelay = `${(Math.random() * 2.4).toFixed(2)}s`;
+        light.appendChild(spark);
+      }
+      light.style.left = `${Math.round(target.left + target.width / 2)}px`;
+      light.style.top = `${Math.round(target.top + target.height / 2)}px`;
+      layer.insertBefore(light, layer.firstChild);
       const slot = (r: { x: number; y: number; w: number; h: number } | null) => r
         ? `translate(${r.x - (target.left + target.width / 2)}px, ${r.y - (target.top + target.height / 2)}px) scale(${r.w / W})`
         : 'translateY(120px) scale(0.4)';
