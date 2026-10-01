@@ -13,6 +13,7 @@ import { isTouch, onLongPress } from '../viewport';
 import { append, clear, h, replace } from './dom';
 import { toggleMusicMenu } from './MusicMenu';
 import { sfx } from '../audio/Sfx';
+import { tiltOnPointer } from './tilt';
 
 /** A button shown under a pinned card, e.g. "Bid this card" after a tap. */
 interface InspectAction { label: string; primary?: boolean; run: () => void }
@@ -817,6 +818,7 @@ export class Hud {
       if (d.kind === 'hero' && d.triggerText) text.push(h('p', { class: 'trigger' }, `⚡ ${d.triggerText}`));
     } else if (d.conditionText) text.push(h('p', {}, d.conditionText));
     const img = cardThumb(show, 400, 'inspect-img', true);
+    tiltOnPointer(img); // leans a few degrees toward the mouse
     replace(this.inspector,
       img,
       h('div', { class: 'inspect-body' },
@@ -1109,14 +1111,17 @@ export class Hud {
     this.counter = null; // answered here, not in an announcement
     return new Promise<void>((resolve) => {
       const thumb = cardThumb(o.def, W, 'thumb', false, true); // ability sentence in bold
-      const cardEl = h('div', { class: 'case-card' }, thumb);
+      // The face is what leans toward the pointer; the card element itself flies in and out.
+      const face = h('div', { class: 'case-face' }, thumb);
+      tiltOnPointer(face);
+      const cardEl = h('div', { class: 'case-card' }, face);
       cardEl.style.width = `${W}px`;
       cardEl.style.height = `${H}px`;
       // The letters of the ability text on the card glow and pulse (the letters only, not the box they sit in).
       const lit = ruleGlowCanvas(o.def);
       if (lit) {
         lit.classList.add('case-glow');
-        cardEl.appendChild(lit);
+        face.appendChild(lit);
       }
       const lines = o.results.slice(0, 4).map((t) => h('p', { class: 'case-result' }, t));
       const foot = h('div', { class: 'case-foot' });
