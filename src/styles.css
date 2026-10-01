@@ -285,6 +285,8 @@ body.shape-short .card-btn.fan { transform: none; }
 .notice-lines p { margin: 3px 0 0; font-size: 13.5px; line-height: 1.35; }
 .notice-dismiss { margin-top: 5px; font-size: 11.5px; color: var(--ink-dim); }
 
+.plate-crown.skull { transform: rotate(-8deg); font-size: 20px; }
+.plate-crown.skull.still { transform: rotate(-8deg); }
 .plate-crown.still { animation: none; transform: rotate(14deg); }
 .plate-crown {
   position: absolute; top: -14px; right: -6px; font-size: 22px; line-height: 1; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.7));

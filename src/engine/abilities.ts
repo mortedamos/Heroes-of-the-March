@@ -452,7 +452,7 @@ export const ABILITIES: Record<string, Ability> = {
   'tova-emberdeep-keeper-of-the-underway-door': {
     status: 'full', restReturnDraw: true,
     activations: [{
-      id: 'rest', label: 'Rest this turn (no stats); draw an extra card on your next turn', windows: ['beforeBidding'], per: 'turn',
+      id: 'rest', label: 'Rest this turn (no stats); draw two extra cards on your next turn', windows: ['beforeBidding'], per: 'turn',
       use: (ctx, self) => {
         const p = ctx.player(self.owner);
         p.companions = p.companions.filter((c) => c !== self.card);

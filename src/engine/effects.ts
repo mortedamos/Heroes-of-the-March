@@ -190,7 +190,11 @@ export function drawResources(ctx: Ctx, player: PlayerId, n: number, reason: str
   let count = n;
   // Archmage Corvin Varro: any time you would draw a resource, you may draw an additional one.
   const extra = p.hero ? activeAbility(ctx, p.hero)?.extraDrawOnDraw : undefined;
-  if (extra === true || (extra === 'ownTurn' && p === ctx.active)) count += 1;
+  if (extra === true || (extra === 'ownTurn' && p === ctx.active)) {
+    count += 1;
+    // Shown as a zap into the resource deck (no big card: it happens on every draw).
+    if (ctx.s.turn.number > 0 && p.hero) ctx.emit({ type: 'abilityZap', player, source: ctx.ref(p.hero), deck: 'resource', pile: 'deck' });
+  }
   // Sigrun Stonefast: may take random cards from the discard pile instead.
   const sigrun = ctx.s.discards.resource.length ? playerHas(ctx, p, (a) => a.drawFromDiscardChoice) : null;
   if (sigrun && ctx.s.turn.number > 0) {

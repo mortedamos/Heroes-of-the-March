@@ -10,12 +10,13 @@
   "scripts": {
     "cards": "node scripts/build-cards.ts",
     "dev": "vite",
-    "build": "npm run typecheck && vite build",
+    "build": "npm run sfx && npm run typecheck && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
-    "audit": "npm audit --omit=dev"
+    "audit": "npm audit --omit=dev",
+    "sfx": "node scripts/sfx.ts"
   },
   "dependencies": {
     "three": "^0.186.1"

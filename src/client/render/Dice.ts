@@ -60,7 +60,7 @@ export class Die {
   }
 
   /** Tumble onto the table with `value` on top. A new roll replaces one still in progress. */
-  async roll(value: number): Promise<void> {
+  async roll(value: number, opts: { hold?: number; keep?: boolean } = {}): Promise<void> {
     const mine = {};
     this.token = mine;
     const face = FACE_VALUE.indexOf(value);
@@ -84,7 +84,7 @@ export class Die {
     m.position.set(this.pos.x, SIZE / 2 + 0.02, this.pos.z);
     m.quaternion.copy(final);
     // Stay for a moment so the number can be read, then clear the table.
-    await new Promise((r) => setTimeout(r, 1800));
-    if (this.token === mine) m.visible = false;
+    await new Promise((r) => setTimeout(r, opts.hold ?? 1800));
+    if (this.token === mine && !opts.keep) m.visible = false; // `keep`: the caller hides it once its message is dismissed
   }
 }

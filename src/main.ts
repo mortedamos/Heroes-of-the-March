@@ -20,7 +20,7 @@ window.matchMedia('(hover: none)').addEventListener('change', () => syncBodyClas
 
 const stage = document.getElementById('stage')!;
 const overlay = document.getElementById('overlay')!;
-const BOT_NAMES = ['Rowan', 'Isolde', 'Bram', 'Mirela', 'Tamsin'];
+const BOT_NAMES = ['Rowan', 'Perrin', 'Bram', 'Mirela', 'Tamsin'];
 // Starts loading while the setup screen is up; card faces need it before they're drawn.
 
 let teardown: (() => void) | null = null;

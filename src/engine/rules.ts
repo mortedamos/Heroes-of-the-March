@@ -80,7 +80,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'difficulty', topic: 'Harder challenges (house rule)',
     ruling: 'Every encounter card is printed 1 to 3 harder than the original game (easier ones more, and ones that already draw minions or have a condition less), so surviving is no longer a given and spending to survive is a real choice.' },
   { id: 'fall-cost', topic: 'Falling costs (house rule)',
-    ruling: 'When your hero falls you also discard one of your companions and one resource card from your hand (you choose which), before your new hero arrives. Nothing is discarded if you have none.' },
+    ruling: 'When your hero falls you also discard one of your companions (you choose which), before your new hero arrives. Nothing is discarded if you have none. Your hand is not affected.' },
   { id: 'bidding-end', topic: 'End of bidding',
     ruling: 'Bidding ends when every player passes in a row. A player who passed may bid again if someone else bids after them.' },
   { id: 'bidding-empty-hand', topic: 'Empty hand',

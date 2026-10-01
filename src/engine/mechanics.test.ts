@@ -711,7 +711,8 @@ describe('companion movement', () => {
     expect(player(g, g.A).resting).toContain(tova);
     until(g, (s) => s.turn.number === 3 && s.players[s.turn.active]!.id === g.A);
     expect(player(g, g.A).companions).toContain(tova);
-    expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Tova'))).toBe(true);
+    const tovaDraw = g.events.find((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Tova'));
+    expect(tovaDraw && tovaDraw.type === 'drew' && tovaDraw.cards.length).toBe(2);
   });
 
   it('Tova also returns when rested on another player\x27s turn, in a three-player game', () => {
@@ -915,6 +916,47 @@ describe('the opening companion draft', () => {
   });
 });
 
+describe('abilities that reach into a deck', () => {
+  it('Corvin extra draw zaps the resource deck', () => {
+    const g = newGame();
+    standard(g, { hero: 'archmage-corvin-varro' });
+    restart(g);
+    until(g, bidFor(g.A));
+    const zap = g.events.find((e) => e.type === 'abilityZap');
+    expect(zap && zap.type === 'abilityZap' && zap.deck === 'resource' && zap.pile === 'deck').toBe(true);
+  });
+});
+
+describe('the opening companion draft and Ysolde', () => {
+  it('gives a hero with a limit of three three slots from the same pool of five', () => {
+    const g = newGame(2, 1, { companionDraft: 5 });
+    const { state } = createGame({ players: seats(2), seed: seed(11), rules: { heroDraft: 1, companionDraft: 5 } });
+    g.s = state;
+    // Hand the first player to draft Ysolde (limit 3); the other keeps a normal hero.
+    const first = g.s.players[g.s.turn.active]!;
+    const ysolde = idOf(g.s, 'ysolde-of-the-wellspring');
+    const swap = first.hero;
+    const holder = g.s.players.find((p) => p.hero === ysolde);
+    if (holder) holder.hero = swap; else for (const pile of Object.values(g.s.decks)) { const i = pile.indexOf(ysolde); if (i >= 0) pile.splice(i, 1, swap); }
+    first.hero = ysolde;
+    // Redo the draft step now that the hero is in place.
+    g.s.pending = null;
+    g.s.tasks = [];
+    for (const p of g.s.players) delete p.used['companionDraft'];
+    g.s.turn.step = 'companionDraft';
+    g.s.hold = 'encounter';
+    const r = resume(g.s);
+    if (!r.ok) throw new Error(r.error);
+    g.s = r.state;
+    const d = g.s.pending!;
+    if (d.kind !== 'choose' || d.purpose !== 'companionDraft') throw new Error('expected a companion draft');
+    expect(d.player).toBe(first.id);
+    expect(d.min).toBe(3);
+    expect(d.max).toBe(3);
+    expect(d.options).toHaveLength(5);
+  });
+});
+
 describe('the tavern', () => {
   it('shows three face-up companions to everyone', () => {
     const g = newGame(3);
@@ -952,7 +994,7 @@ describe('the tavern', () => {
 });
 
 describe('house rules: falling costs', () => {
-  it('a fall costs a companion, then a resource card, both chosen by the player', () => {
+  it('a fall costs a companion chosen by the player, and no resource card', () => {
     const g = newGame(2, 1, { fallCost: true });
     // Physical 4 + 2 + 2 against the Basilisk (Physical 15): A fails and falls.
     standard(g, { companions: ['nettle-burrows-trouble-maker', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'mask-of-many-faces'] });
@@ -967,12 +1009,12 @@ describe('house rules: falling costs', () => {
       asked.push(d.purpose);
       return { type: 'choose', decision: d.id, picks: [d.options[0]!.value] };
     });
-    expect(asked).toEqual(['discardCompanion', 'discardResource']);
+    expect(asked).toEqual(['discardCompanion']);
     const a = player(g, g.A);
     expect(a.companions.length + a.inactiveCompanions.length + a.resting.length).toBe(1);
-    expect(a.hand).toHaveLength(1);
+    expect(a.hand).toHaveLength(2);
     const paid = g.events.filter((e) => (e.type === 'companionDiscarded' || e.type === 'resourceDiscarded') && e.player === g.A && e.reason === 'Fallen hero');
-    expect(paid.map((e) => e.type)).toEqual(['companionDiscarded', 'resourceDiscarded']);
+    expect(paid.map((e) => e.type)).toEqual(['companionDiscarded']);
   });
 
   it('without the rule a fall only replaces the hero', () => {

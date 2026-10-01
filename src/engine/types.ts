@@ -318,6 +318,8 @@ export type GameEvent =
   | { type: 'ability'; player: PlayerId | null; source: string; text: string }
   | { type: 'abilityUsed'; player: PlayerId; source: CardRef; ability: string; label: string }
   | { type: 'abilityCountered'; player: PlayerId; source: CardRef; by: CardRef }
+  /** A card's ability reaches into a deck (or a discard pile) without being "used": Corvin's extra draw, Sigrun's choice. */
+  | { type: 'abilityZap'; player: PlayerId; source: CardRef; deck: DeckName; pile: 'deck' | 'discard' }
   /** A hero's ability shrugged off an opponent's effect (Brunna). */
   | { type: 'abilityIgnored'; player: PlayerId; by: CardRef; source: CardRef; targetCard: CardRef | null }
   | { type: 'effect'; effect: TurnEffect; source: CardRef; targetCard: CardRef | null; targetPlayer: PlayerId | null }

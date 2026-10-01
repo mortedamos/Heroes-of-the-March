@@ -333,8 +333,9 @@
     "G": 4
    },
    "abilityName": "Waiting at the Door",
-   "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw an additional resource card and then turn this card face up.",
-   "kind": "companion"
+   "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
+   "kind": "companion",
+   "revision": "Now two extra cards on her return (was one)."
   },
   {
    "id": "varg-ironjaw",

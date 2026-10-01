@@ -13,7 +13,7 @@ import { IllegalMove } from './context';
 import type { CompanionDef, EncounterDef, Stat } from './cardTypes';
 import {
   activeAbility, activeEffects, addEffect, cardOption, companionEnters, councilHeroes, disabledCards, discardCompanion,
-  drawRaw, drawResources, enforceCompanionLimit, fire, flushOpeningEntrants, noteMultiBid, hasGroup, leaveLocation, locationEnters, ownerOf, peekOption,
+  drawRaw, drawResources, enforceCompanionLimit, fire, maxCompanions, flushOpeningEntrants, noteMultiBid, hasGroup, leaveLocation, locationEnters, ownerOf, peekOption,
   playerHas, refillTavern, replaceLocation, statName,
 } from './effects';
 import { nextFloat } from './rng';
@@ -261,7 +261,9 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     const p = ctx.clockwise().find((x) => !x.used['companionDraft']);
     if (!p) { goTo(ctx, 'turnStart'); return; }
     p.used['companionDraft'] = 1;
-    const need = Math.max(0, ctx.s.rules.startingCompanions);
+    // A hero who may keep more companions (Ysolde: three) gets the extra slot here too (the pool stays the same size).
+    const extra = Math.max(0, maxCompanions(ctx, p) - ctx.s.rules.maxCompanions);
+    const need = Math.max(0, ctx.s.rules.startingCompanions + extra);
     const offered = peekTop(ctx, 'companion', ctx.s.rules.companionDraft);
     if (!offered.length || need === 0) return;
     const n = Math.min(need, offered.length);
@@ -286,9 +288,9 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       p.resting = p.resting.filter((x) => x !== c);
       p.companions.push(c);
       // Shown like any ability: the card comes back up and says what it does.
-      if (abilityOf(ctx.defId(c))?.restReturnDraw) ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(c), ability: 'return', label: 'Turns face up and draws an extra resource card' });
+      if (abilityOf(ctx.defId(c))?.restReturnDraw) ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(c), ability: 'return', label: 'Turns face up and draws two extra resource cards' });
       ctx.emit({ type: 'companionFaceDown', player: p.id, card: ctx.ref(c), faceDown: false });
-      if (abilityOf(ctx.defId(c))?.restReturnDraw) drawResources(ctx, p.id, 1, ctx.def(c).name);
+      if (abilityOf(ctx.defId(c))?.restReturnDraw) drawResources(ctx, p.id, 2, ctx.def(c).name);
     }
     const r = ctx.s.rules;
     if (r.handModel === 'refill') {
@@ -560,19 +562,14 @@ export function resolveBid(ctx: Ctx, p: PlayerState, bid: Bid): void {
 
 /**
  * A hero falls: a new hero takes up the banner (chosen, with The Hall of Rest).
- * House rule (fallCost): the fall also costs a companion and a resource card,
- * chosen by the player and paid before the new hero arrives.
+ * House rule (fallCost): the fall also costs one of your companions, chosen by you and
+ * paid before the new hero arrives.
  */
 export function heroFalls(ctx: Ctx, p: PlayerState): void {
   p.fallPending = false;
   replaceFallenHero(ctx, p);
   if (!ctx.s.rules.fallCost) return;
-  // queueFirst puts each in front, so the order is: companion, resource, then the new hero.
-  ctx.queueFirst({
-    t: 'choose', purpose: 'discardResource', player: p.id, source: 'Your hero fell',
-    prompt: 'Your hero fell: discard a resource card', options: p.hand.map((c) => cardOption(ctx, c)),
-    min: 1, max: 1, data: { reason: 'Fallen hero' },
-  });
+  // queueFirst puts it in front, so the order is: the companion, then the new hero.
   ctx.queueFirst({
     t: 'choose', purpose: 'discardCompanion', player: p.id, source: 'Your hero fell',
     prompt: 'Your hero fell: discard one of your companions',
@@ -936,9 +933,12 @@ export function applyChoice(
         enforceCompanionLimit(ctx, p, 'Gauntlet of Returning');
         break;
       }
-      case 'sigrunDraw':
+      case 'sigrunDraw': {
+        const sigrun = playerHas(ctx, p, (a) => a.drawFromDiscardChoice);
+        if (sigrun) ctx.emit({ type: 'abilityZap', player: p.id, source: ctx.ref(sigrun), deck: 'resource', pile: pick === 'discard' ? 'discard' : 'deck' });
         drawRaw(ctx, p.id, Number(data['n']), String(data['reason']), pick === 'discard' ? 'discard' : 'deck');
         break;
+      }
       case 'waystoneDraw': {
         if (pick !== 'draw') break;
         const c = ctx.take('companion');

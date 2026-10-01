@@ -17,3 +17,6 @@ _build/*
 .claude/
 Heroes-of-the-March-cards.pdf
 source-docs/Heroes-of-the-March-rules.md
+tools/
+docs/
+docs/HOUSE_RULES.md

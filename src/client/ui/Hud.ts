@@ -230,7 +230,17 @@ export class Hud {
     if (!v.players.some((p) => p.bids.some((b) => !b.hidden && b.faceUp))) return out;
     let best = -Infinity;
     for (const p of v.players) if (p.projection && p.projection.total > best) best = p.projection.total;
-    for (const p of v.players) if (p.projection && p.projection.total === best) out.add(p.id);
+    const falling = this.fallers(v);
+    for (const p of v.players) if (p.projection && p.projection.total === best && !falling.has(p.id)) out.add(p.id);
+    return out;
+  }
+
+  /** Players who would fall from the encounter as things stand (confirmed total below the difficulty, no hidden bids left to save them). */
+  private fallers(v: GameView): Set<string> {
+    const out = new Set<string>();
+    const step = v.turn.step;
+    if (step !== 'bidding' && step !== 'reveal' && step !== 'winEndOfBidding') return out;
+    for (const p of v.players) if (p.projection && p.projection.hiddenBids === 0 && p.projection.total < p.projection.difficulty) out.add(p.id);
     return out;
   }
 
@@ -248,7 +258,7 @@ export class Hud {
       replace(el, ...this.plateContent(v, p));
     }
     for (const [id, el] of this.plateEls) if (!keep.has(id)) { el.remove(); this.plateEls.delete(id); }
-    this.crowned = this.leaders(v);
+    this.crowned = new Set([...this.leaders(v), ...this.fallers(v)]);
   }
 
   /**
@@ -270,7 +280,9 @@ export class Hud {
       : '';
     const you = p.id === v.you;
     return [
-      this.leaders(v).has(p.id) ? h('span', { class: `plate-crown${this.crowned.has(p.id) ? ' still' : ''}`, title: 'Highest total so far' }, '👑') : '',
+      this.fallers(v).has(p.id)
+        ? h('span', { class: `plate-crown skull${this.crowned.has(p.id) ? ' still' : ''}`, title: 'Would fall from this encounter as things stand' }, '💀')
+        : this.leaders(v).has(p.id) ? h('span', { class: `plate-crown${this.crowned.has(p.id) ? ' still' : ''}`, title: 'Highest total so far' }, '👑') : '',
       h('div', { class: 'plate-head' },
         h('strong', { class: 'plate-name', title: p.hero ? getDef(p.hero.def).name : '' }, p.name, you ? h('span', { class: 'plate-you' }, ' (you)') : ''),
         h('span', { class: 'plate-renown', title: `Renown (${v.rules.renownToWin} wins)` }, `★ ${p.renown}`, h('span', { class: 'plate-goal' }, `/${v.rules.renownToWin}`))),
@@ -340,7 +352,7 @@ export class Hud {
       append(this.prompt, h('span', { class: 'waiting' }, 'Choose your companions.'));
       return;
     }
-    const draft = mine?.kind === 'choose' && (mine.purpose === 'heroDraft' || mine.purpose === 'heroKeep') && mine.options.length > 0;
+    const draft = mine?.kind === 'choose' && (mine.purpose === 'heroDraft' || mine.purpose === 'heroKeep' || mine.purpose === 'hallOfRest') && mine.options.length > 0;
     if (draft) {
       this.stage.classList.remove('hidden');
       this.renderDraftStage(v, d!.id, mine);
@@ -480,8 +492,16 @@ export class Hud {
 
   /** The hero draft: the offered heroes as big cards, so the art and powers are easy to read. */
   private renderDraftStage(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
+    // Any number of cards (The Hall of Rest offers the whole hero stack): pick the largest size that fits in rows.
     const n = Math.max(1, c.options.length);
-    const w = Math.round(Math.max(110, Math.min(260, (window.innerWidth - 80) / (n + 0.3), (window.innerHeight - 190) / 1.42)));
+    const availW = window.innerWidth - 80, availH = window.innerHeight - 200;
+    let w = 80;
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = Math.ceil(n / cols);
+      const fit = Math.min(260, (availW - (cols - 1) * 14) / cols, (availH - (rows - 1) * 14) / (rows * (CARD_H / CARD_W)));
+      if (fit > w) w = fit;
+    }
+    w = Math.round(Math.max(80, w));
     const touch = isTouch();
     const cardOptions = c.options.filter((o) => o.card);
     const others = c.options.filter((o) => !o.card);
@@ -491,9 +511,10 @@ export class Hud {
         this.confirmTap(v, decision, ref, 'Choose ' + shortName(ref.def), () => this.deps.send({ type: 'choose', decision, picks: [o.value] })));
     });
     const keepOrSend = c.purpose === 'heroKeep';
+    const hall = c.purpose === 'hallOfRest';
     replace(this.stage, h('div', { class: 'stage-panel draft' }, h('div', { class: 'stage-main' },
-      h('h2', {}, keepOrSend ? 'A new hero takes up your banner' : 'Choose your hero'),
-      h('p', { class: 'stage-hint' }, keepOrSend
+      h('h2', {}, keepOrSend ? 'A new hero takes up your banner' : hall ? 'The Hall of Rest: choose who takes up your banner' : 'Choose your hero'),
+      h('p', { class: 'stage-hint' }, hall ? 'Any hero in the stack may be chosen.' : keepOrSend
         ? 'Keep this hero, or send them back and draw another. You must keep the next one.'
         : touch ? 'Tap a hero to read it; tap again to choose.' : 'Click a hero to choose them. The others go back in the stack, unseen.'),
       h('div', { class: 'stage-row' }, ...cards),

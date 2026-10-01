@@ -303,6 +303,12 @@ export class Board {
 
   // --- attacks -------------------------------------------------------------------------
 
+  /** The table position of a deck's discard pile. */
+  discardPoint(deck: DeckName): { x: number; z: number } | null {
+    const d = this.layout?.discards[deck];
+    return d ? { x: d.x, z: d.z } : null;
+  }
+
   /** The table position of a deck (its top card). */
   deckPoint(deck: DeckName): { x: number; z: number } | null {
     const d = this.layout?.decks[deck];

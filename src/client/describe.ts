@@ -56,6 +56,7 @@ export function describe(e: ClientEvent, view: GameView): string | null {
     case 'shuffled': case 'turnEnded': case 'effectCancelled': return null;
     case 'companionMinion': return `${who(e.player)} ${e.player === view.you ? 'lose' : 'loses'} ${card(e.card.def)} to the Iron Mites: it joins the encounter as a minion.`;
     case 'encounterReplaced': return `${e.reason}: ${card(e.from.def)} is driven off.`;
+    case 'abilityZap': return null;
     case 'abilityIgnored': return `${who(e.player)}: ${short(e.by.def)} shrugs off ${short(e.source.def)}.`;
     case 'abilityCountered': return `${who(e.player)} ${e.player === view.you ? 'counter' : 'counters'} ${short(e.source.def)} with ${short(e.by.def)}.`;
     case 'abilityUsed': return `${who(e.player)}: ${short(e.source.def)}. ${e.label}.`;

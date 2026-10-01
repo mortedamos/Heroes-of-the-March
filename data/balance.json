@@ -27,6 +27,10 @@
     "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand. If you do, choose another player's companion: it must contribute its lowest stat this turn.",
     "note": "New ability (the old one chose the die-roll challenge, which no longer exists)."
   },
+  "Tova Emberdeep, Keeper of the Underway Door": {
+    "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
+    "note": "Now two extra cards on her return (was one)."
+  },
   "Old Hiss": {
     "name": "Cobra Chicken"
   },
