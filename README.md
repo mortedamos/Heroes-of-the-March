@@ -87,3 +87,15 @@ without one still counts its numbers; `statusReport()` lists any such cards
 
 Where the v0.3 rules leave gaps, the rulings live in `src/engine/rules.ts`
 (`RULE_NOTES`); they're also shown in-game and in [docs/HOUSE-RULES.md](docs/HOUSE-RULES.md).
+
+## Build stamp
+
+The title screen shows the date, time and build number of the latest commit, for example `2026-09-30 10:40 · build 345`. A git hook (`.githooks/pre-commit`) rewrites `src/build-info.ts` on every commit and adds it to that commit, so nobody has to remember to bump it.
+
+One-time setup per clone (git stores this setting per clone, so repeat it after a fresh clone or the hook does nothing):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Notes: `git commit --amend` leaves the number one too high, and `git commit --no-verify` skips the hook and keeps the previous stamp.

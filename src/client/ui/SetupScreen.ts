@@ -3,6 +3,7 @@
 import type { BotLevel } from '../../bots/heuristic';
 import { MAX_PLAYERS, MIN_PLAYERS, type HouseRules } from '../../engine';
 import { isTouch } from '../viewport';
+import { BUILD } from '../../build-info';
 import { h } from './dom';
 
 export type HandModelChoice = 'steady' | 'refill';
@@ -25,6 +26,13 @@ export function rulesFor(c: SetupChoice): Partial<HouseRules> {
     heroDraft: 3, // at the start: look at three heroes, keep one
     draftOnReplace: c.draftOnReplace,
   };
+}
+
+/** "2026-09-30 10:40 · build 345" (nothing before the first stamped commit). */
+export function buildStampText(): string {
+  const when = [BUILD.date, BUILD.time].filter(Boolean).join(' ');
+  if (!BUILD.number) return '';
+  return `${when}${when ? ' · ' : ''}build ${BUILD.number}`;
 }
 
 const STORE_KEY = 'hotm.setup.v1';
@@ -126,7 +134,7 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
       wrap.remove();
       resolve(choice);
     });
-    const wrap = h('div', { class: 'setup' }, form);
+    const wrap = h('div', { class: 'setup' }, form, h('div', { class: 'build-stamp' }, buildStampText()));
     root.appendChild(wrap);
     // On phones, focusing would pop the keyboard up over the form.
     if (!isTouch()) {

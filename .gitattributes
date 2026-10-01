@@ -1,0 +1,2 @@
+# The commit hook is a shell script: keep Unix line endings so it runs on every machine.
+.githooks/* text eol=lf

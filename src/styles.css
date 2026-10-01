@@ -480,3 +480,6 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
   position: sticky; bottom: 0; margin-top: auto; padding-top: 8px; background: var(--panel-solid);
 }
 .stage-panel.draft .stage-hint { text-align: center; margin: 0; }
+
+/* Date and build number in the corner of the title screen (written by the pre-commit hook). */
+.build-stamp { position: fixed; right: 14px; bottom: 10px; font-size: 11px; opacity: 0.7; text-shadow: 0 1px 3px rgba(0,0,0,0.7); pointer-events: none; }

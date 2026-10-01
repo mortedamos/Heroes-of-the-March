@@ -1,0 +1,22 @@
+#!/bin/sh
+# Writes the commit date, time and build number into src/build-info.ts and stages it, so the
+# title screen always shows which build you are looking at. (Setup: see README, "Build stamp".)
+set -e
+
+OUT="src/build-info.ts"
+[ -d "$(dirname "$OUT")" ] || exit 0
+
+# The number this commit WILL be (derived from history, so it cannot drift).
+if git rev-parse --verify HEAD >/dev/null 2>&1; then
+  NUMBER=$(($(git rev-list --count HEAD) + 1))
+else
+  NUMBER=1
+fi
+DATE=$(date +%Y-%m-%d)
+TIME=$(date +%H:%M)
+
+printf '// Written by .githooks/pre-commit on every commit. Do not edit by hand.\nexport const BUILD = { date: "%s", time: "%s", number: %s };\n' \
+  "$DATE" "$TIME" "$NUMBER" > "$OUT"
+
+git add "$OUT"
+echo "pre-commit: build stamp -> $DATE $TIME (build $NUMBER)"
