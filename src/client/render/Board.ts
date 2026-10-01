@@ -8,6 +8,7 @@ import { cardBack, cardFace } from './cardFaces';
 import { computeLayout, type Layout, type Placement, type Shape } from './layout';
 import type { TableScene } from './TableScene';
 import { easeOut } from './tween';
+import { PALETTE, type Theme } from '../ui/themes';
 
 const CARD_GEOM = new THREE.BoxGeometry(1, 0.012, 1.4);
 const EDGE_MAT = new THREE.MeshStandardMaterial({ color: '#d9ccb0', roughness: 0.8 });
@@ -351,15 +352,15 @@ export class Board {
    * from the source to the target, an impact ring, and a shake on both cards.
    * Red for something done to someone, green for a boon. Resolves when it is over.
    */
-  attack(fromKey: string, target: string | { x: number; z: number }, tone: 'bad' | 'good'): Promise<void> {
+  attack(fromKey: string, target: string | { x: number; z: number }, theme: Theme): Promise<void> {
     const from = this.cards.get(fromKey);
     const to = typeof target === 'string' ? this.cards.get(target) ?? null : null;
     if (!from || from === to || (typeof target === 'string' && !to)) return Promise.resolve();
     const a = from.mesh.position.clone();
     a.y += 0.12;
     const b = to ? new THREE.Vector3(to.base.x, to.base.y + 0.12, to.base.z) : new THREE.Vector3((target as { x: number }).x, 0.4, (target as { z: number }).z);
-    const core = tone === 'bad' ? '#ffd6cf' : '#dcffee';
-    const glow = tone === 'bad' ? '#ff3b30' : '#2fd08a';
+    const pal = PALETTE[theme];
+    const { core, glow } = pal;
     const SEG = 16;
     const side = new THREE.Vector3().subVectors(b, a).cross(new THREE.Vector3(0, 1, 0)).normalize();
     const mk = (color: string, opacity: number): THREE.Line => {
@@ -368,7 +369,7 @@ export class Board {
       line.frustumCulled = false;
       return line;
     };
-    const bolts = [mk(glow, 0.55), mk(glow, 0.55), mk(core, 1)];
+    const bolts = [mk(glow, 0.55), mk(pal.accent, 0.55), mk(core, 1)];
     const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: glow, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
     head.scale.setScalar(0.55);
     const ring = new THREE.Mesh(RING_GEOM, new THREE.MeshBasicMaterial({ color: glow, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
@@ -397,7 +398,7 @@ export class Board {
     const DRAW = 0.42; // share of the time spent travelling; the rest is the impact
     return this.t.tweens.add(520, (k) => {
       const travel = Math.min(1, k / DRAW);
-      bolts.forEach((l, i) => scatter(l, travel, i === 2 ? 0.14 : 0.26));
+      bolts.forEach((l, i) => scatter(l, travel, (i === 2 ? 0.14 : 0.26) * pal.wobble));
       head.position.lerpVectors(a, b, travel);
       (head.material as THREE.SpriteMaterial).opacity = k < DRAW ? 1 : Math.max(0, 1 - (k - DRAW) / 0.2);
       if (k >= DRAW) {
@@ -405,7 +406,7 @@ export class Board {
         const r = (k - DRAW) / (1 - DRAW);
         const fade = 1 - r;
         bolts.forEach((l, i) => { (l.material as THREE.LineBasicMaterial).opacity = (i === 2 ? 1 : 0.55) * fade; });
-        ring.scale.setScalar(0.6 + r * 2.2);
+        ring.scale.setScalar((0.6 + r * 2.2) * pal.ring);
         (ring.material as THREE.MeshBasicMaterial).opacity = 0.9 * fade;
       }
     }, { ease: (k) => k }).then(() => {

@@ -10,7 +10,8 @@ import { describe, nameOf } from './describe';
 import { Hud } from './ui/Hud';
 import { Die, DIE_POS } from './render/Dice';
 import { music } from './audio/Music';
-import { sfx } from './audio/Sfx';
+import { sfx, type SfxName } from './audio/Sfx';
+import { THEME_SOUND, themeForAbility, type Theme } from './ui/themes';
 import { isTouch, syncBodyClasses } from './viewport';
 
 const ERROR_TEXT: Record<string, string> = {
@@ -138,6 +139,7 @@ export class GameClient {
     /** Your own ability: shown only if it turns out to answer someone else's (`response`). */
     onlyIfResponse?: boolean;
     response?: boolean;
+    theme: Theme;
     /** A die rolled by this ability (its result is shown, and the table waits for it to be read). */
     roll?: number;
   } | null = null;
@@ -315,7 +317,7 @@ export class GameClient {
     const heroOf = (pid: PlayerId | null): string | null => view.players.find((p) => p.id === pid)?.hero?.id ?? null;
     let from: string | null = null;
     let to: string | null = null;
-    let tone: 'bad' | 'good' = 'bad';
+    let theme: Theme = 'hex';
     let at: PlayerId | null = null; // who it lands on
     switch (e.type) {
       case 'effect': {
@@ -323,28 +325,29 @@ export class GameClient {
         from = this.board.hasCard(e.source.id) ? e.source.id : heroOf(e.effect.owner);
         to = e.targetCard && this.board.hasCard(e.targetCard.id) ? e.targetCard.id : heroOf(e.targetPlayer);
         const boon = e.effect.kind === 'statBonus' || e.effect.kind === 'autoWin' || e.effect.kind === 'heroMultiplier' || e.effect.owner === e.targetPlayer;
-        tone = boon ? 'good' : 'bad';
+        const k = e.effect.kind;
+        theme = k === 'statBonus' || k === 'heroMultiplier' ? 'boon' : k === 'disableAbilities' ? 'shield' : boon ? 'boon' : 'hex';
         break;
       }
-      case 'abilityCountered': from = e.by.id; to = e.source.id; tone = 'good'; at = null; break;
+      case 'abilityCountered': from = e.by.id; to = e.source.id; theme = 'shield'; at = null; break;
       case 'abilityIgnored': {
         from = e.by.id;
         to = e.targetCard && this.board.hasCard(e.targetCard.id) ? e.targetCard.id : e.by.id;
-        tone = 'good';
+        theme = 'shield';
         if (to === from) { to = null; }
         break;
       }
       case 'abilityZap': {
         // Corvin's extra draw, Sigrun's choice: the card zaps the stack it is drawing from.
         const pt = e.pile === 'discard' ? this.board.discardPoint(e.deck) : this.board.deckPoint(e.deck);
-        if (pt && this.board.hasCard(e.source.id)) { this.zap(e.source.id, pt, 'good'); sfx.play('effect-positive'); }
+        if (pt && this.board.hasCard(e.source.id)) { this.zap(e.source.id, pt, 'draw'); this.playTheme('draw'); }
         return;
       }
       case 'peeked': {
         // Looking at a stack (Wren, Grukka, Barnaby): the card behind it zaps that stack.
         const src = this.lastAbilityCard;
         const pt = this.board.deckPoint(e.deck);
-        if (src && pt && this.board.hasCard(src)) { this.zap(src, pt, 'good'); sfx.play('effect-positive'); }
+        if (src && pt && this.board.hasCard(src)) { this.zap(src, pt, 'insight'); this.playTheme('insight'); }
         return;
       }
       case 'abilityUsed': {
@@ -353,22 +356,23 @@ export class GameClient {
         const deck: DeckName | null = e.ability === 'shadowsteeds' || e.ability === 'notThisFight' ? 'encounter' : null;
         const at3 = deck ? this.board.deckPoint(deck) : null;
         if (deck && at3 && this.board.hasCard(e.source.id)) {
-          this.zap(e.source.id, at3, 'good');
-          sfx.play('effect-positive');
+          const th = themeForAbility(e.ability);
+          this.zap(e.source.id, at3, th);
+          this.playTheme(th);
         }
         return;
       }
-      case 'bidClaimed': from = heroOf(e.to); to = heroOf(e.from); at = e.from; break;
-      case 'bidsSwapped': from = heroOf(e.a); to = heroOf(e.b); at = e.b; break;
+      case 'bidClaimed': from = heroOf(e.to); to = heroOf(e.from); at = e.from; theme = 'trade'; break;
+      case 'bidsSwapped': from = heroOf(e.a); to = heroOf(e.b); at = e.b; theme = 'trade'; break;
       case 'cardsTraded': {
-        from = heroOf(e.from); to = heroOf(e.to); at = e.to;
+        from = heroOf(e.from); to = heroOf(e.to); at = e.to; theme = 'trade';
         // You can see your own hand: the bolt lands on the card that was swapped in, not on your hero.
         const mine = e.to === view.you ? e.gave : null;
         const end = mine ? this.hud.handCardById(mine.id) : null;
         const start = from ? this.board.screenPoint(from) : null;
         if (end && start) {
-          this.anims.push(this.hud.screenBolt(start, end, 'bad'));
-          sfx.play('effect-negative');
+          this.anims.push(this.hud.screenBolt(start, end, 'trade'));
+          this.playTheme('trade');
           if (isTouch() && 'vibrate' in navigator) navigator.vibrate([60, 40, 90]);
           return;
         }
@@ -377,10 +381,12 @@ export class GameClient {
       default: return;
     }
     if (!from || !to || from === to || !this.board.hasCard(from) || !this.board.hasCard(to)) return;
-    this.zap(from, to, tone);
-    sfx.play(tone === 'bad' ? 'effect-negative' : 'effect-positive');
+    this.zap(from, to, theme);
+    // Something changing hands sends a bolt each way.
+    if (theme === 'trade') this.zap(to, from, theme);
+    this.playTheme(theme);
     // Haptics where the device has them: a firm buzz when it lands on you, a tick otherwise.
-    if (isTouch() && 'vibrate' in navigator) navigator.vibrate(at === view.you && tone === 'bad' ? [60, 40, 90] : [18]);
+    if (isTouch() && 'vibrate' in navigator) navigator.vibrate(at === view.you && theme === 'hex' ? [60, 40, 90] : [18]);
   }
 
   /** The card sounds: shuffling, dealing, placing, flipping, discarding, dice and renown. */
@@ -446,7 +452,7 @@ export class GameClient {
       const mine = e.player === view.you;
       // Abilities you start need no showing (you know what you did); one that turns out to
       // answer someone else's (it cancels an effect) is shown like theirs.
-      this.openCase(view, { key: e.source.id, def: e.source.def, owner: e.player, label: e.label, onlyIfResponse: mine });
+      this.openCase(view, { key: e.source.id, def: e.source.def, owner: e.player, label: e.label, onlyIfResponse: mine, theme: themeForAbility(e.ability) });
       return !mine;
     }
     // A counter (Aldric) or a shrug-off (Brunna) answers another ability: show the answering card, whoever's.
@@ -457,7 +463,7 @@ export class GameClient {
       const title = e.type === 'abilityCountered'
         ? `${who} countered ${whoseCard(view, e.source)}`
         : `${who} ${e.player === view.you ? 'ignore' : 'ignores'} ${whoseCard(view, e.source)}`;
-      this.openCase(view, { key: e.by.id, def: e.by.def, owner: e.player, label: '', title, subtitle: `with ${getDef(e.by.def).name}`, response: true });
+      this.openCase(view, { key: e.by.id, def: e.by.def, owner: e.player, label: '', title, subtitle: `with ${getDef(e.by.def).name}`, response: true, theme: 'shield' });
       return true;
     }
     if (this.announcing && this.pendingCase && isAbilityResult(e, this.announcing)) {
@@ -490,7 +496,7 @@ export class GameClient {
   /** Start collecting an ability (and what it does) to show large; its zaps wait for that. */
   private openCase(view: GameView, c: {
     key: string; def: string; owner: PlayerId; label: string;
-    title?: string; subtitle?: string; onlyIfResponse?: boolean; response?: boolean;
+    title?: string; subtitle?: string; onlyIfResponse?: boolean; response?: boolean; theme: Theme;
   }): void {
     this.announcing = c.owner;
     let resolve: () => void = () => undefined;
@@ -500,9 +506,15 @@ export class GameClient {
   }
 
   /** A bolt from `from`; it waits until the ability it belongs to has been shown and dismissed. */
-  private zap(from: string, to: string | { x: number; z: number }, tone: 'bad' | 'good'): void {
+  /** The theme's sound, or the boon sound if that theme has no sound file yet. */
+  private playTheme(theme: Theme): void {
+    const name = THEME_SOUND[theme] as SfxName;
+    sfx.play(sfx.has(name) ? name : 'effect-positive');
+  }
+
+  private zap(from: string, to: string | { x: number; z: number }, theme: Theme): void {
     const gate = this.caseGate;
-    this.anims.push((gate ? gate.promise : Promise.resolve()).then(() => this.board.attack(from, to, tone)));
+    this.anims.push((gate ? gate.promise : Promise.resolve()).then(() => this.board.attack(from, to, theme)));
   }
 
   /**
@@ -546,6 +558,7 @@ export class GameClient {
           name: def.kind === 'hero' || def.kind === 'companion' ? def.abilityName : def.name,
           text: def.kind === 'hero' || def.kind === 'companion' ? def.abilityText : c.label,
           results: c.lines,
+          theme: c.theme,
           from,
         });
       } finally {

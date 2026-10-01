@@ -318,14 +318,54 @@ body.shape-short .card-btn.fan { transform: none; }
   background: #fff6cf; box-shadow: 0 0 8px 2px rgba(255, 224, 130, 0.95); opacity: 0;
   animation: case-spark 2.4s ease-out infinite;
 }
+.case-spark.orbit { animation-name: case-orbit; }
 @keyframes case-spin { to { transform: translate(-50%, -50%) rotate(360deg); } }
 @keyframes case-breathe { 50% { opacity: 0.55; transform: translate(-50%, -50%) scale(1.07); } }
 @keyframes case-spark {
-  0% { opacity: 0; transform: rotate(var(--a)) translateX(var(--r0)) scale(0.4); }
+  0% { opacity: 0; transform: translate(var(--x0), var(--y0)) scale(0.4); }
   18% { opacity: 1; }
-  100% { opacity: 0; transform: rotate(var(--a)) translateX(var(--r1)) scale(1); }
+  100% { opacity: 0; transform: translate(var(--x1), var(--y1)) scale(1); }
 }
-@media (prefers-reduced-motion: reduce) { .case-rays { animation: none; } .case-spark { display: none; } }
+@keyframes case-orbit {
+  0% { opacity: 0; transform: rotate(var(--a)) translateX(var(--r0)) scale(0.5); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(calc(var(--a) + 150deg)) translateX(var(--r0)) scale(1); }
+}
+/* Themes: the same light in different colours and movement (see themes.ts). */
+.theme-hex .case-rays { background: repeating-conic-gradient(from 0deg, rgba(150, 80, 255, 0.30) 0deg 5deg, transparent 5deg 12deg, rgba(60, 225, 135, 0.24) 12deg 17deg, transparent 17deg 24deg); animation-duration: 70s; }
+.theme-hex .case-halo { background: radial-gradient(circle, rgba(170, 100, 255, 0.50) 0%, rgba(70, 220, 140, 0.24) 40%, rgba(70, 220, 140, 0) 68%); }
+.theme-hex .case-spark { background: #d9ffc9; box-shadow: 0 0 8px 2px rgba(164, 85, 255, 0.95); }
+.case-circle {
+  position: absolute; left: 0; top: 0; transform: translate(-50%, -50%); border-radius: 50%;
+  border: 2px solid rgba(190, 140, 255, 0.75); box-shadow: 0 0 22px rgba(150, 80, 255, 0.7), inset 0 0 22px rgba(70, 225, 135, 0.35);
+  animation: case-counter 60s linear infinite;
+}
+.case-circle.inner { border-color: rgba(90, 235, 150, 0.6); border-style: dashed; box-shadow: 0 0 16px rgba(70, 225, 135, 0.55); animation: case-spin 90s linear infinite; }
+.case-rune {
+  position: absolute; left: 50%; top: 50%; width: 1.4em; height: 1.4em; margin: -0.7em; text-align: center; line-height: 1.4em;
+  font-size: 22px; color: #d9ffc9; text-shadow: 0 0 8px #a455ff, 0 0 14px #46e08c; transform-origin: center center;
+}
+@keyframes case-counter { to { transform: translate(-50%, -50%) rotate(-360deg); } }
+.theme-boon .case-halo { background: radial-gradient(circle, rgba(255, 232, 160, 0.55) 0%, rgba(255, 205, 90, 0.28) 38%, rgba(255, 190, 60, 0) 68%); }
+.theme-insight .case-rays { background: repeating-conic-gradient(from 0deg, rgba(190, 225, 255, 0.34) 0deg 1.4deg, transparent 1.4deg 9deg); animation-duration: 90s; }
+.theme-insight .case-halo { background: radial-gradient(circle, rgba(170, 215, 255, 0.45) 0%, rgba(100, 170, 255, 0.2) 40%, rgba(100, 170, 255, 0) 68%); }
+.theme-insight .case-spark { background: #ffffff; box-shadow: 0 0 8px 2px rgba(108, 184, 255, 0.95); }
+.theme-draw .case-rays { background: repeating-conic-gradient(from 0deg, rgba(90, 240, 220, 0.26) 0deg 5deg, transparent 5deg 17deg); }
+.theme-draw .case-halo { background: radial-gradient(circle, rgba(110, 245, 225, 0.5) 0%, rgba(47, 214, 196, 0.25) 40%, rgba(47, 214, 196, 0) 68%); }
+.theme-draw .case-spark { background: #dcfff9; box-shadow: 0 0 8px 2px rgba(47, 214, 196, 0.95); }
+.theme-shield .case-rays { background: repeating-conic-gradient(from 0deg, rgba(200, 215, 240, 0.26) 0deg 5deg, transparent 5deg 17deg); animation: none; }
+.theme-shield .case-halo { background: radial-gradient(circle, rgba(200, 215, 240, 0.5) 0%, rgba(150, 175, 215, 0.25) 40%, rgba(150, 175, 215, 0) 68%); animation-duration: 5s; }
+.theme-shield .case-spark { background: #ffffff; box-shadow: 0 0 8px 2px rgba(159, 182, 218, 0.95); }
+.case-shield-ring {
+  position: absolute; left: 0; top: 0; width: 86vmin; height: 86vmin; transform: translate(-50%, -50%); border-radius: 50%;
+  border: 3px solid rgba(214, 226, 245, 0.9); box-shadow: 0 0 26px rgba(159, 182, 218, 0.9), inset 0 0 30px rgba(159, 182, 218, 0.5);
+  animation: case-ring 1.6s ease-out 1;
+}
+@keyframes case-ring { from { transform: translate(-50%, -50%) scale(0.45); opacity: 1; } to { transform: translate(-50%, -50%) scale(1.15); opacity: 0.25; } }
+.theme-trade .case-rays { background: repeating-conic-gradient(from 0deg, rgba(255, 180, 70, 0.28) 0deg 5deg, transparent 5deg 17deg); animation-duration: 36s; }
+.theme-trade .case-halo { background: radial-gradient(circle, rgba(255, 200, 110, 0.5) 0%, rgba(255, 162, 31, 0.26) 40%, rgba(255, 162, 31, 0) 68%); }
+.theme-trade .case-spark { background: #fff0cf; box-shadow: 0 0 8px 2px rgba(255, 162, 31, 0.95); }
+@media (prefers-reduced-motion: reduce) { .case-rays, .case-circle { animation: none; } .case-spark { display: none; } }
 .case-title {
   text-align: center; color: #fff3cf; font-size: 16px; line-height: 1.4; max-width: min(520px, 94vw); padding: 10px 18px;
   background: rgba(20, 14, 6, 0.94); border: 1px solid var(--gold); border-radius: 10px; box-shadow: 0 6px 22px rgba(0,0,0,0.6);

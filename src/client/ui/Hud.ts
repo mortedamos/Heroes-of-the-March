@@ -14,6 +14,7 @@ import { append, clear, h, replace } from './dom';
 import { toggleMusicMenu } from './MusicMenu';
 import { sfx } from '../audio/Sfx';
 import { tiltOnPointer } from './tilt';
+import { PALETTE, RUNES, type Theme } from './themes';
 
 /** A button shown under a pinned card, e.g. "Bid this card" after a tap. */
 interface InspectAction { label: string; primary?: boolean; run: () => void }
@@ -1034,12 +1035,12 @@ export class Hud {
   }
 
   /** A crackling bolt drawn over the page between two screen points (used when an end is a card in your hand). */
-  screenBolt(a: { x: number; y: number }, b: { x: number; y: number }, tone: 'bad' | 'good'): Promise<void> {
+  screenBolt(a: { x: number; y: number }, b: { x: number; y: number }, theme: Theme): Promise<void> {
     const NS = 'http://www.w3.org/2000/svg';
     const svg = document.createElementNS(NS, 'svg');
     svg.setAttribute('class', 'bolt-layer');
-    const glow = tone === 'bad' ? '#ff3b30' : '#2fd08a';
-    const core = tone === 'bad' ? '#ffe3de' : '#e6fff2';
+    const pal = PALETTE[theme];
+    const { glow, core } = pal;
     const mk = (color: string, width: number, opacity: number): SVGPathElement => {
       const p = document.createElementNS(NS, 'path');
       p.setAttribute('fill', 'none');
@@ -1051,7 +1052,7 @@ export class Hud {
       svg.appendChild(p);
       return p;
     };
-    const outer = mk(glow, 9, 0.35), mid = mk(glow, 4, 0.7), inner = mk(core, 1.8, 1);
+    const outer = mk(glow, 9, 0.35), mid = mk(pal.accent, 4, 0.7), inner = mk(core, 1.8, 1);
     const ring = document.createElementNS(NS, 'circle');
     ring.setAttribute('fill', 'none');
     ring.setAttribute('stroke', glow);
@@ -1081,12 +1082,12 @@ export class Hud {
     const step = (now: number): void => {
       const k = Math.min(1, (now - start) / TOTAL);
       const reach = Math.min(1, k / DRAW);
-      outer.setAttribute('d', path(reach, 46));
-      mid.setAttribute('d', path(reach, 30));
-      inner.setAttribute('d', path(reach, 22));
+      outer.setAttribute('d', path(reach, 46 * pal.wobble));
+      mid.setAttribute('d', path(reach, 30 * pal.wobble));
+      inner.setAttribute('d', path(reach, 22 * pal.wobble));
       const fade = k < DRAW ? 1 : 1 - (k - DRAW) / (1 - DRAW);
       svg.style.opacity = String(Math.max(0, fade));
-      if (k >= DRAW) { ring.setAttribute('r', String(8 + ((k - DRAW) / (1 - DRAW)) * 46)); ring.setAttribute('opacity', String(fade)); }
+      if (k >= DRAW) { ring.setAttribute('r', String((8 + ((k - DRAW) / (1 - DRAW)) * 46) * pal.ring)); ring.setAttribute('opacity', String(fade)); }
       if (k < 1) requestAnimationFrame(step);
       else { svg.remove(); finish(); }
     };
@@ -1101,7 +1102,7 @@ export class Hud {
    * counter question, when there is one, is answered here instead of with a click.
    */
   showcase(o: {
-    def: string; title: string; subtitle: string; name: string; text: string; results: string[];
+    def: string; title: string; subtitle: string; name: string; text: string; results: string[]; theme: Theme;
     from: { x: number; y: number; w: number; h: number } | null;
   }): Promise<void> {
     const vw = window.innerWidth, vh = window.innerHeight;
@@ -1133,21 +1134,7 @@ export class Hud {
 
       // Fly in from the card's place on the table (FLIP): start over it, end at the middle.
       const target = cardEl.getBoundingClientRect();
-      // Light behind the card: slowly turning rays, a pulsing halo and sparkles drifting outward from its edge.
-      const light = h('div', { class: 'case-light', aria: { hidden: 'true' } }, h('div', { class: 'case-rays' }), h('div', { class: 'case-halo' }));
-      for (let i = 0; i < 22; i++) {
-        const spark = h('i', { class: 'case-spark' });
-        spark.style.setProperty('--a', `${Math.round(Math.random() * 360)}deg`);
-        spark.style.setProperty('--r0', `${Math.round(Math.max(target.width, target.height) * (0.42 + Math.random() * 0.12))}px`);
-        spark.style.setProperty('--r1', `${Math.round(Math.max(target.width, target.height) * (0.75 + Math.random() * 0.45))}px`);
-        spark.style.setProperty('--s', `${(3 + Math.random() * 5).toFixed(1)}px`);
-        spark.style.animationDuration = `${(1.6 + Math.random() * 1.8).toFixed(2)}s`;
-        spark.style.animationDelay = `${(Math.random() * 2.4).toFixed(2)}s`;
-        light.appendChild(spark);
-      }
-      light.style.left = `${Math.round(target.left + target.width / 2)}px`;
-      light.style.top = `${Math.round(target.top + target.height / 2)}px`;
-      layer.insertBefore(light, layer.firstChild);
+      layer.insertBefore(this.themedLight(o.theme, target), layer.firstChild);
       const slot = (r: { x: number; y: number; w: number; h: number } | null) => r
         ? `translate(${r.x - (target.left + target.width / 2)}px, ${r.y - (target.top + target.height / 2)}px) scale(${r.w / W})`
         : 'translateY(120px) scale(0.4)';
@@ -1178,6 +1165,67 @@ export class Hud {
         });
       }
     });
+  }
+
+  /**
+   * The light behind a shown ability card, in the ability's theme: hex is a green and purple spell
+   * circle of runes; a boon rises in gold; insight is thin cool rays; a draw streams toward the deck;
+   * a shield is still, with a ring; a trade orbits.
+   */
+  private themedLight(theme: Theme, card: DOMRect): HTMLElement {
+    const light = h('div', { class: `case-light theme-${theme}`, aria: { hidden: 'true' } }, h('div', { class: 'case-rays' }), h('div', { class: 'case-halo' }));
+    const big = Math.max(card.width, card.height);
+    const cx = card.left + card.width / 2, cy = card.top + card.height / 2;
+    light.style.left = `${Math.round(cx)}px`;
+    light.style.top = `${Math.round(cy)}px`;
+    const rnd = (a: number, b: number): number => a + Math.random() * (b - a);
+    const px = (n: number): string => `${Math.round(n)}px`;
+
+    if (theme === 'hex') {
+      // A spell circle: two rings and a ring of runes turning slowly the other way.
+      const ring = h('div', { class: 'case-circle' });
+      const R = big * 0.72;
+      ring.style.width = px(R * 2);
+      ring.style.height = px(R * 2);
+      const inner = h('div', { class: 'case-circle inner' });
+      inner.style.width = px(R * 1.7);
+      inner.style.height = px(R * 1.7);
+      for (let i = 0; i < RUNES.length; i++) {
+        const rune = h('span', { class: 'case-rune' }, RUNES[i]!);
+        rune.style.transform = `rotate(${(i * 360) / RUNES.length}deg) translateY(${px(-R * 0.86)})`;
+        ring.appendChild(rune);
+      }
+      light.append(ring, inner);
+    }
+    if (theme === 'shield') light.appendChild(h('div', { class: 'case-shield-ring' }));
+
+    // Where the sparkles go depends on the theme.
+    const deck = this.layout?.decks.resource;
+    const aim = theme === 'draw' && deck ? this.deps.project(deck.x, 0.3, deck.z) : null;
+    const dir = aim ? { x: aim.x - cx, y: aim.y - cy } : null;
+    const dlen = dir ? Math.hypot(dir.x, dir.y) || 1 : 1;
+    for (let i = 0; i < 22; i++) {
+      const spark = h('i', { class: 'case-spark' });
+      const ang = Math.random() * Math.PI * 2;
+      const r0 = big * rnd(0.42, 0.56);
+      let x0 = Math.cos(ang) * r0, y0 = Math.sin(ang) * r0, x1 = x0, y1 = y0;
+      if (theme === 'boon') { x1 = x0 + rnd(-20, 20); y1 = y0 - rnd(90, 190); } // rises
+      else if (theme === 'draw' && dir) {
+        // Sparkles gather around the card and stream the way the cards will go (toward the deck).
+        x0 = rnd(-card.width / 2, card.width / 2); y0 = rnd(-card.height / 2, card.height / 2);
+        const reach = rnd(0.35, 0.7) * Math.min(dlen, 520);
+        x1 = x0 + (dir.x / dlen) * reach + rnd(-16, 16); y1 = y0 + (dir.y / dlen) * reach + rnd(-16, 16);
+      } else if (theme === 'insight' || theme === 'shield') { x1 = x0 + rnd(-6, 6); y1 = y0 + rnd(-6, 6); } // twinkle in place
+      else if (theme === 'trade') { spark.classList.add('orbit'); spark.style.setProperty('--a', `${Math.round(ang * 57.3)}deg`); spark.style.setProperty('--r0', px(r0)); }
+      else { x1 = Math.cos(ang) * big * rnd(0.75, 1.2); y1 = Math.sin(ang) * big * rnd(0.75, 1.2); } // hex: drift outward
+      spark.style.setProperty('--x0', px(x0)); spark.style.setProperty('--y0', px(y0));
+      spark.style.setProperty('--x1', px(x1)); spark.style.setProperty('--y1', px(y1));
+      spark.style.setProperty('--s', `${rnd(3, 8).toFixed(1)}px`);
+      spark.style.animationDuration = `${rnd(1.6, 3.4).toFixed(2)}s`;
+      spark.style.animationDelay = `${rnd(0, 2.4).toFixed(2)}s`;
+      light.appendChild(spark);
+    }
+    return light;
   }
 
   /** Resolves once no announcement is open (immediately if none is). */

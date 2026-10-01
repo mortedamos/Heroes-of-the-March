@@ -15,7 +15,7 @@ const SAFE_FILE = /^[A-Za-z0-9._-]+\.(mp3|ogg|wav|webm)$/;
 /** The sounds the game plays (the full list is in data/sfx-catalog.json). */
 export type SfxName =
   | 'effect-negative' | 'effect-positive' | 'shuffle' | 'deal' | 'card-flip' | 'card-place' | 'card-pickup'
-  | 'card-discard' | 'die-roll' | 'renown' | 'click';
+  | 'card-discard' | 'die-roll' | 'renown' | 'click' | 'effect-insight' | 'effect-draw' | 'effect-shield' | 'effect-trade';
 
 /** The least time (ms) between two plays of one sound, so a burst of events does not machine-gun it. */
 const MIN_GAP: Partial<Record<SfxName, number>> = { shuffle: 1500, click: 60, 'card-flip': 90, 'card-place': 90 };
@@ -62,6 +62,11 @@ class Sfx {
   }
   setVolume(v: number): void { this.volume = Math.min(1, Math.max(0, v)); if (this.volume > 0) this.muted = false; this.save(); }
   setMuted(m: boolean): void { this.muted = m; this.save(); }
+
+  /** Whether the manifest has a file for this sound. */
+  has(name: SfxName): boolean {
+    return (this.manifest[name]?.length ?? 0) > 0;
+  }
 
   /** Play a sound `delayMs` from now (for a run of cards, each with its own sound). */
   playLater(name: SfxName, delayMs: number): void {
