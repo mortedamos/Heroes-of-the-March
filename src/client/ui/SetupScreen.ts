@@ -3,6 +3,8 @@
 import type { BotLevel } from '../../bots/heuristic';
 import { MAX_PLAYERS, MIN_PLAYERS, type HouseRules } from '../../engine';
 import { isTouch } from '../viewport';
+import titleArt from '@art/ui__title_ridge.webp?url';
+import titleArtTall from '@art/ui__title_ridge_tall.webp?url';
 import { BUILD } from '../../build-info';
 import { h } from './dom';
 
@@ -135,6 +137,9 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
       resolve(choice);
     });
     const wrap = h('div', { class: 'setup' }, form, h('div', { class: 'build-stamp' }, buildStampText()));
+    // The title picture (heroes on the ridge, the split Marchstone); the form sits over its quiet middle.
+    wrap.style.setProperty('--title-art', `url(${titleArt})`);
+    wrap.style.setProperty('--title-art-tall', `url(${titleArtTall})`); // for upright and near-square screens, where the wide picture would crop the heroes
     root.appendChild(wrap);
     // On phones, focusing would pop the keyboard up over the form.
     if (!isTouch()) {

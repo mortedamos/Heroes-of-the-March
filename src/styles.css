@@ -429,7 +429,22 @@ body.shape-short .notices { left: calc((100vw - var(--dock-w)) / 2); width: min(
 /* Setup: centred when it fits, scrollable when it doesn't (phone landscape). */
 .setup {
   position: fixed; inset: 0; z-index: 10; display: flex; padding: 16px; overflow-y: auto; overscroll-behavior: contain;
-  background: radial-gradient(ellipse at center, rgba(40, 28, 14, 0.85), rgba(8, 5, 2, 0.96));
+  /* The picture, darkened toward the middle (where the form is) and the edges, over a dark fallback. */
+  background:
+    radial-gradient(ellipse at 50% 58%, rgba(8, 5, 2, 0.55), rgba(8, 5, 2, 0.1) 62%, rgba(8, 5, 2, 0.45) 100%),
+    var(--title-art, none) center top / cover no-repeat,
+    radial-gradient(ellipse at center, rgba(40, 28, 14, 1), rgba(8, 5, 2, 1));
+}
+@media (max-aspect-ratio: 5/4) {
+  .setup {
+    background:
+      radial-gradient(ellipse at 50% 70%, rgba(8, 5, 2, 0.5), rgba(8, 5, 2, 0.05) 70%),
+      var(--title-art-tall, none) center top / cover no-repeat,
+      radial-gradient(ellipse at center, rgba(40, 28, 14, 1), rgba(8, 5, 2, 1));
+  }
+  /* Upright screens: the form sits low, so the heroes and the split stone above it stay in view. */
+  .setup { padding-bottom: 34px; } /* room for the build stamp under the form */
+  .setup .setup-card { margin: auto auto 0; }
 }
 .setup-card {
   margin: auto; width: min(440px, 100%); padding: 28px 30px; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px;
