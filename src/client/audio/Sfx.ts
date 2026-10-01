@@ -12,7 +12,14 @@ const DEFAULT_VOLUME = 0.7;
 /** Only plain file names are accepted from the manifest. */
 const SAFE_FILE = /^[A-Za-z0-9._-]+\.(mp3|ogg|wav|webm)$/;
 
-export type SfxName = 'effect-negative' | 'effect-positive';
+/** The sounds the game plays (the full list is in data/sfx-catalog.json). */
+export type SfxName =
+  | 'effect-negative' | 'effect-positive' | 'shuffle' | 'deal' | 'card-flip' | 'card-place' | 'card-pickup'
+  | 'card-discard' | 'die-roll' | 'renown' | 'click';
+
+/** The least time (ms) between two plays of one sound, so a burst of events does not machine-gun it. */
+const MIN_GAP: Partial<Record<SfxName, number>> = { shuffle: 1500, click: 60, 'card-flip': 90, 'card-place': 90 };
+const DEFAULT_GAP = 40;
 
 function load(): { volume: number; muted: boolean } {
   try {
@@ -27,6 +34,7 @@ class Sfx {
   muted: boolean;
   /** sound name -> file names, from the manifest (empty until it has loaded). */
   private manifest: Record<string, string[]> = {};
+  private readonly last = new Map<string, number>();
 
   constructor() {
     const p = load();
@@ -55,11 +63,19 @@ class Sfx {
   setVolume(v: number): void { this.volume = Math.min(1, Math.max(0, v)); if (this.volume > 0) this.muted = false; this.save(); }
   setMuted(m: boolean): void { this.muted = m; this.save(); }
 
+  /** Play a sound `delayMs` from now (for a run of cards, each with its own sound). */
+  playLater(name: SfxName, delayMs: number): void {
+    window.setTimeout(() => this.play(name), delayMs);
+  }
+
   /** Play a sound if the manifest lists it; otherwise do nothing. */
   play(name: SfxName): void {
     if (this.muted || this.volume === 0) return;
     const files = this.manifest[name];
     if (!files?.length) return;
+    const now = performance.now();
+    if (now - (this.last.get(name) ?? -1e9) < (MIN_GAP[name] ?? DEFAULT_GAP)) return;
+    this.last.set(name, now);
     const file = files[Math.floor(Math.random() * files.length)]!;
     const a = new Audio(`${import.meta.env.BASE_URL}sounds/${file}`);
     a.volume = this.volume;

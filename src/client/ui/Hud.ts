@@ -12,6 +12,7 @@ import { nameOf } from '../describe';
 import { isTouch, onLongPress } from '../viewport';
 import { append, clear, h, replace } from './dom';
 import { toggleMusicMenu } from './MusicMenu';
+import { sfx } from '../audio/Sfx';
 
 /** A button shown under a pinned card, e.g. "Bid this card" after a tap. */
 interface InspectAction { label: string; primary?: boolean; run: () => void }
@@ -153,6 +154,8 @@ export class Hud {
       if (e.key === 'Escape') { this.unpin(); this.closeModal(); }
     });
     window.addEventListener('resize', () => this.fitHand());
+    // Every button click gets a small click.
+    root.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('button.btn, .modal-close')) sfx.play('click'); });
     const track = (e: PointerEvent) => { this.pointer = { x: e.clientX, y: e.clientY, mouse: e.pointerType !== 'touch' }; };
     window.addEventListener('pointermove', track, { passive: true });
     window.addEventListener('pointerdown', track, { passive: true });
@@ -769,6 +772,8 @@ export class Hud {
   private thumbButton(card: CardRef, width: number, extra = '', onTap?: () => void): HTMLButtonElement {
     const b = h('button', { class: `card-btn ${extra}`, aria: { label: getDef(card.def).name }, data: { def: card.def, id: card.id } }, cardThumb(card.def, width));
     this.previewOn(b, card.def);
+    // Choosing a card (to bid it, recruit it, ...) sounds like picking it up.
+    if (onTap) b.addEventListener('click', () => sfx.play('card-pickup'));
     b.addEventListener('click', onTap ?? (() => {
       if (this.pinned === card.def) this.unpin();
       else this.inspect(card.def, true);

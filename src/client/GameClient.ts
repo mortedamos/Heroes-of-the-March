@@ -268,6 +268,7 @@ export class GameClient {
       const announced = await this.announce(e, text, view);
       this.attackFor(e, view);
       this.motionFor(e, view);
+      this.soundFor(e, view);
       if (announced) continue;
       switch (e.type) {
         case 'turnStarted':
@@ -380,6 +381,26 @@ export class GameClient {
     sfx.play(tone === 'bad' ? 'effect-negative' : 'effect-positive');
     // Haptics where the device has them: a firm buzz when it lands on you, a tick otherwise.
     if (isTouch() && 'vibrate' in navigator) navigator.vibrate(at === view.you && tone === 'bad' ? [60, 40, 90] : [18]);
+  }
+
+  /** The card sounds: shuffling, dealing, placing, flipping, discarding, dice and renown. */
+  private soundFor(e: ClientEvent, view: GameView): void {
+    switch (e.type) {
+      case 'shuffled': sfx.play('shuffle'); break;
+      case 'drew':
+        // One deal sound per card that flies into your hand (staggered like the cards); others' draws are quiet.
+        if (e.player === view.you && e.deck === 'resource') {
+          const n = Math.min(5, e.cards?.length ?? e.count);
+          for (let i = 0; i < n; i++) sfx.playLater('deal', i * 130);
+        }
+        break;
+      case 'bid': case 'companionPlayed': sfx.play('card-place'); break;
+      case 'revealed': case 'encounterRevealed': case 'locationRevealed': sfx.play('card-flip'); break;
+      case 'resourceDiscarded': case 'companionDiscarded': sfx.play('card-discard'); break;
+      case 'dieRolled': sfx.play('die-roll'); break;
+      case 'renownGained': sfx.play('renown'); break;
+      default: break;
+    }
   }
 
   /** Dice rolling on the table, and cards flying from the deck into your hand. */
