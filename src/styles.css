@@ -554,3 +554,13 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 
 /* Date and build number in the corner of the title screen (written by the pre-commit hook). */
 .build-stamp { position: fixed; right: 14px; bottom: 10px; font-size: 11px; opacity: 0.7; text-shadow: 0 1px 3px rgba(0,0,0,0.7); pointer-events: none; }
+
+/* Display font: the game's own headings, title and buttons (not the card faces). Chosen on the title screen. */
+:root { --display: "Cinzel", Georgia, "Palatino Linotype", serif; }
+.setup h1, .brand, .stage-main h2, .stage-section h3, .stage-hero h3, .modal h2, .decision-title, .case-title strong,
+.plate-name, .banner, .notice-title, .btn.primary, .music-title, .deck-tip strong {
+  font-family: var(--display);
+}
+.setup h1 { letter-spacing: 0.04em; }
+.font-pick { position: fixed; left: 14px; bottom: 10px; z-index: 11; display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-dim); }
+.font-pick select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px; font-size: 12px; max-width: 260px; }
