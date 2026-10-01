@@ -8,7 +8,7 @@
 // A sound is `name.mp3` or up to three variants `name_1.mp3`, `name_2.mp3`, `name_3.mp3`
 // (a - works as well as _, and .ogg, .wav and .webm also work).
 
-import { readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -46,6 +46,10 @@ for (const c of catalog) {
   const list = found.get(c.name);
   if (list) manifest[c.name] = list.sort((a, b) => a.n - b.n).slice(0, MAX_VARIANTS).map((x) => x.file);
 }
+// tools/ and docs/ are not in the repository (they are git-ignored), so a fresh checkout, such as
+// the one the deploy workflow builds from, does not have them yet.
+mkdirSync(join(root, 'tools'), { recursive: true });
+mkdirSync(join(root, 'docs'), { recursive: true });
 writeFileSync(join(DIR, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 // A plain script (not JSON) so tools/sfx-tracker.html also works when opened straight from disk.
 writeFileSync(join(root, 'tools', 'sfx-data.js'), `window.SFX = ${JSON.stringify({ maxVariants: MAX_VARIANTS, catalog, manifest, unknown, extra })};\n`);
