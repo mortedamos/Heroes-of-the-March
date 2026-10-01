@@ -19,13 +19,7 @@
     "sfx": "node scripts/sfx.ts"
   },
   "dependencies": {
-    "@fontsource/almendra-sc": "^5.3.0",
-    "@fontsource/cinzel": "^5.3.0",
     "@fontsource/cinzel-decorative": "^5.3.0",
-    "@fontsource/im-fell-english-sc": "^5.3.0",
-    "@fontsource/medievalsharp": "^5.3.0",
-    "@fontsource/metamorphous": "^5.3.0",
-    "@fontsource/uncial-antiqua": "^5.3.0",
     "three": "^0.186.1"
   },
   "devDependencies": {

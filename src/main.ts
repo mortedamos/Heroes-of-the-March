@@ -11,10 +11,9 @@ import { GameHost } from './net/GameHost';
 import { BotSeat, LocalTransport } from './net/local';
 import { syncBodyClasses } from './client/viewport';
 import { music } from './client/audio/Music';
-import { applyFont, currentFontId } from './client/fonts';
+import './client/fonts';
 
 music.autoStart();
-applyFont(currentFontId());
 syncBodyClasses();
 window.addEventListener('resize', () => syncBodyClasses());
 // A tablet can gain or lose a mouse mid-game.

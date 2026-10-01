@@ -4,7 +4,6 @@ import type { BotLevel } from '../../bots/heuristic';
 import { MAX_PLAYERS, MIN_PLAYERS, type HouseRules } from '../../engine';
 import { isTouch } from '../viewport';
 import { BUILD } from '../../build-info';
-import { applyFont, currentFontId, DISPLAY_FONTS } from '../fonts';
 import { h } from './dom';
 
 export type HandModelChoice = 'steady' | 'refill';
@@ -135,13 +134,7 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
       wrap.remove();
       resolve(choice);
     });
-    // Try the display fonts out: the choice is remembered and changes the title and headings straight away.
-    const fontSelect = h('select', { id: 'setup-font', aria: { label: 'Title font' } });
-    for (const f of DISPLAY_FONTS) { const o = h('option', {}, f.label); o.value = f.id; fontSelect.appendChild(o); }
-    fontSelect.value = currentFontId();
-    fontSelect.addEventListener('change', () => applyFont(fontSelect.value));
-    const fontPick = h('label', { class: 'font-pick' }, h('span', {}, 'Title font'), fontSelect);
-    const wrap = h('div', { class: 'setup' }, form, fontPick, h('div', { class: 'build-stamp' }, buildStampText()));
+    const wrap = h('div', { class: 'setup' }, form, h('div', { class: 'build-stamp' }, buildStampText()));
     root.appendChild(wrap);
     // On phones, focusing would pop the keyboard up over the form.
     if (!isTouch()) {
