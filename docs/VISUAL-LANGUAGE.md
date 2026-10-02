@@ -2,9 +2,9 @@
 
 | Signal | Meaning | Where |
 |---|---|---|
-| Static red glow around a card | Something bad has happened to the card (an opponent's ability was used on it). | `Board.setAfflicted` |
+| Static soft red glow around a card | Something bad has happened to the card (an opponent's ability was used on it). | `Board.setAfflicted` |
 | Gold one-shot flash and lift | An ability just fired on this card. | `Board.flash` |
-| **Pulsing sky-blue glow, a short wiggle every couple of seconds, and a soft two-note chime** | **This card can use an ability right now. Click it.** | `Board.setAttention`, `attentionOf` |
+| **Pulsing soft sky-blue glow, a short wiggle every couple of seconds, and a soft two-note chime** | **This card can use an ability right now. Click it.** | `Board.setAttention`, `attentionOf` |
 | Gold ring on the player plate | Whose decision it is. | `.plate.deciding` |
 | Gold ring on a hand card | A card you can play. | `.card-btn.playable` |
 

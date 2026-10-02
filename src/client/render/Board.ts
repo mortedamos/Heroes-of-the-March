@@ -59,22 +59,37 @@ function glowTexture(): THREE.CanvasTexture {
   return glowTex;
 }
 
-/** A flat rectangular frame (lying in the card's plane) around a card of 1 x 1.4. */
-function frame(w: number, h: number): THREE.ShapeGeometry {
-  const shape = new THREE.Shape();
-  shape.moveTo(-w / 2, -h / 2); shape.lineTo(w / 2, -h / 2); shape.lineTo(w / 2, h / 2); shape.lineTo(-w / 2, h / 2); shape.closePath();
-  const hole = new THREE.Path();
-  hole.moveTo(-0.49, -0.69); hole.lineTo(-0.49, 0.69); hole.lineTo(0.49, 0.69); hole.lineTo(0.49, -0.69); hole.closePath();
-  shape.holes.push(hole);
-  const g = new THREE.ShapeGeometry(shape);
-  g.rotateX(-Math.PI / 2);
-  return g;
+/**
+ * A soft halo around a card of 1 x 1.4: a plane a little bigger than the card, textured with a blurred
+ * rounded rectangle (the card itself hides the middle). Replaces the old hard-edged frame outline.
+ */
+const HALO_W = 1.8, HALO_H = 2.2;
+const HALO_GEOM = new THREE.PlaneGeometry(HALO_W, HALO_H).rotateX(-Math.PI / 2);
+let haloTex: THREE.CanvasTexture | null = null;
+function haloTexture(): THREE.CanvasTexture {
+  if (haloTex) return haloTex;
+  const ppu = 256; // canvas pixels per world unit
+  const c = document.createElement('canvas');
+  c.width = Math.round(HALO_W * ppu);
+  c.height = Math.round(HALO_H * ppu);
+  const g = c.getContext('2d')!;
+  const w = ppu * 1.0, h = ppu * 1.4, r = ppu * 0.06;
+  const x = (c.width - w) / 2, y = (c.height - h) / 2;
+  g.fillStyle = '#fff';
+  g.shadowColor = '#fff';
+  g.shadowBlur = ppu * 0.22;
+  // Several passes build up the glow near the card and let it fade out smoothly to nothing at the plane's edge.
+  for (let i = 0; i < 5; i++) {
+    g.beginPath();
+    g.roundRect(x, y, w, h, r);
+    g.fill();
+  }
+  haloTex = new THREE.CanvasTexture(c);
+  haloTex.colorSpace = THREE.SRGBColorSpace;
+  return haloTex;
 }
-const GLOW_INNER = frame(1.1, 1.5);
-const GLOW_OUTER = frame(1.26, 1.66);
-const glowMat = (opacity: number) => new THREE.MeshBasicMaterial({ color: '#ff3b30', transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
-const GLOW_MAT_INNER = glowMat(0.5);
-const GLOW_MAT_OUTER = glowMat(0.2);
+const haloMat = (color: string, opacity: number, additive = false) => new THREE.MeshBasicMaterial({ color, map: haloTexture(), transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide, ...(additive ? { blending: THREE.AdditiveBlending } : {}) });
+const GLOW_MAT = haloMat('#ff3b30', 0.75);
 
 /** "This card can act now": a pulsing sky-blue outline and a short wiggle every couple of seconds. */
 const ATTN_COLOR = '#4fb8ff';
@@ -82,9 +97,7 @@ const ATTN_PULSE_MS = 1400;
 const ATTN_WIGGLE_EVERY_MS = 2600;
 const ATTN_WIGGLE_MS = 520;
 const ATTN_FADE_MS = 2000;
-const attnMat = (opacity: number) => new THREE.MeshBasicMaterial({ color: ATTN_COLOR, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
-const ATTN_MAT_INNER = attnMat(0.6);
-const ATTN_MAT_OUTER = attnMat(0.3);
+const ATTN_MAT = haloMat(ATTN_COLOR, 0.8, true);
 const reducedMotion = (): boolean => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
 /** Between 1° and 5° to either side, never quite straight. */
@@ -313,8 +326,7 @@ export class Board {
     const still = reducedMotion();
     const pulse = still ? 1 : 0.5 + 0.5 * Math.sin((now / ATTN_PULSE_MS) * Math.PI * 2);
     const fade = this.attnDeadline === null ? 1 : Math.max(0, Math.min(1, (this.attnDeadline - now) / ATTN_FADE_MS));
-    ATTN_MAT_INNER.opacity = (0.3 + 0.5 * pulse) * (0.25 + 0.75 * fade);
-    ATTN_MAT_OUTER.opacity = (0.1 + 0.3 * pulse) * (0.25 + 0.75 * fade);
+    ATTN_MAT.opacity = (0.55 + 0.45 * pulse) * (0.25 + 0.75 * fade);
     const phase = (now % ATTN_WIGGLE_EVERY_MS) / ATTN_WIGGLE_MS;
     const wiggle = still || phase >= 1 ? 0 : Math.sin(phase * Math.PI * 4) * (1 - phase) * (4 * Math.PI / 180);
     for (const obj of this.cards.values()) {
@@ -498,7 +510,7 @@ export class Board {
       const want = keys.has(obj.key) && !obj.removing;
       if (want && !obj.glow) {
         const g = new THREE.Group();
-        g.add(new THREE.Mesh(GLOW_INNER, GLOW_MAT_INNER), new THREE.Mesh(GLOW_OUTER, GLOW_MAT_OUTER));
+        g.add(new THREE.Mesh(HALO_GEOM, GLOW_MAT));
         obj.mesh.add(g);
         obj.glow = g;
       } else if (!want && obj.glow) {
@@ -517,7 +529,7 @@ export class Board {
       const want = keys.has(obj.key) && !obj.removing;
       if (want && !obj.attn) {
         const g = new THREE.Group();
-        g.add(new THREE.Mesh(GLOW_INNER, ATTN_MAT_INNER), new THREE.Mesh(GLOW_OUTER, ATTN_MAT_OUTER));
+        g.add(new THREE.Mesh(HALO_GEOM, ATTN_MAT));
         g.position.y = 0.002; // above the red outline if both are shown
         obj.mesh.add(g);
         obj.attn = g;
