@@ -660,9 +660,9 @@
     "G": 4
    },
    "abilityName": "Assess the Situation",
-   "abilityText": "You may use your hero's guile stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 2.",
+   "abilityText": "You may use your hero's guile stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
    "kind": "companion",
-   "revision": "Companions can now borrow the hero's stat too (up to 2); was a below-average card."
+   "revision": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
   },
   {
    "id": "posy-marchbank-marchguard-clerk",
@@ -679,9 +679,9 @@
     "G": 4
    },
    "abilityName": "Right-Hand Help",
-   "abilityText": "You may use your hero's mental stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 2.",
+   "abilityText": "You may use your hero's mental stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
    "kind": "companion",
-   "revision": "Companions can now borrow the hero's stat too (up to 2); was a below-average card."
+   "revision": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
   },
   {
    "id": "brisa-blastcap-bombardier",

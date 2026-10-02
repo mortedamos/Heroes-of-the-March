@@ -1253,14 +1253,14 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     expect(d.options.map((o) => o.value).filter((v) => v !== 'deck')).toHaveLength(4);
   });
 
-  it('Posy and Osric let one companion borrow the hero stat, up to +2', () => {
+  it('Posy and Osric let one companion borrow the hero stat, up to +1', () => {
     const g = newGame();
-    // Corvin: P4 M9 G5. Physical challenge. Posy P3, Pell P2: the best-placed companion gains +2 (cap), the other nothing.
+    // Corvin: P4 M9 G5. Physical challenge. Posy P3, Pell P2: the best-placed companion gains +1 (cap), the other nothing.
     standard(g, { companions: ['posy-marchbank-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
     restart(g);
     until(g, bidFor(g.A));
     const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.companions.reduce((a, c) => a + c.value, 0)).toBe(3 + 2 + 2);
+    expect(tb.companions.reduce((a, c) => a + c.value, 0)).toBe(3 + 2 + 1);
   });
 });
 

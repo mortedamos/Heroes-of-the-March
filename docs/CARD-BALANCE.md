@@ -115,3 +115,27 @@ node _build/balance/report.mjs docs/balance-data > docs/CARD-BALANCE-TABLES.md
 ```
 
 Each round uses a new `--from` offset (240, 480, … for heroes) so chunks never overlap; the report merges every `*-rN.json` file.
+
+## Companion redesign results (round 2)
+
+After the geese, Tobin, Tansy, Sigrun, Pell, Mogra, Nettle, Posy, Osric and Tova changes, the 13 changed companions were rerun with the same controlled method (1,200 games per card at 3 and 4 players, with and without the ability; data in `docs/balance-data/v2/`). All sit between 0.90 and 1.17 relative win rate (95% interval ±0.06), against 0.53–1.41 before for the full roster.
+
+| Card | Before | After | Notes |
+|---|---|---|---|
+| Honk | 0.88 | 0.95 | The reveal is used on about 20% of turns held. |
+| Waddle | 0.94 | 0.98 | |
+| Duchess (Hiss) | 0.98 | 1.05 | |
+| Cobra Chicken (Hiss) | 0.98 | 1.04 | |
+| Tobin | 1.03 | 0.98 | Fires on almost every game (0.7 effects per turn); ability worth ≈ 0 because Geese are rare. |
+| Tansy | 1.10 | 1.00 | Fires in about 22% of games where held 3+ turns. |
+| Tova | 0.95 | 0.93 | Now used (about 0.2 rests per turn, was 0 of 4,745 offers) but the ability is worth only +0.01. Still slightly low; a small stat buff would fix it. |
+| Mogra | 1.02 | 0.96 | |
+| Sigrun | 0.99 | 1.02 | Ability worth +0.03. |
+| Nettle | 1.02 | 1.00 | |
+| Pell (+2) | 1.02 | 1.14 | Ability worth +0.25. Slightly above the target band, kept at +2 as requested. |
+| Posy (cap +1) | 0.96 | 1.06 | |
+| Osric (cap +1) | 0.94 | 0.99 | |
+
+Posy and Osric were first measured with a +2 cap on the borrowed stat and came out too strong (1.17 and 1.14, ability worth +0.25 each, against about +0.09 predicted), so the cap was lowered to +1. The table shows the +1 results.
+
+Not yet measured: The Golden Egg (added after these runs), and Tobin and Tansy's effect on opponents' win rates.

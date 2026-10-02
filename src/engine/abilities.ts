@@ -526,8 +526,8 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G', companionLift: { stat: 'G', cap: 2 } },
-  'posy-marchbank-marchguard-clerk': { status: 'full', heroStatSub: 'M', companionLift: { stat: 'M', cap: 2 } },
+  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G', companionLift: { stat: 'G', cap: 1 } },
+  'posy-marchbank-marchguard-clerk': { status: 'full', heroStatSub: 'M', companionLift: { stat: 'M', cap: 1 } },
   'brisa-blastcap-bombardier': forceHero('P'),
   'mira-coldwater-the-stonetouched': {
     status: 'full',

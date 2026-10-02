@@ -110,11 +110,11 @@
     "note": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter."
   },
   "Posy Marchbank, Marchguard Clerk": {
-    "abilityText": "You may use your hero's mental stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 2.",
-    "note": "Companions can now borrow the hero's stat too (up to 2); was a below-average card."
+    "abilityText": "You may use your hero's mental stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
+    "note": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
   },
   "Sir Osric Vane, Marshal of the Old Guard": {
-    "abilityText": "You may use your hero's guile stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 2.",
-    "note": "Companions can now borrow the hero's stat too (up to 2); was a below-average card."
+    "abilityText": "You may use your hero's guile stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
+    "note": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
   }
 }
