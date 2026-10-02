@@ -29,7 +29,8 @@
   },
   "Tova Emberdeep, Keeper of the Underway Door": {
     "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
-    "note": "Now two extra cards on her return (was one)."
+    "note": "Now two extra cards on her return (was one); Physical 1 → 2 and Mental 3 → 4 (the ability alone didn't make up for resting).",
+    "stats": { "P": 2, "M": 4 }
   },
   "Old Hiss": {
     "name": "Cobra Chicken"
@@ -103,18 +104,19 @@
   },
   "Pell Quillon, Collegium Prodigy": {
     "abilityText": "At the end of bidding, as resource cards are revealed, if you played at least two resource cards, each of them gains 2 to its value.",
-    "note": "Bonus 1 → 2, and the wording now says when it applies (was worth almost nothing)."
+    "note": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 and Guile 3 → 2 to keep her from outperforming the rest.",
+    "stats": { "P": 1, "G": 2 }
   },
   "Nettle Burrows, Trouble Maker": {
     "stats": { "G": 5 },
     "note": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter."
   },
   "Posy Marchbank, Marchguard Clerk": {
-    "abilityText": "You may use your hero's mental stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
-    "note": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
+    "abilityText": "You may use your hero's mental stat in place of another stat. If you do, Posy gains +1 to mental for this encounter.",
+    "note": "Now also gains +1 when the swap is used (was a below-average card)."
   },
   "Sir Osric Vane, Marshal of the Old Guard": {
-    "abilityText": "You may use your hero's guile stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
-    "note": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
+    "abilityText": "You may use your hero's guile stat in place of another stat. If you do, Osric gains +1 guile for this encounter.",
+    "note": "Now also gains +1 when the swap is used (was a below-average card)."
   }
 }

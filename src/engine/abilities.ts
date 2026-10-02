@@ -98,8 +98,8 @@ export interface Ability {
   drawFromDiscardChoice?: boolean;
   /** Mogra: abilities of yours that reveal cards from a stack to see whether they work reveal one extra. */
   extraReveal?: boolean;
-  /** Posy, Osric: one of your companions may use your hero's `stat` in place of its own, gaining at most `cap`. */
-  companionLift?: { stat: Stat; cap: number };
+  /** Posy, Osric: when the hero's stat swap (heroStatSub) is used, this companion gains this much for the encounter. */
+  heroSubBonus?: number;
   /** Brunna: forced-stat effects on your cards apply only if they help you. */
   ignoreForcedStat?: boolean;
   /** Hobby: your first bid may be face down too. */
@@ -526,8 +526,8 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G', companionLift: { stat: 'G', cap: 1 } },
-  'posy-marchbank-marchguard-clerk': { status: 'full', heroStatSub: 'M', companionLift: { stat: 'M', cap: 1 } },
+  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G', heroSubBonus: 1 },
+  'posy-marchbank-marchguard-clerk': { status: 'full', heroStatSub: 'M', heroSubBonus: 1 },
   'brisa-blastcap-bombardier': forceHero('P'),
   'mira-coldwater-the-stonetouched': {
     status: 'full',

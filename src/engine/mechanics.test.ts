@@ -1253,14 +1253,23 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     expect(d.options.map((o) => o.value).filter((v) => v !== 'deck')).toHaveLength(4);
   });
 
-  it('Posy and Osric let one companion borrow the hero stat, up to +1', () => {
+  it('Posy and Osric gain +1 when the hero swap is used, and only then', () => {
+    // Corvin: P4 M9 G5. A Physical challenge: Mental 9 beats Physical 4, so Posy's swap is used and she gains +1.
     const g = newGame();
-    // Corvin: P4 M9 G5. Physical challenge. Posy P3, Pell P2: the best-placed companion gains +1 (cap), the other nothing.
-    standard(g, { companions: ['posy-marchbank-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    standard(g, { companions: ['posy-marchbank-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] });
     restart(g);
     until(g, bidFor(g.A));
-    const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.companions.reduce((a, c) => a + c.value, 0)).toBe(3 + 2 + 1);
+    const used = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
+    expect(used.companions.find((c) => c.source === card(g, 'posy-marchbank-marchguard-clerk'))?.value).toBe(3 + 1);
+    // Osric swaps Guile 5 for Physical 4: also used (+1). Guile 5 does not beat a Guile challenge, so no swap there.
+    const h = newGame();
+    standard(h, { companions: ['sir-osric-vane-marshal-of-the-old-guard', 'pell-quillon-collegium-prodigy'], hand: [] });
+    restart(h);
+    until(h, bidFor(h.A));
+    const osric = totalFor(new Ctx(h.s), player(h, h.A), () => true)!;
+    expect(osric.companions.find((c) => c.source === card(h, 'sir-osric-vane-marshal-of-the-old-guard'))?.value).toBe(4 + 1);
+    const onGuile = totalFor(new Ctx(h.s), player(h, h.A), () => true, 'G')!;
+    expect(onGuile.companions.find((c) => c.source === card(h, 'sir-osric-vane-marshal-of-the-old-guard'))?.value).toBe(4);
   });
 });
 
@@ -1295,7 +1304,9 @@ describe('bots and Tova', () => {
   it('rests when the turn is lost anyway', () => {
     expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], [])).toBe('rest');
   });
+});
 
+describe('The Golden Egg', () => {
   it('The Golden Egg is worth 1, plus 2 for every Goose in play, anyone\'s', () => {
     const value = (mine: string[], theirs: string[]) => {
       const g = newGame();

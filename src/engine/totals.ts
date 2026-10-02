@@ -109,22 +109,23 @@ function heroValue(ctx: Ctx, p: PlayerState, stat: Stat): number {
 }
 
 /**
- * Posy and Osric: one of the player's companions may use the hero's Mental / Guile in place of its own
- * stat, gaining at most `cap`. Applied to whichever companion gains most (a silenced one gains nothing).
+ * Posy and Osric: when the hero's stat swap is used (the hero's Mental / Guile beats the hero's stat in this
+ * challenge), the companion that provides it gains `heroSubBonus` for the encounter. If both are in play, the
+ * one providing the better swap gets it. A silenced companion contributes nothing, bonus included.
  */
-function liftOneCompanion(ctx: Ctx, p: PlayerState, companions: Contribution[]): void {
-  let lift: { stat: Stat; cap: number } | undefined;
-  for (const c of p.companions) lift ??= activeAbility(ctx, c)?.companionLift;
-  if (!lift) return;
-  const heroStat = (getDef(ctx.defId(p.hero)) as HeroDef).stats[lift.stat];
+function addSwapBonus(ctx: Ctx, p: PlayerState, stat: Stat, companions: Contribution[]): void {
+  const hero = getDef(ctx.defId(p.hero)) as HeroDef;
   let best: Contribution | null = null;
-  let bestGain = 0;
+  let bestSub = hero.stats[stat];
+  let bonus = 0;
   for (const c of companions) {
+    const a = activeAbility(ctx, c.source);
+    if (!a?.heroStatSub || !a.heroSubBonus) continue;
     if (activeEffects(ctx, 'silenceCompanion').some((e) => e.target === c.source)) continue;
-    const gain = Math.min(lift.cap, heroStat - c.value);
-    if (gain > bestGain) { best = c; bestGain = gain; }
+    const sub = hero.stats[a.heroStatSub];
+    if (sub > bestSub) { best = c; bestSub = sub; bonus = a.heroSubBonus; }
   }
-  if (best) best.value += bestGain;
+  if (best) best.value += bonus;
 }
 
 function companionValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat): number {
@@ -155,7 +156,7 @@ export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverrid
   if (!stat) return null;
   const hero = heroValue(ctx, p, stat);
   const companions = p.companions.map((c) => ({ source: c, value: companionValue(ctx, p, c, stat) }));
-  liftOneCompanion(ctx, p, companions);
+  addSwapBonus(ctx, p, stat, companions);
   if (companions.length > 2 && activeAbility(ctx, p.hero)?.extraCompanionHalf) {
     const weakest = companions.reduce((a, b) => (b.value < a.value ? b : a));
     weakest.value = Math.floor(weakest.value / 2);

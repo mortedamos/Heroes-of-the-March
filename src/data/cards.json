@@ -328,14 +328,14 @@
    "quote": "“Someone has to mind the door. Sigrun certainly won't.”",
    "art": "units__foehammer_3",
    "stats": {
-    "P": 1,
-    "M": 3,
+    "P": 2,
+    "M": 4,
     "G": 4
    },
    "abilityName": "Waiting at the Door",
    "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
    "kind": "companion",
-   "revision": "Now two extra cards on her return (was one)."
+   "revision": "Now two extra cards on her return (was one); Physical 1 → 2 and Mental 3 → 4 (the ability alone didn't make up for resting)."
   },
   {
    "id": "varg-ironjaw",
@@ -438,14 +438,14 @@
    "quote": "“I've checked it four times. The odds are terrible. I'm coming anyway.”",
    "art": "units__wizard_1",
    "stats": {
-    "P": 2,
+    "P": 1,
     "M": 5,
-    "G": 3
+    "G": 2
    },
    "abilityName": "Proofs and Theorems",
    "abilityText": "At the end of bidding, as resource cards are revealed, if you played at least two resource cards, each of them gains 2 to its value.",
    "kind": "companion",
-   "revision": "Bonus 1 → 2, and the wording now says when it applies (was worth almost nothing)."
+   "revision": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 and Guile 3 → 2 to keep her from outperforming the rest."
   },
   {
    "id": "nettle-burrows-trouble-maker",
@@ -660,9 +660,9 @@
     "G": 4
    },
    "abilityName": "Assess the Situation",
-   "abilityText": "You may use your hero's guile stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
+   "abilityText": "You may use your hero's guile stat in place of another stat. If you do, Osric gains +1 guile for this encounter.",
    "kind": "companion",
-   "revision": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
+   "revision": "Now also gains +1 when the swap is used (was a below-average card)."
   },
   {
    "id": "posy-marchbank-marchguard-clerk",
@@ -679,9 +679,9 @@
     "G": 4
    },
    "abilityName": "Right-Hand Help",
-   "abilityText": "You may use your hero's mental stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 1.",
+   "abilityText": "You may use your hero's mental stat in place of another stat. If you do, Posy gains +1 to mental for this encounter.",
    "kind": "companion",
-   "revision": "Companions can now borrow the hero's stat too (up to 1); was a below-average card."
+   "revision": "Now also gains +1 when the swap is used (was a below-average card)."
   },
   {
    "id": "brisa-blastcap-bombardier",
