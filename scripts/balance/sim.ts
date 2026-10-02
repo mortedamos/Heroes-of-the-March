@@ -258,3 +258,26 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   for (const [key, v] of used) { const [owner, def] = key.split('|') as [string, string]; if (!held[owner]?.has(def)) aggOf(cards, def).used += v; }
   return { n, turns: state.turn.number, winner: winnerId ? state.players.findIndex((p) => p.id === winnerId) : -1, players, capped };
 }
+
+// --- shards: the unit of saved results -----------------------------------------------
+
+export interface Cell { games: number; wins: number; turns: number; falls: number; capped: number; posGames: number[]; posWins: number[] }
+export interface Shard { experiment: string; args: Record<string, string>; cells: Record<string, Cell>; cards: AggMap; games: number }
+
+export const newCell = (): Cell => ({ games: 0, wins: 0, turns: 0, falls: 0, capped: 0, posGames: Array(6).fill(0), posWins: Array(6).fill(0) });
+
+export function merge(parts: Shard[]): Shard {
+  const out: Shard = { experiment: parts[0]!.experiment, args: parts[0]!.args, cells: {}, cards: {}, games: 0 };
+  for (const p of parts) {
+    out.games += p.games;
+    mergeAgg(out.cards, p.cards);
+    for (const [k, c] of Object.entries(p.cells)) {
+      const t = (out.cells[k] ??= newCell());
+      t.games += c.games; t.wins += c.wins; t.turns += c.turns; t.falls += c.falls; t.capped += c.capped;
+      c.posGames.forEach((v, i) => { t.posGames[i]! += v; });
+      c.posWins.forEach((v, i) => { t.posWins[i]! += v; });
+    }
+  }
+  return out;
+}
+

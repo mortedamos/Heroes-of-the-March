@@ -7,12 +7,8 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BotLevel } from '../../src/bots/heuristic';
-import { companionIds, heroIds, mergeAgg, mix, mulberry, playGame, strip, type AggMap, type GameSpec } from './sim';
+import { companionIds, heroIds, merge, mix, mulberry, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
 
-export interface Cell { games: number; wins: number; turns: number; falls: number; capped: number; posGames: number[]; posWins: number[] }
-export interface Shard { experiment: string; args: Record<string, string>; cells: Record<string, Cell>; cards: AggMap; games: number }
-
-const newCell = (): Cell => ({ games: 0, wins: 0, turns: 0, falls: 0, capped: 0, posGames: Array(6).fill(0), posWins: Array(6).fill(0) });
 
 function parseArgs(argv: string[]): { pos: string[]; opt: Record<string, string> } {
   const pos: string[] = [], opt: Record<string, string> = {};
@@ -27,6 +23,7 @@ const hashStr = (s: string): number => { let h = 2166136261; for (const c of s) 
 
 function runShard(experiment: string, opt: Record<string, string>, shard: number, shards: number): Shard {
   const games = Number(opt.games ?? 200);
+  const from = Number(opt.from ?? 0);
   const base = Number(opt.seed ?? 1);
   const ns = (opt.ns ?? '3,4').split(',').map(Number);
   const level = (opt.level ?? 'normal') as BotLevel;
@@ -45,7 +42,7 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
   const heroes = heroIds(), comps = companionIds();
 
   if (experiment === 'hero') {
-    for (const h of heroes) for (const n of ns) for (let g = shard; g < games; g += shards) {
+    for (const h of heroes) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
       const seed = mix(base, hashStr(h), n, g);
       const r = mulberry(mix(seed, 1));
       const others = heroes.filter((x) => x !== h);
@@ -62,7 +59,7 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
       played++;
     }
   } else if (experiment === 'comp') {
-    for (const c of comps) for (const n of ns) for (let g = shard; g < games; g += shards) {
+    for (const c of comps) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
       const seed = mix(base, hashStr(c), n, g);
       const seat = g % n;
       const restore = ablate ? strip(c) : () => {};
@@ -74,7 +71,7 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
     }
   } else if (experiment === 'nat') {
     const cycle = [3, 4, 3, 4, 5, 2, 6];
-    for (let g = shard; g < games; g += shards) {
+    for (let g = from + shard; g < from + games; g += shards) {
       const n = cycle[g % cycle.length]!;
       const seed = mix(base, 0x9a7, g);
       const rec = playGame({ n, seed, level }, cards);
@@ -85,21 +82,6 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
     }
   } else throw new Error(`unknown experiment ${experiment}`);
   return { experiment, args: opt, cells, cards, games: played };
-}
-
-function merge(parts: Shard[]): Shard {
-  const out: Shard = { experiment: parts[0]!.experiment, args: parts[0]!.args, cells: {}, cards: {}, games: 0 };
-  for (const p of parts) {
-    out.games += p.games;
-    mergeAgg(out.cards, p.cards);
-    for (const [k, c] of Object.entries(p.cells)) {
-      const t = (out.cells[k] ??= newCell());
-      t.games += c.games; t.wins += c.wins; t.turns += c.turns; t.falls += c.falls; t.capped += c.capped;
-      c.posGames.forEach((v, i) => { t.posGames[i]! += v; });
-      c.posWins.forEach((v, i) => { t.posWins[i]! += v; });
-    }
-  }
-  return out;
 }
 
 async function main(): Promise<void> {

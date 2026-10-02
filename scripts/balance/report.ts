@@ -1,13 +1,17 @@
 // Turns the raw experiment JSON in docs/balance-data into docs/CARD-BALANCE.md tables.
 //   node _build/balance/report.mjs [dataDir] > docs/CARD-BALANCE-TABLES.md
 
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { allDefs, getDef } from '../../src/engine/cards';
-import { describeAbility, type CardAgg } from './sim';
-import type { Cell, Shard } from './cli';
+import { describeAbility, merge, type CardAgg, type Cell, type Shard } from './sim';
 
 const dir = process.argv[2] ?? 'docs/balance-data';
-const load = (f: string): Shard | null => existsSync(`${dir}/${f}`) ? JSON.parse(readFileSync(`${dir}/${f}`, 'utf8')) as Shard : null;
+/** Merge every chunk file for an experiment (hero-r1.json, hero-r2.json, ...). */
+const load = (name: string): Shard | null => {
+  const re = new RegExp(`^${name}(-r\\d+)?\\.json$`);
+  const parts = readdirSync(dir).filter((f) => re.test(f)).sort().map((f) => JSON.parse(readFileSync(`${dir}/${f}`, 'utf8')) as Shard);
+  return parts.length ? merge(parts) : null;
+};
 
 const pct = (x: number, d = 1) => (x * 100).toFixed(d);
 const wilson = (w: number, n: number): [number, number] => {
@@ -76,7 +80,7 @@ function perCard(exp: Shard | null, ab: Shard | null, kind: 'hero' | 'companion'
 }
 
 const out: string[] = [];
-const hero = load('hero.json'), heroAb = load('hero-ablate.json'), comp = load('comp.json'), compAb = load('comp-ablate.json'), nat = load('nat.json');
+const hero = load('hero'), heroAb = load('hero-ablate'), comp = load('comp'), compAb = load('comp-ablate'), nat = load('nat');
 
 out.push('## Heroes (controlled: each hero dealt to a rotating seat, other seats dealt random heroes)', '');
 perCard(hero, heroAb, 'hero', out);
