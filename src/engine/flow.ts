@@ -371,14 +371,14 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       if (bid) {
         bid.visible = true;
         ctx.emit({ type: 'revealed', player: p.id, card: ctx.ref(bid.card) });
-        // Loremaster Oskar Grimgate: once per turn, on any turn, a card being turned face up may count negative.
+        // Loremaster Oskar Grimgate: once per turn, on any turn, a card being turned face up may count as zero.
         const holder = ctx.clockwise().map((x) => ({ x, card: playerHas(ctx, x, (a) => a.negateReveals) })).find((h) => h.card && !t.used[usageKey(h.card, 'negate')]);
         const oskar = holder?.card ?? null;
         if (holder && oskar && resourceValue(ctx, p, bid.card) > 0) {
           ctx.queue({
             t: 'choose', purpose: 'oskarNegate', player: holder.x.id, source: ctx.def(oskar).name,
-            prompt: `The Book of Grudges: make ${p.name}'s ${ctx.def(bid.card).name} count as a negative?`,
-            options: [{ value: 'negate', label: 'Count it as a negative', card: { def: ctx.defId(bid.card), id: bid.card } }, { value: 'keep', label: 'Leave it' }],
+            prompt: `The Book of Grudges: make ${p.name}'s ${ctx.def(bid.card).name} count as zero?`,
+            options: [{ value: 'negate', label: 'Count it as zero', card: { def: ctx.defId(bid.card), id: bid.card } }, { value: 'keep', label: 'Leave it' }],
             min: 1, max: 1, data: { card: bid.card, source: oskar },
           });
         }
@@ -868,7 +868,7 @@ export function applyChoice(
         if (pick === 'negate') {
           const source = String(data['source']);
           ctx.s.turn.used[usageKey(source, 'negate')] = 1; // once per turn
-          ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(source), ability: 'negate', label: 'Make a revealed card count as a negative' });
+          ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(source), ability: 'negate', label: 'Make a revealed card count as zero' });
           addEffect(ctx, { kind: 'negateBid', source, owner: p.id, target: String(data['card']) });
         }
         break;

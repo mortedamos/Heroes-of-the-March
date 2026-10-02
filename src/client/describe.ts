@@ -86,7 +86,7 @@ function describeEffect(e: Extract<ClientEvent, { type: 'effect' }>, view: GameV
     case 'forceHeroStat': return `${src}: ${e.targetPlayer === view.you ? 'your' : `${who(e.targetPlayer)}'s`} hero must contribute ${stat(ef.stat)}.`;
     case 'statBonus': return `${src}: ${who(e.targetPlayer)} ${(ef.amount ?? 0) >= 0 ? 'gain' : 'lose'}${e.targetPlayer === view.you ? '' : 's'} ${Math.abs(ef.amount ?? 0)} to ${stat(ef.stat)}.`;
     case 'heroMultiplier': return `${src}: ${e.targetPlayer === view.you ? 'your' : `${who(e.targetPlayer)}'s`} hero's stats are doubled.`;
-    case 'negateBid': return `${src}: ${target} now counts as a negative!`;
+    case 'negateBid': return `${src}: ${target} now counts as zero!`;
     case 'disableAbilities': return `${src}: ${target}'s ability is disabled for the rest of the turn.`;
     case 'autoWin': return `${src}: ${who(e.targetPlayer)} will take the location, whatever the totals!`;
   }

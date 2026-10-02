@@ -65,7 +65,7 @@
   },
   "Loremaster Oskar Grimgate": {
     "abilityName": "The Book of Grudges",
-    "abilityText": "Once per turn, on any turn, when a face-down resource card is turned face up, you may have any numeric bonus it grants count as a negative instead.",
+    "abilityText": "Once per turn, on any turn, when a face-down resource card is turned face up, you may have any numeric bonus it grants count as zero instead.",
     "note": "Now once per turn (was every card revealed on your turn); ability renamed The Book of Grudges."
   },
   "Honk, the Goose Rout Veteran": {

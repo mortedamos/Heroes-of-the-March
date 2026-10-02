@@ -229,6 +229,8 @@ body.shape-short .card-btn.fan { transform: none; }
   font-weight: bold; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 0 10px rgba(79, 184, 255, 0.75);
 }
 @media (hover: hover) { .ability-ok:hover { background: #2a97e6; } }
+.ability-ok.skip { background: #5b4a36; border-color: #d9c9a8; box-shadow: none; }
+@media (hover: hover) { .ability-ok.skip:hover { background: #75604a; } }
 
 /* Log */
 .log {

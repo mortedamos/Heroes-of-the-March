@@ -66,7 +66,7 @@ export type EffectKind =
   | 'forceHeroStat'      // target player's hero contributes `stat` instead (Hugo, Caelan, Brisa, Clemence)
   | 'statBonus'          // target player gains `amount` to `stat` ('all' = every stat) (Vaelis, geese)
   | 'heroMultiplier'     // target player's hero stats x `amount` (Mags)
-  | 'negateBid'          // target bid's value counts negative (Oskar)
+  | 'negateBid'          // target bid's value counts as zero (Oskar)
   | 'disableAbilities'   // target hero/companion's abilities are off this turn (Aldric)
   | 'autoWin';           // target player wins this encounter (Mira)
 

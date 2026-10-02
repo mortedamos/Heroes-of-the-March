@@ -106,7 +106,7 @@ export interface Ability {
   mayBidFaceDown?: boolean;
   /** Hesk: one extra use per turn of a companion's once-per-turn ability. */
   reuseCompanionAbility?: boolean;
-  /** Oskar: once per turn, on any turn, a face-down card being revealed may count negative. */
+  /** Oskar: once per turn, on any turn, a face-down card being revealed may count as zero. */
   negateReveals?: boolean;
   /** Tova: when this resting companion returns, draw a resource. */
   restReturnDraw?: boolean;

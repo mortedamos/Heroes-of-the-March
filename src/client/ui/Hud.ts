@@ -31,6 +31,8 @@ function thumbSizes(): { hand: number; option: number; drawn: number } {
 
 export interface HudDeps {
   send(cmd: Command): void;
+  /** Skip a usable ability for now (the Skip button on its card). */
+  skipAbility(cardId: string, ability: string): void;
   newGame(): void;
   project(x: number, y: number, z: number): { x: number; y: number };
 }
@@ -77,7 +79,7 @@ function effectTag(e: EffectView): string {
     case 'forceHeroStat': return `Hero → ${stat}`;
     case 'statBonus': return `${(e.amount ?? 0) >= 0 ? '+' : ''}${e.amount} ${stat}`;
     case 'heroMultiplier': return 'Hero ×2';
-    case 'negateBid': return `${tgt} negative`;
+    case 'negateBid': return `${tgt} zero`;
     case 'disableAbilities': return `${tgt} disabled`;
     case 'autoWin': return 'Takes the location';
   }
@@ -184,10 +186,14 @@ export class Hud {
     const v = this.view;
     const ready = v && cardId ? attentionOf(v).filter((a) => a.cardId === cardId) : [];
     const name = (getDef(def) as { abilityName?: string }).abilityName ?? '';
-    const actions: InspectAction[] = ready.map((a) => ({
-      label: 'OK', primary: true, ability: { name: ready.length > 1 || !name ? a.label : name },
-      run: () => { this.unpin(); this.deps.send({ type: 'ability.use', decision: a.decision, source: a.cardId, ability: a.ability }); },
-    }));
+    // Each ability gets an OK and a Skip button, in that order (placeAbilityButtons relies on the pairs).
+    const actions: InspectAction[] = ready.flatMap((a) => {
+      const ability = { name: ready.length > 1 || !name ? a.label : name };
+      return [
+        { label: 'OK', primary: true, ability, run: () => { this.unpin(); this.deps.send({ type: 'ability.use', decision: a.decision, source: a.cardId, ability: a.ability }); } },
+        { label: 'Skip', ability, run: () => { this.unpin(); this.deps.skipAbility(a.cardId, a.ability); } },
+      ];
+    });
     this.pinnedCardId = cardId;
     this.inspect(def, true, actions);
     if (ready.length) this.pinnedFor = ready[0]!.decision;
@@ -834,7 +840,7 @@ export class Hud {
           h('button', { class: 'btn', on: { click: () => this.disarmAndRender() } }, 'Cancel')) : ''),
       isPinned ? h('button', { class: 'inspector-close', aria: { label: 'Close card' }, on: { click: () => this.disarmAndRender() } }, '×') : '',
       // OK buttons for usable abilities sit on the card face itself, beside the ability text.
-      ...abilityActs.map((a) => h('button', { class: 'ability-ok', title: a.ability!.name, on: { click: a.run } }, a.label)));
+      ...abilityActs.map((a) => h('button', { class: `ability-ok${a.label === 'Skip' ? ' skip' : ''}`, title: a.ability!.name, on: { click: a.run } }, a.label)));
     this.abilityOk = abilityActs.length ? { def: show, buttons: [...this.inspector.querySelectorAll<HTMLElement>('.ability-ok')], img } : null;
     if (abilityActs.length) img.dataset['tilt'] = '0'; // a leaning card would slide away from its button
     this.inspector.classList.toggle('pinned', isPinned);
@@ -850,7 +856,7 @@ export class Hud {
     if (this.abilityOk && this.abilityRaf === null) this.abilityRaf = requestAnimationFrame(() => this.trackAbilityButtons());
   }
 
-  /** Put each OK button on the card face, at the right end of the ability name (or just under the ability text). */
+  /** Put each OK / Skip pair on the card face, at the right end of the ability name (or just under the ability text). */
   private placeAbilityButtons(): void {
     const o = this.abilityOk;
     if (!o || !o.img.isConnected) return;
@@ -863,11 +869,13 @@ export class Hud {
     const left = r.left + (contain ? (r.width - CARD_W * scale) / 2 : 0);
     const posY = Number.parseFloat(cs.objectPosition.split(' ')[1] ?? '50');
     const top = r.top + (contain ? ((r.height - CARD_H * scale) * (Number.isFinite(posY) ? posY : 50)) / 100 : 0);
-    const btnW = 96, btnH = Math.max(box.nameH + 8, 30);
-    const onNameLine = box.nameW + btnW + 14 <= box.w;
+    // OK and Skip side by side, one row per ability.
+    const btnW = 70, gap = 6, btnH = Math.max(box.nameH + 8, 30);
+    const onNameLine = box.nameW + btnW * 2 + gap + 14 <= box.w;
     o.buttons.forEach((b, i) => {
-      const y = (onNameLine ? box.nameY - 4 : box.textBottom + 2) + i * (btnH + 4);
-      const x = box.x + box.w - btnW;
+      const row = Math.floor(i / 2), col = i % 2;
+      const y = (onNameLine ? box.nameY - 4 : box.textBottom + 2) + row * (btnH + 4);
+      const x = box.x + box.w - (btnW * 2 + gap) + col * (btnW + gap);
       b.style.left = `${left + x * scale}px`;
       b.style.top = `${top + y * scale}px`;
       b.style.width = `${btnW * scale}px`;

@@ -146,8 +146,8 @@ export function resourceValue(ctx: Ctx, owner: PlayerState, card: CardId): numbe
     if (ctx.s.turn.wandsDisabled) return 0;
     for (const c of owner.companions) v += activeAbility(ctx, c)?.wandBonus ?? 0;
   }
-  // Oskar: "any numeric bonus it grants counts as a negative instead".
-  if (v > 0 && activeEffects(ctx, 'negateBid').some((e) => e.target === card && hostileApplies(ctx, owner, e.owner))) v = -v;
+  // Oskar: "any numeric bonus it grants counts as zero instead".
+  if (v > 0 && activeEffects(ctx, 'negateBid').some((e) => e.target === card && hostileApplies(ctx, owner, e.owner))) v = 0;
   return v;
 }
 

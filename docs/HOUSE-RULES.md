@@ -50,7 +50,7 @@ card text left room for interpretation:
 | Aldric (Shield of the Dawn) | Disables one opposing hero's or companion's abilities for the rest of the turn and cancels effects it made this turn; can't undo completed actions. |
 | Forced stats | The forced stat replaces the card's own substitutions. Brunna's player takes the higher value. Hobby's player draws whenever anyone is forced. |
 | Iron Mites | Players with companions roll; the lowest (ties re-roll) gives one of their *own* companions as a minion, adding its challenge stat; discarded at end of turn. |
-| Oskar | Once per turn, on any turn, a face-down card with a positive value may be made to count negative as it's revealed. |
+| Oskar | Once per turn, on any turn, a face-down card with a positive value may be made to count as zero as it's revealed. |
 | Mira | End of bidding: take the location regardless of totals; discard your hand; your hero falls (Shield of Xorthalos prevents it, the Amulet doesn't). |
 | Mags | Discarded at end of turn only if used. |
 | Hobby | First bid may be face down; cards still reveal in the normal reveal step. |

@@ -292,7 +292,7 @@ describe('silence, steal, negate, swap', () => {
     expect(JSON.stringify(viewFor(g.s, g.A))).not.toContain(`"${card(g, 'the-axe-of-doom')}"`);
   });
 
-  it('Oskar makes a revealed card count negative', () => {
+  it('Oskar makes a revealed card count as zero', () => {
     const g = newGame();
     standard(g, { companions: ['loremaster-oskar-grimgate', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['honey-biscuit', 'the-axe-of-doom'] });
     restart(g);
@@ -305,8 +305,8 @@ describe('silence, steal, negate, swap', () => {
     finishTurn(g);
     const outcome = g.events.find((e) => e.type === 'outcome');
     const row = outcome?.type === 'outcome' ? outcome.result.rows.find((r) => r.player === g.B) : undefined;
-    // Maren P6 + Waddle P4 + Tobin P3 + biscuit 1 - axe 4
-    expect(row?.total).toBe(6 + 4 + 3 + 1 - 4);
+    // Maren P6 + Waddle P4 + Tobin P3 + biscuit 1 + axe 0 (instead of 4)
+    expect(row?.total).toBe(6 + 4 + 3 + 1);
   });
 
   it('Oskar works on other players\x27 turns too', () => {
@@ -343,6 +343,21 @@ describe('silence, steal, negate, swap', () => {
     });
     expect(offers).toBe(1);
     expect(g.events.filter((e) => e.type === 'abilityUsed' && e.ability === 'negate')).toHaveLength(1);
+  });
+
+  it('face-down cards are turned up one per player, taking turns', () => {
+    const g = newGame();
+    standard(g, { hand: ['honey-biscuit', 'tin-whistle', 'sprig-of-heather'] }, { hand: ['feathered-cap', 'jesters-cap', 'bag-of-toffees'] });
+    restart(g);
+    const n = g.events.length;
+    until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve', (_s, d) => {
+      if (d.kind !== 'bid') return undefined;
+      const mine = player(g, d.player).hand;
+      return mine.length ? { type: 'bid.play', decision: d.id, card: mine[0]! } : { type: 'bid.pass', decision: d.id };
+    });
+    const order = g.events.slice(n).flatMap((e) => (e.type === 'revealed' ? [e.player] : []));
+    expect(order.length).toBeGreaterThanOrEqual(4);
+    for (let i = 1; i < order.length; i++) expect(order[i]).not.toBe(order[i - 1]); // never the same player twice in a row
   });
 
   it('An Apple for the Road swaps with another bid', () => {

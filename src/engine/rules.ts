@@ -127,7 +127,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'iron-mites', topic: 'Iron Mites',
     ruling: 'Players with companions roll; the lowest roller (ties re-roll) gives one of their own companions to the encounter as a minion. It adds its stat for the challenge to the difficulty and is discarded at the end of the turn.' },
   { id: 'oskar', topic: 'Loremaster Oskar',
-    ruling: 'Once per turn, on any player\'s turn, a face-down card turned face up with a positive value may be made to count negative (Oskar\'s controller decides).' },
+    ruling: 'Once per turn, on any player\'s turn, a face-down card turned face up with a positive value may be made to count as zero (Oskar\'s controller decides).' },
   { id: 'ilvena', topic: 'Elder Ilvena (Ruling of the Conclave)',
     ruling: 'Before bidding, once per turn: discard a resource card from your hand (the price, paid first), then choose another player\'s companion. It contributes its lowest stat this turn instead of its usual one. Aldric and Brunna can still cancel it like any forcing effect.' },
   { id: 'mira', topic: 'Mira Coldwater',

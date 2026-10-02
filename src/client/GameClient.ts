@@ -15,9 +15,6 @@ import { sfx, type SfxName } from './audio/Sfx';
 import { THEME_SOUND, themeForAbility, type Theme } from './ui/themes';
 import { isTouch, syncBodyClasses } from './viewport';
 
-/** How long a glowing card waits for a click before its chance passes by (ms). */
-const READY_PASS_MS = 8000;
-
 const ERROR_TEXT: Record<string, string> = {
   stale_decision: 'That choice was already made.',
   not_your_decision: "It isn't your decision.",
@@ -70,7 +67,7 @@ function afflictionsOf(view: GameView): Map<string, string[]> {
       case 'silenceCompanion': add(e.targetCard?.id, `Silenced: contributes nothing ${by}`); break;
       case 'forceCompanionStat': add(e.targetCard?.id, `Forced to use ${stat} ${by}`); break;
       case 'forceHeroStat': add(view.players.find((p) => p.id === e.targetPlayer)?.hero?.id, `Forced to use ${stat} ${by}`); break;
-      case 'negateBid': add(e.targetCard?.id, `Counts as a negative ${by}`); break;
+      case 'negateBid': add(e.targetCard?.id, `Counts as zero ${by}`); break;
       case 'disableAbilities': add(e.targetCard?.id, `Abilities disabled ${by}`); break;
       default: break;
     }
@@ -132,9 +129,8 @@ export class GameClient {
   private afflictions = new Map<string, string[]>();
   /** Ready abilities already chimed for (turn:card:ability), so repeated bid decisions don't nag. */
   private readySeen = new Set<string>();
-  /** Ready abilities that were ignored until the window passed (turn:card:ability): not offered again that turn. */
-  private passedBy = new Set<string>();
-  private readyTimer: ReturnType<typeof setInterval> | null = null;
+  /** Abilities the player skipped (turn:card:ability:window): no glow for that window, but later windows still offer them. */
+  private skipped = new Set<string>();
   /** The table card under the pointer, if any. */
   private hoverKey: string | null = null;
   /** Animations still playing; an announcement waits for them so it appears after the zap. */
@@ -169,6 +165,7 @@ export class GameClient {
     this.unhook.push(() => window.removeEventListener('resize', this.onResize));
     this.hud = new Hud(overlay, {
       send: (cmd) => this.send(cmd),
+      skipAbility: (cardId, ability) => this.skipAbility(cardId, ability),
       newGame: onNewGame,
       project: (x, y, z) => this.scene.project(x, y, z),
     });
@@ -259,19 +256,15 @@ export class GameClient {
   /**
    * Cards that can act now glow, wiggle and chime (once per ability per turn).
    *
-   * An ability window needs an answer, so if the player ignores the glowing cards for a while the client
-   * passes for them (the glow dims over the last 2 s). The wait pauses while a card view is open or the
-   * pointer is on a glowing card. An ability that passed by is not offered again this turn.
+   * Nothing times out: the window waits until the player uses the ability (OK on the card) or skips it
+   * (Skip on the card, or "Not now" in the dock). When every ability on offer has been skipped, the window
+   * is answered for the player.
    */
   private signalReadyAbilities(view: GameView): void {
-    this.stopReadyTimer();
-    let ready = attentionOf(view);
+    const all = attentionOf(view);
     const pending = view.pending;
-    const window = pending?.detail?.kind === 'activate';
-    const key = (a: { cardId: string; ability: string }) => `${view.turn.number}:${a.cardId}:${a.ability}`;
-    if (window) ready = ready.filter((a) => !this.passedBy.has(key(a)));
-    if (window && pending && ready.length === 0 && attentionOf(view).length > 0) {
-      // Everything on offer already passed by this turn: answer for the player at once.
+    const ready = all.filter((a) => !this.skipped.has(this.skipKey(view, a)));
+    if (pending?.detail?.kind === 'activate' && ready.length === 0 && all.length > 0) {
       const decision = pending.id;
       queueMicrotask(() => { if (!this.disposed) this.send({ type: 'ability.done', decision }); });
     }
@@ -280,34 +273,27 @@ export class GameClient {
     document.body.dataset['abilityReady'] = ready.length ? ready.map((a) => a.cardId).join(',') : ''; // for tests and styling
     let fresh = false;
     for (const a of ready) {
-      if (!this.readySeen.has(key(a))) { this.readySeen.add(key(a)); fresh = true; }
+      const k = `${view.turn.number}:${a.cardId}:${a.ability}`;
+      if (!this.readySeen.has(k)) { this.readySeen.add(k); fresh = true; }
     }
     if (fresh) sfx.play('ability-ready');
-    if (window && pending && ready.length > 0) this.startReadyTimer(pending.id, ready.map(key), new Set(ready.map((a) => a.cardId)));
   }
 
-  private startReadyTimer(decision: number, keys: string[], cards: Set<string>): void {
-    let deadline = performance.now() + READY_PASS_MS;
-    this.board.setAttentionDeadline(deadline);
-    this.readyTimer = setInterval(() => {
-      const now = performance.now();
-      // Reading a glowing card (its view is open, or the pointer is on it) holds the window open.
-      if (this.hud.pinnedCard !== null || (this.hoverKey !== null && cards.has(this.hoverKey))) {
-        deadline = now + READY_PASS_MS;
-        this.board.setAttentionDeadline(deadline);
-        return;
-      }
-      if (now < deadline) return;
-      this.stopReadyTimer();
-      for (const k of keys) this.passedBy.add(k);
-      this.board.setAttention(new Set());
-      this.send({ type: 'ability.done', decision });
-    }, 200);
+  /** The skip is per window (or per bid decision), so an ability skipped now is still offered at its next window. */
+  private skipKey(view: GameView, a: { cardId: string; ability: string }): string {
+    const d = view.pending?.detail;
+    const scope = d?.kind === 'activate' ? d.window : `bid${view.pending?.id ?? 0}`;
+    return `${view.turn.number}:${a.cardId}:${a.ability}:${scope}`;
   }
 
-  private stopReadyTimer(): void {
-    if (this.readyTimer) clearInterval(this.readyTimer);
-    this.readyTimer = null;
+  /** The Skip button on a card: stop offering this ability in this window. */
+  private skipAbility(cardId: string, ability: string): void {
+    const view = this.view;
+    if (!view) return;
+    const a = attentionOf(view).find((x) => x.cardId === cardId && x.ability === ability);
+    if (!a) return;
+    this.skipped.add(this.skipKey(view, a));
+    this.signalReadyAbilities(view);
   }
 
   private async present(view: GameView, events: ClientEvent[]): Promise<void> {
@@ -644,7 +630,6 @@ export class GameClient {
 
   dispose(): void {
     this.disposed = true;
-    this.stopReadyTimer();
     this.caseGate?.resolve();
     this.die.hide();
     for (const u of this.unhook) u();
