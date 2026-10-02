@@ -104,8 +104,8 @@
   },
   "Pell Quillon, Collegium Prodigy": {
     "abilityText": "At the end of bidding, as resource cards are revealed, if you played at least two resource cards, each of them gains 2 to its value.",
-    "note": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 and Guile 3 → 2 to keep her from outperforming the rest.",
-    "stats": { "P": 1, "G": 2 }
+    "note": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 to keep her from outperforming the rest.",
+    "stats": { "P": 1, "G": 3 }
   },
   "Nettle Burrows, Trouble Maker": {
     "stats": { "G": 5 },

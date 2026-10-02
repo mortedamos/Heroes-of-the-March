@@ -152,3 +152,7 @@ Tova 1/3/4 → 2/4/4; Pell 2/5/3 → 1/5/2 (ability still +2); Posy and Osric no
 | Sir Osric Vane | 0.99 (cap +1) | **0.97** |
 
 All four sit inside the 0.9–1.1 target band. Pell overshot a little downward (about 0.97 against a predicted 1.10); a one-point stat restore would put her near 1.0 if you want it. The Golden Egg was in the deck for this run (75 resource cards).
+
+### Pell, Guile +1
+
+Pell is now 1/5/3 (Guile 2 → 3). Rerun with the same seed (2,400 games, ±0.06; `docs/balance-data/v2/comp-pell-g3.json`): **0.99** relative win rate, up from 0.97.

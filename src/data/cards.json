@@ -440,12 +440,12 @@
    "stats": {
     "P": 1,
     "M": 5,
-    "G": 2
+    "G": 3
    },
    "abilityName": "Proofs and Theorems",
    "abilityText": "At the end of bidding, as resource cards are revealed, if you played at least two resource cards, each of them gains 2 to its value.",
    "kind": "companion",
-   "revision": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 and Guile 3 → 2 to keep her from outperforming the rest."
+   "revision": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 to keep her from outperforming the rest."
   },
   {
    "id": "nettle-burrows-trouble-maker",
