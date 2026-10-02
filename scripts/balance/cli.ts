@@ -1,5 +1,6 @@
 // Usage (after `npm run balance:build`):
-//   node _build/balance/cli.mjs run <hero|comp|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--out file.json]
+//   node _build/balance/cli.mjs run <hero|comp|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--only id,id] [--out file.json]
+//   (--only keeps just the companions whose id contains one of the given fragments; comp experiment only)
 // Experiments are fully determined by (seed, game index): rerunning gives identical numbers.
 
 import { spawn } from 'node:child_process';
@@ -39,7 +40,9 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
     c.falls += me.falls;
     c.posGames[me.pos]!++; if (me.won) c.posWins[me.pos]!++;
   };
-  const heroes = heroIds(), comps = companionIds();
+  const only = (opt.only ?? '').split(',').filter(Boolean);
+  const pick = (ids: string[]) => (only.length ? ids.filter((id) => only.some((o) => id.includes(o))) : ids);
+  const heroes = heroIds(), comps = pick(companionIds());
 
   if (experiment === 'hero') {
     for (const h of heroes) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
