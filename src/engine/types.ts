@@ -216,7 +216,7 @@ export type ChoosePurpose =
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
   | 'counterAbility' | 'oskarNegate' | 'appleSwap'
   | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'companionMinion'
-  | 'heroDraft' | 'heroKeep' | 'companionDraft' | 'companionPick';
+  | 'heroDraft' | 'heroKeep' | 'companionDraft';
 
 export type Decision = CompanionOfferDecision | CompanionPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;
 

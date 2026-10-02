@@ -130,11 +130,6 @@ describe('authorization and atomicity', () => {
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     s = r.state;
-    const pickD = s.pending!;
-    if (pickD.kind !== 'choose') throw new Error('expected a pick');
-    const picked = applyCommand(s, pickD.player, { type: 'choose', decision: pickD.id, picks: [pickD.options[0]!.value] });
-    if (!picked.ok) throw new Error(picked.error);
-    s = picked.state;
     const place = s.pending!;
     expect(place.kind).toBe('companion.place');
     const other = s.players.find((p) => p.id !== place.player)!;

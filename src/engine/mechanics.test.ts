@@ -408,6 +408,18 @@ describe('peeks stay private', () => {
     expect(g.s.turn.location).toBe(second);
   });
 
+  it('Barnaby can use his maps at any point of his own turn, not only right after the location', () => {
+    const g = newGame();
+    standard(g, { hero: 'professor-barnaby-pickwort' });
+    restart(g);
+    until(g, bidFor(g.A));
+    const d = g.s.pending!;
+    expect(d.kind === 'bid' && d.abilities.some((x) => x.ability === 'maps')).toBe(true);
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    pick(g, 'keep');
+    expect(g.s.pending?.kind).toBe('bid'); // back to the bidding decision
+  });
+
   it('Wren can bottom the next location', () => {
     const g = newGame();
     standard(g, { companions: ['wren-nightingale-relic-hunter', 'pell-quillon-collegium-prodigy'] });
@@ -984,44 +996,35 @@ describe('the opening companion draft and Ysolde', () => {
   });
 });
 
-describe('the companion phase: draw three, pick one', () => {
-  it('shows the three only to the player drawing, and a pick must be exactly one', () => {
+describe('the companion phase: one random companion, keep it or not', () => {
+  it('draws one at random, privately, and at the limit keeping it means replacing one', () => {
     const g = newGame();
     until(g, (_s, d) => d.kind === 'companion.offer');
     const offer = g.s.pending!;
-    const deckBefore = g.s.decks.companion.length;
+    const top = g.s.decks.companion[g.s.decks.companion.length - 1]!;
     act(g, { type: 'companion.draw', decision: offer.id });
-    const d = g.s.pending!;
-    if (d.kind !== 'choose' || d.purpose !== 'companionPick') throw new Error('expected a companion pick');
-    expect(d.options).toHaveLength(3);
-    expect([d.min, d.max]).toEqual([1, 1]);
-    for (const p of g.s.players.filter((x) => x.id !== d.player)) expect(viewFor(g.s, p.id).pending!.detail).toBeUndefined();
-    expect(applyCommand(g.s, d.player, { type: 'choose', decision: d.id, picks: [] })).toEqual({ ok: false, error: 'bad_pick_count' });
-    act(g, { type: 'choose', decision: d.id, picks: [d.options[1]!.value] });
-    // The pick is recruited (the other two went back); at the limit it replaces one.
     const place = g.s.pending!;
     if (place.kind !== 'companion.place') throw new Error('expected placement');
-    expect(g.s.cards[place.drawn]).toBe(d.options[1]!.value);
+    expect(place.drawn).toBe(top);
     expect(place.mustReplace).toBe(true);
-    expect(g.s.decks.companion).toHaveLength(deckBefore - 1);
+    expect(applyCommand(g.s, place.player, { type: 'companion.keep', decision: place.id, replace: null })).toEqual({ ok: false, error: 'must_replace' });
     const old = player(g, place.player).companions[0]!;
     act(g, { type: 'companion.keep', decision: place.id, replace: old });
     expect(player(g, place.player).companions).toContain(place.drawn);
     expect(player(g, place.player).companions).not.toContain(old);
   });
 
-  it('under the limit, the pick just joins', () => {
+  it('can be let go, and under the limit it just joins', () => {
     const g = newGame();
     until(g, (_s, d) => d.kind === 'companion.offer');
     const offer = g.s.pending!;
     const p = player(g, offer.player);
     g.s.decks.companion.push(p.companions.pop()!);
     act(g, { type: 'companion.draw', decision: offer.id });
-    const d = g.s.pending!;
-    if (d.kind !== 'choose') throw new Error('expected a pick');
-    act(g, { type: 'choose', decision: d.id, picks: [d.options[0]!.value] });
     const place = g.s.pending!;
     expect(place.kind === 'companion.place' && place.mustReplace).toBe(false);
+    act(g, { type: 'companion.discard', decision: place.id });
+    expect(g.s.discards.companion).toContain((place as { drawn: string }).drawn);
   });
 });
 

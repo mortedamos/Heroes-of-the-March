@@ -436,7 +436,7 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full',
     on: { locationEntered: locationEntered('Accord') },
     activations: [{
-      id: 'maps', label: 'Look at the next two locations; you may swap one in', windows: ['afterLocation'], turn: 'own', per: 'turn',
+      id: 'maps', label: 'Look at the next two locations; you may swap one in', windows: ['afterLocation', 'beforeBidding', 'bidding', 'endOfBidding'], turn: 'own', per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.location) && hasLocationsToPeek(ctx),
       use: (ctx, self) => {
         const next = peekTop(ctx, 'location', 2);

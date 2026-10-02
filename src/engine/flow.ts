@@ -904,16 +904,6 @@ export function applyChoice(
         if (pick === picks[picks.length - 1]) ctx.shuffle('companion');
         break;
       }
-      case 'companionPick': {
-        // Companion phase: the pick is recruited; the others are shuffled back unseen.
-        const card = ctx.takeMatching('companion', (c) => ctx.defId(c) === pick);
-        ctx.shuffle('companion');
-        if (!card) { t.cursor += 1; break; }
-        ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(card)], reason: 'Companion phase' });
-        // At your limit you must replace one of your companions.
-        ctx.decide({ kind: 'companion.place', player: p.id, drawn: card, mustReplace: companionCount(p) >= maxCompanions(ctx, p) });
-        break;
-      }
       case 'heroKeep': {
         if (pick === 'redraw') {
           ctx.shuffle('hero'); // the one you passed on is shuffled back in

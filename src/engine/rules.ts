@@ -57,8 +57,6 @@ export const DEFAULT_RULES: HouseRules = {
 
 /** At the start of the game each player looks at this many companions and keeps `startingCompanions` (Ysolde: one more). */
 export const OPENING_COMPANION_POOL = 5;
-/** On later turns the companion phase lets you look at this many and keep one. */
-export const COMPANION_PHASE_POOL = 3;
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
@@ -97,7 +95,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'fall-timing', topic: 'Fall timing',
     ruling: 'Every player who fails the encounter falls at the end of that turn, whoever\'s turn it is. Players who fall at once choose their replacements one after another, so nobody draws the same hero.' },
   { id: 'companion-phase', topic: 'Companion phase',
-    ruling: 'From turn 2, starting with the current player and going clockwise, each player may draw 3 companions and pick 1 (the rest are shuffled back unseen). If that would take you past your companion limit, you must replace one of your companions. Toggle: companionPhase.' },
+    ruling: 'From turn 2, starting with the current player and going clockwise, each player may draw one companion at random and decide whether to keep it. If keeping it would take you past your companion limit, you must replace one of your companions. Toggle: companionPhase.' },
   { id: 'draw-size', topic: 'Draw size',
     ruling: 'Draw size counts every seat, bots included.' },
   { id: 'empty-decks', topic: 'Empty stacks',

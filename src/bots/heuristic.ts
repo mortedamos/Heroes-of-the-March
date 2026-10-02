@@ -48,7 +48,7 @@ export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.ran
   switch (detail.kind) {
     case 'companion.offer': {
       if (level === 'easy' && rand() < 0.3) return { type: 'companion.skip', decision };
-      // Looking at three and keeping the best is never worse than skipping (the pick can still be let go).
+      // A random draw can still be let go, so drawing is never worse than skipping.
       return { type: 'companion.draw', decision };
     }
 
@@ -437,7 +437,7 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const worth = level !== 'easy' && user && (user === t.biggestThreat() || t.threat(user) > 8);
       return [worth ? 'counter' : 'allow'];
     }
-    case 'companionDraft': case 'companionPick': {
+    case 'companionDraft': {
       // Choose the strongest companions (easy bots pick at random).
       const sorted = level === 'easy' ? [...values].sort(() => rand() - 0.5) : [...values].sort((a, b) => companionScore(optionCard(b)?.def ?? '') - companionScore(optionCard(a)?.def ?? ''));
       return sorted.slice(0, c.max);

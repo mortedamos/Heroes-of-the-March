@@ -9,9 +9,7 @@
 // Errors returned to clients are short codes and never include internals.
 
 import { Ctx, IllegalMove } from './context';
-import { peekTop } from './abilities';
-import { companionCount, companionEnters, maxCompanions, noteMultiBid, peekOption } from './effects';
-import { COMPANION_PHASE_POOL } from './rules';
+import { companionCount, companionEnters, maxCompanions, noteMultiBid } from './effects';
 import { advance, applyChoice, resolveBid, useActivation } from './flow';
 import type { CardId, Command, GameEvent, GameState, PlayerId } from './types';
 
@@ -143,16 +141,11 @@ function handle(ctx: Ctx, seat: PlayerId, cmd: Command): void {
 
   switch (cmd.type) {
     case 'companion.draw': {
-      // Look at the top few companions and pick one (applyChoice 'companionPick' continues from there).
-      const offered = peekTop(ctx, 'companion', COMPANION_PHASE_POOL);
-      if (!offered.length) { s.turn.cursor += 1; return; }
-      ctx.emit({ type: 'peeked', player: p.id, deck: 'companion', count: offered.length });
-      ctx.queueFirst({
-        t: 'choose', purpose: 'companionPick', player: p.id, source: 'Companion phase',
-        prompt: `Pick one of these ${offered.length} companion${offered.length === 1 ? '' : 's'} to recruit.`,
-        options: offered.map((c) => peekOption(ctx, ctx.defId(c), c, ctx.def(c).name)),
-        min: 1, max: 1,
-      });
+      // One companion at random: keep it (replacing one at the limit) or let it go.
+      const card = ctx.take('companion');
+      if (!card) { s.turn.cursor += 1; return; }
+      ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(card)], reason: 'Companion phase' });
+      ctx.decide({ kind: 'companion.place', player: p.id, drawn: card, mustReplace: companionCount(p) >= maxCompanions(ctx, p) });
       return;
     }
     case 'companion.skip':
