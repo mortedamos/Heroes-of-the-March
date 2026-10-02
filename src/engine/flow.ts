@@ -296,6 +296,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
         if (n > 0) drawResources(ctx, x.id, n, 'Start of turn');
       }
     }
+    fire(ctx, 'turnStart', { player: p.id });
     // Nothing may be used until every player has picked their companions: on the very first turn the
     // start-of-turn abilities wait until the companion phase is over.
     goTo(ctx, t.number === 1 ? 'companions' : 'winTurnStart');
@@ -937,10 +938,31 @@ export function applyChoice(
         enforceCompanionLimit(ctx, p, 'Gauntlet of Returning');
         break;
       }
-      case 'sigrunDraw': {
-        const sigrun = playerHas(ctx, p, (a) => a.drawFromDiscardChoice);
-        if (sigrun) ctx.emit({ type: 'abilityZap', player: p.id, source: ctx.ref(sigrun), deck: 'resource', pile: pick === 'discard' ? 'discard' : 'deck' });
-        drawRaw(ctx, p.id, Number(data['n']), String(data['reason']), pick === 'discard' ? 'discard' : 'deck');
+      case 'sigrunPick': {
+        const n = Number(data['n']);
+        const reason = String(data['reason']);
+        const pile = ctx.s.discards.resource;
+        if (pick === 'deck' || !pile.includes(pick)) { drawRaw(ctx, p.id, n, reason, 'deck'); break; }
+        // Once per turn: the chosen card leaves the discard pile, the others stay in it.
+        t.used[`sigrun:${p.id}`] = 1;
+        pile.splice(pile.indexOf(pick), 1);
+        p.hand.push(pick);
+        const sigrun = String(data['sigrun']);
+        if (ctx.s.cards[sigrun]) ctx.emit({ type: 'abilityZap', player: p.id, source: ctx.ref(sigrun), deck: 'resource', pile: 'discard' });
+        ctx.emit({ type: 'drew', player: p.id, deck: 'resource', cards: [ctx.ref(pick)], reason });
+        if (n > 1) drawRaw(ctx, p.id, n - 1, reason, 'deck');
+        break;
+      }
+      case 'tobinPick': {
+        // The revealed companions were set aside; the chosen Goose joins the player, the rest are discarded.
+        const revealed = String(data['revealed']).split(',').filter(Boolean);
+        t.setAside = t.setAside.filter((c) => !revealed.includes(c));
+        const chosen = pick !== 'none' && revealed.includes(pick) ? pick : null;
+        for (const c of revealed) if (c !== chosen) ctx.discard('companion', c);
+        if (chosen) {
+          companionEnters(ctx, p, chosen, null);
+          enforceCompanionLimit(ctx, p, 'Keeper of the Flock');
+        }
         break;
       }
       case 'waystoneDraw': {

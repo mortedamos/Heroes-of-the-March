@@ -36,12 +36,12 @@ const COMPANION_ABILITY: Record<string, number> = {
   'nettle-burrows-trouble-maker': 2, 'sister-aurelie-dane-physician': 2, 'gnash-the-butcher-of-bloodmire': 2,
   'sir-osric-vane-marshal-of-the-old-guard': 2, 'posy-marchbank-marchguard-clerk': 2,
   'elder-ilvena-of-the-conclave': 3, 'loremaster-oskar-grimgate': 2, 'mags-tolliver-market-trader': 2,
-  'mira-coldwater-the-stonetouched': 2, 'goldie-trickgrin-keeper-of-the-goose-and-kettle': 1, 'pell-quillon-collegium-prodigy': 1,
-  'seraphine-moonveil-warden-scholar': 1, 'varg-ironjaw': 1, 'tansy-brambleby-barmaid-and-volunteer': 1,
+  'mira-coldwater-the-stonetouched': 2, 'goldie-trickgrin-keeper-of-the-goose-and-kettle': 1, 'pell-quillon-collegium-prodigy': 2,
+  'seraphine-moonveil-warden-scholar': 1, 'varg-ironjaw': 1, 'tansy-brambleby-barmaid-and-volunteer': 1.5,
   'fennick-puffcap-mycomancer': 1, 'captain-rook-halloran-skyship-captain': 1, 'marshal-hedda-ironvow': 1,
-  'wren-nightingale-relic-hunter': 1, 'mogra-swiftfoot-goblin-runner': 0.5, 'tova-emberdeep-keeper-of-the-underway-door': 0.5,
-  'sigrun-stonefast-metal-singer': 0.5, 'tobin-quill-goose-keeper': 0.5,
-  'honk-the-goose-rout-veteran': 0.5, 'duchess-the-pub-goose': 0.5, 'sergeant-waddle': 0.5, 'cobra-chicken': 0.5,
+  'wren-nightingale-relic-hunter': 1, 'mogra-swiftfoot-goblin-runner': 1, 'tova-emberdeep-keeper-of-the-underway-door': 1,
+  'sigrun-stonefast-metal-singer': 1.5, 'tobin-quill-goose-keeper': 1.5,
+  'honk-the-goose-rout-veteran': 1.5, 'duchess-the-pub-goose': 1.5, 'sergeant-waddle': 1, 'cobra-chicken': 0.5,
 };
 
 /** Stand-in for an empty hero slot (only during the opening hero draft). */
@@ -96,7 +96,13 @@ export class Table {
   /** Best guess at a player's final total: visible total + hidden bids at the average. */
   estimate(p: PlayerPublicView): number {
     if (!p.projection) return 0;
-    return p.projection.total + p.projection.hiddenBids * HIDDEN_BID_ESTIMATE;
+    return p.projection.total + p.projection.hiddenBids * HIDDEN_BID_ESTIMATE + this.pellBonus(p);
+  }
+
+  /** Pell's bonus only shows once the cards are revealed; until then, count it for whoever has her and has played enough. */
+  pellBonus(p: PlayerPublicView): number {
+    if (this.view.turn.step !== 'bidding' || p.bids.length < 2) return 0;
+    return p.companions.some((c) => c.def === 'pell-quillon-collegium-prodigy') ? 2 * p.bids.length : 0;
   }
 
   difficultyFor(p: PlayerPublicView): number { return p.projection?.difficulty ?? this.view.turn.challenge?.difficulty.total ?? 0; }
@@ -104,7 +110,7 @@ export class Table {
   myEstimate(): number {
     // Our own face-down Council cards count 0 until revealed; add what we expect them to bring.
     const pending = this.me.bids.reduce((a, b) => a + (!b.hidden && !b.faceUp ? SPECIAL_VALUE[b.card.def] ?? 0 : 0), 0);
-    return (this.me.projection?.total ?? 0) + pending;
+    return (this.me.projection?.total ?? 0) + pending + this.pellBonus(this.me);
   }
 
   /** How dangerous an opponent is right now: this encounter, and the race to win. */

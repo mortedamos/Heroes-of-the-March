@@ -11,10 +11,10 @@
 // and never read from anything but the GameState, so they stay deterministic.
 
 import { CARDS, getDef } from './cards';
-import type { CardKind, EncounterDef, Stat } from './cardTypes';
+import type { CardKind, EncounterDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import {
-  abilityRoll, addEffect, cardOption, companionsInPlay, councilHeroes, drawResources, fire, hasGroup, statName,
+  abilityRoll, addEffect, cardOption, companionsInPlay, councilHeroes, drawResources, extraReveals, fire, hasGroup, revealTop, statName,
 } from './effects';
 import { replaceEncounter } from './flow';
 import { baseStrength, challengeStat } from './totals';
@@ -24,7 +24,7 @@ import { DECKS } from './types';
 export interface Source { card: CardId; owner: PlayerId | null; kind: CardKind }
 export interface OwnedSource extends Source { owner: PlayerId }
 
-export type TriggerName = 'die' | 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'companionEntered' | 'heroFell' | 'locationWon' | 'statForced';
+export type TriggerName = 'die' | 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'companionEntered' | 'heroFell' | 'locationWon' | 'statForced' | 'turnStart';
 export interface TriggerPayload {
   die: { value: number; player: PlayerId | null };
   /** The turn's encounter challenge was announced (stat as modified by the location); player is the active player. */
@@ -36,6 +36,8 @@ export interface TriggerPayload {
   heroFell: { player: PlayerId };
   locationWon: { player: PlayerId; margin: number };
   statForced: { player: PlayerId; target: CardId };
+  /** The start of `player`'s turn (after resting companions return and cards are drawn). */
+  turnStart: { player: PlayerId };
 }
 
 export type ImplStatus = 'full' | 'partial' | 'todo';
@@ -92,8 +94,12 @@ export interface Ability {
   resourceValue?: (ctx: Ctx, owner: PlayerState, base: number) => number;
   /** Mogra: roll ability dice twice on your turn and keep either. */
   rerollAbilityDice?: boolean;
-  /** Sigrun: draws may come from the discard pile instead. */
+  /** Sigrun: once per turn, a draw may instead take one of three random discarded cards. */
   drawFromDiscardChoice?: boolean;
+  /** Mogra: abilities of yours that reveal cards from a stack to see whether they work reveal one extra. */
+  extraReveal?: boolean;
+  /** Posy, Osric: one of your companions may use your hero's `stat` in place of its own, gaining at most `cap`. */
+  companionLift?: { stat: Stat; cap: number };
   /** Brunna: forced-stat effects on your cards apply only if they help you. */
   ignoreForcedStat?: boolean;
   /** Hobby: your first bid may be face down too. */
@@ -259,23 +265,37 @@ function forceHero(stat: Stat, turn?: 'own'): Ability {
   };
 }
 
-/** The four geese: end of bidding, roll; 3+ gains 3 Physical, otherwise the goose sits out. */
-const goose: Ability = {
-  status: 'full',
-  activations: [{
-    id: 'honk', label: 'HONK! Roll: 3+ gains 3 Physical, else this goose gives nothing', windows: ['endOfBidding'], per: 'turn',
-    use: (ctx, self) => {
-      const r = abilityRoll(ctx, self.owner, 'high');
-      if (r >= 3) {
-        addEffect(ctx, { kind: 'statBonus', source: self.card, owner: self.owner, target: self.owner, stat: 'P', amount: 3 });
-        ctx.log(self.owner, nameOf(ctx, self.card), `HONK! Rolled ${r}: +3 Physical`);
-      } else {
-        addEffect(ctx, { kind: 'silenceCompanion', source: self.card, owner: self.owner, target: self.card });
-        ctx.log(self.owner, nameOf(ctx, self.card), `rolled ${r}: waddles off this turn`);
-      }
-    },
-  }],
-};
+/**
+ * The four geese: at the end of bidding, reveal the top resource card; if it is the goose's kind of card,
+ * gain a bonus in the goose's stat. The card is discarded either way and the goose keeps its stats.
+ */
+function flipBonus(o: { id: 'honk' | 'hiss'; stat: Stat; bonus: number; test: (d: ResourceDef) => boolean; when: string }): Ability {
+  const word = o.id === 'honk' ? 'HONK!' : 'Hiss';
+  return {
+    status: 'full',
+    activations: [{
+      id: o.id, label: `${word} Reveal the top resource card: ${o.when} gains +${o.bonus} ${statName(o.stat)}`, windows: ['endOfBidding'], per: 'turn',
+      canUse: (ctx) => ctx.s.decks.resource.length + ctx.s.discards.resource.length > 0,
+      use: (ctx, self) => {
+        const cards = revealTop(ctx, self.owner, 'resource', 1 + extraReveals(ctx, self.owner), nameOf(ctx, self.card));
+        const hit = cards.some((c) => o.test(ctx.def(c) as ResourceDef));
+        for (const c of cards) {
+          ctx.discard('resource', c);
+          ctx.emit({ type: 'resourceDiscarded', player: self.owner, card: ctx.ref(c), reason: nameOf(ctx, self.card) });
+        }
+        if (hit) {
+          addEffect(ctx, { kind: 'statBonus', source: self.card, owner: self.owner, target: self.owner, stat: o.stat, amount: o.bonus });
+          ctx.log(self.owner, nameOf(ctx, self.card), `${word} +${o.bonus} ${statName(o.stat)}`);
+        } else ctx.log(self.owner, nameOf(ctx, self.card), `${word} Nothing this time`);
+      },
+    }],
+  };
+}
+
+const honk = flipBonus({ id: 'honk', stat: 'P', bonus: 3, when: 'a value of 3 or more', test: (d) => d.value >= 3 });
+const waddle = flipBonus({ id: 'honk', stat: 'P', bonus: 2, when: 'an odd value', test: (d) => d.value % 2 === 1 });
+const duchess = flipBonus({ id: 'hiss', stat: 'G', bonus: 5, when: 'a value of 4 or more', test: (d) => d.value >= 4 });
+const cobra = flipBonus({ id: 'hiss', stat: 'G', bonus: 3, when: 'a Wand', test: (d) => d.wand });
 
 /** Top `n` cards of a stack without removing them (refills from the discard if empty). */
 export function peekTop(ctx: Ctx, deck: DeckName, n: number): CardId[] {
@@ -462,11 +482,21 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   'varg-ironjaw': companionCounter('Underway'),
-  'tansy-brambleby-barmaid-and-volunteer': companionCounter('Goose'),
+  // Tansy: at the start of her controller's turn, a resource for every Goose in play anywhere.
+  'tansy-brambleby-barmaid-and-volunteer': {
+    status: 'full',
+    on: {
+      turnStart: (ctx, self, e) => {
+        if (e.player !== self.owner) return;
+        const geese = companionsInPlay(ctx).filter((c) => hasGroup(ctx.def(c.card), 'Goose')).length;
+        if (geese > 0) drawFor(ctx, self, geese);
+      },
+    },
+  },
   'fennick-puffcap-mycomancer': companionCounter('Healer'),
   'captain-rook-halloran-skyship-captain': companionCounter('Collegium', true),
   'marshal-hedda-ironvow': companionCounter('Marchguard', true),
-  'pell-quillon-collegium-prodigy': { status: 'full', multiBidBonus: { cards: 2, bonus: 1 } },
+  'pell-quillon-collegium-prodigy': { status: 'full', multiBidBonus: { cards: 2, bonus: 2 } },
   'nettle-burrows-trouble-maker': { status: 'full', selfStatSub: 'G' },
   'sister-aurelie-dane-physician': { status: 'full', selfStatSub: 'M' },
   'gnash-the-butcher-of-bloodmire': { status: 'full', selfStatSub: 'P' },
@@ -496,8 +526,8 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G' },
-  'posy-marchbank-marchguard-clerk': { status: 'full', heroStatSub: 'M' },
+  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G', companionLift: { stat: 'G', cap: 2 } },
+  'posy-marchbank-marchguard-clerk': { status: 'full', heroStatSub: 'M', companionLift: { stat: 'M', cap: 2 } },
   'brisa-blastcap-bombardier': forceHero('P'),
   'mira-coldwater-the-stonetouched': {
     status: 'full',
@@ -508,10 +538,10 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   'seraphine-moonveil-warden-scholar': { status: 'full', onEnter: (ctx, self) => drawFor(ctx, self, 2) },
-  'honk-the-goose-rout-veteran': goose,
-  'duchess-the-pub-goose': goose,
-  'sergeant-waddle': goose,
-  'cobra-chicken': goose,
+  'honk-the-goose-rout-veteran': honk,
+  'duchess-the-pub-goose': duchess,
+  'sergeant-waddle': waddle,
+  'cobra-chicken': cobra,
   'elder-ilvena-of-the-conclave': {
     status: 'full',
     activations: [{
@@ -538,13 +568,31 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   'loremaster-oskar-grimgate': { status: 'full', negateReveals: true },
-  'mogra-swiftfoot-goblin-runner': { status: 'full', rerollAbilityDice: true },
+  'mogra-swiftfoot-goblin-runner': { status: 'full', rerollAbilityDice: true, extraReveal: true },
+  // Tobin: once per turn before bidding, reveal three companions; a Goose among them may join you, the rest are discarded.
   'tobin-quill-goose-keeper': {
     status: 'full',
-    on: {
-      companionEntered: (ctx, self, e) => { if (e.card !== self.card && hasGroup(ctx.def(e.card), 'Goose')) drawFor(ctx, self); },
-      locationEntered: (ctx, self, e) => { if (ctx.defId(e.card) === 'the-goose-and-kettle') drawFor(ctx, self); },
-    },
+    activations: [{
+      id: 'flock', label: 'Reveal the top 3 companions; you may put a Goose among them into play, the rest are discarded', windows: ['beforeBidding'], per: 'turn',
+      canUse: (ctx) => ctx.s.decks.companion.length + ctx.s.discards.companion.length > 0,
+      use: (ctx, self) => {
+        const t = ctx.s.turn;
+        const revealed = revealTop(ctx, self.owner, 'companion', 3 + extraReveals(ctx, self.owner), nameOf(ctx, self.card));
+        const geese = revealed.filter((c) => hasGroup(ctx.def(c), 'Goose'));
+        if (!geese.length) {
+          for (const c of revealed) ctx.discard('companion', c);
+          ctx.log(self.owner, nameOf(ctx, self.card), 'No Goose among them; all discarded');
+          return;
+        }
+        t.setAside.push(...revealed);
+        ctx.queueFirst({
+          t: 'choose', purpose: 'tobinPick', player: self.owner, source: nameOf(ctx, self.card),
+          prompt: 'Keeper of the Flock: put a Goose into play (the others are discarded)?',
+          options: [...geese.map((c) => cardOption(ctx, c)), { value: 'none', label: 'Put none into play' }],
+          min: 1, max: 1, data: { revealed: revealed.join(',') },
+        });
+      },
+    }],
   },
   'clemence-fairbrook-temple-cook': forceHero('P', 'own'),
 

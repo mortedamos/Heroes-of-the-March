@@ -1,6 +1,7 @@
 // Card mechanics: one rigged scenario per ability family.
 
 import { describe, expect, it } from 'vitest';
+import { botDecide } from '../bots/heuristic';
 import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
 import { abilityRoll } from './effects';
@@ -464,16 +465,6 @@ describe('end of bidding', () => {
     finishTurn(g);
     expect(g.s.discards.companion).toContain(mags);
   });
-
-  it('a goose rolls: +3 Physical or sits the turn out', () => {
-    const g = newGame();
-    standard(g, { companions: ['cobra-chicken', 'pell-quillon-collegium-prodigy'], hand: [] });
-    restart(g);
-    until(g, activateFor(g.A, 'endOfBidding'));
-    use(g, 'cobra-chicken', 'honk');
-    const kinds = g.s.turn.effects.map((e) => e.kind);
-    expect(kinds.includes('statBonus') || kinds.includes('silenceCompanion')).toBe(true);
-  });
 });
 
 describe('several forcing abilities in one turn', () => {
@@ -685,7 +676,7 @@ describe('dice modifiers', () => {
 });
 
 describe('Pell Quillon and Tova are shown when they trigger', () => {
-  it('Pell adds +1 to each resource card once two are confirmed, and announces it once', () => {
+  it('Pell adds +2 to each resource card once two are revealed, and announces it once', () => {
     const g = newGame();
     standard(g, { companions: ['pell-quillon-collegium-prodigy', 'posy-marchbank-marchguard-clerk'], hand: ['honey-biscuit', 'mask-of-many-faces'] });
     restart(g);
@@ -698,10 +689,12 @@ describe('Pell Quillon and Tova are shown when they trigger', () => {
     until(g, bidFor(g.A));
     const second = g.s.players.find((p) => p.id === g.A)!.hand[0]!;
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: second });
+    // Still bidding: the bonus waits for the reveal at the end of bidding.
+    expect(totalFor(new Ctx(g.s), player(g, g.A), () => true)!.bonus).toBe(0);
     until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve');
-    // Two cards are out: each is worth one more than its printed value.
+    // Two cards are out: each is worth two more than its printed value.
     const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.bonus).toBe(2);
+    expect(tb.bonus).toBe(4);
     expect(without).toBeGreaterThan(-1);
     expect(g.events.filter((e) => e.type === 'abilityUsed' && e.ability === 'multiBid')).toHaveLength(1);
   });
@@ -782,7 +775,7 @@ describe('companion movement', () => {
     expect(player(g, g.A).companions).toHaveLength(2);
   });
 
-  it('Sigrun may draw from the discard pile', () => {
+  it('Sigrun may take one of the discarded cards instead of drawing', () => {
     const g = newGame();
     standard(g, { companions: ['sigrun-stonefast-metal-singer', 'pell-quillon-collegium-prodigy'], hand: [] });
     const cap = idOf(g.s, 'jesters-cap');
@@ -790,8 +783,8 @@ describe('companion movement', () => {
     g.s.discards.resource.push(cap);
     restart(g);
     const d = g.s.pending!;
-    expect(d.kind === 'choose' && d.purpose === 'sigrunDraw').toBe(true);
-    pick(g, 'discard');
+    expect(d.kind === 'choose' && d.purpose === 'sigrunPick').toBe(true);
+    pick(g, cap);
     expect(player(g, g.A).hand).toContain(cap);
   });
 });
@@ -1126,5 +1119,180 @@ describe('revised heroes (data/balance.json)', () => {
     expect(barnaby.kind === 'hero' && barnaby.stats.P).toBe(4);
     expect(barnaby.revision).toMatch(/Physical 2/);
     expect(getDef('kazra-emberdeep').revision).toBeUndefined();
+  });
+});
+
+describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
+  // The window closes (and the turn resolves) once the ability is used, so read the effect from the event log.
+  const effectsOf = (g: Game) => g.events.flatMap((e) => (e.type === 'effect' && e.effect.kind === 'statBonus' ? [e.effect] : []));
+
+  it('Honk: a card worth 3+ gives +3 Physical; either way it is discarded and Honk keeps her stats', () => {
+    for (const [top, bonus] of [['hundred-year-journal', 3], ['feathered-cap', 0]] as const) {
+      const g = newGame();
+      standard(g, { companions: ['honk-the-goose-rout-veteran', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+      restart(g);
+      until(g, activateFor(g.A, 'endOfBidding'));
+      onTop(g.s, 'resource', [top]);
+      const flipped = card(g, top);
+      use(g, 'honk-the-goose-rout-veteran', 'honk');
+      const bonuses = effectsOf(g);
+      expect(bonuses.length).toBe(bonus ? 1 : 0);
+      if (bonus) expect(bonuses[0]).toMatchObject({ stat: 'P', amount: bonus });
+      expect(g.s.discards.resource).toContain(flipped);
+      expect(g.events.some((e) => e.type === 'cardShown' && e.card.id === flipped)).toBe(true);
+      expect(player(g, g.A).companions).toContain(card(g, 'honk-the-goose-rout-veteran'));
+    }
+  });
+
+  it('Waddle needs an odd value, Duchess 4+ for +5 Guile, Cobra Chicken a Wand for +3 Guile', () => {
+    const cases: [string, string, string, number, string][] = [
+      ['sergeant-waddle', 'honk', 'honey-biscuit', 2, 'P'],
+      ['duchess-the-pub-goose', 'hiss', 'mask-of-many-faces', 5, 'G'],
+      ['cobra-chicken', 'hiss', 'willow-wand', 3, 'G'],
+    ];
+    for (const [goose, ability, top, amount, stat] of cases) {
+      const g = newGame();
+      standard(g, { companions: [goose, 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+      restart(g);
+      until(g, activateFor(g.A, 'endOfBidding'));
+      onTop(g.s, 'resource', [top]);
+      use(g, goose, ability);
+      expect(effectsOf(g)[0]).toMatchObject({ stat, amount });
+    }
+    // And a miss: an even, non-Wand card does nothing for Waddle and Cobra Chicken.
+    for (const [goose, ability] of [['sergeant-waddle', 'honk'], ['cobra-chicken', 'hiss']] as const) {
+      const g = newGame();
+      standard(g, { companions: [goose, 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+      restart(g);
+      until(g, activateFor(g.A, 'endOfBidding'));
+      onTop(g.s, 'resource', ['feathered-cap']);
+      use(g, goose, ability);
+      expect(effectsOf(g)).toHaveLength(0);
+    }
+  });
+
+  it('Mogra reveals one extra card for a goose, so either card can hit', () => {
+    const g = newGame();
+    standard(g, { companions: ['honk-the-goose-rout-veteran', 'mogra-swiftfoot-goblin-runner'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    restart(g);
+    until(g, activateFor(g.A, 'endOfBidding'));
+    onTop(g.s, 'resource', ['feathered-cap', 'hundred-year-journal']); // a miss, then a hit
+    use(g, 'honk-the-goose-rout-veteran', 'honk');
+    expect(effectsOf(g)).toHaveLength(1);
+    expect(g.s.discards.resource).toContain(card(g, 'feathered-cap'));
+    expect(g.s.discards.resource).toContain(card(g, 'hundred-year-journal'));
+    expect(g.events.some((e) => e.type === 'ability' && /reveals one extra card/.test(e.text))).toBe(true);
+  });
+
+  it('Tobin reveals three companions; a Goose may join and the rest are discarded', () => {
+    const g = newGame();
+    standard(g, { companions: ['tobin-quill-goose-keeper', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    restart(g);
+    until(g, activateFor(g.A, 'beforeBidding'));
+    onTop(g.s, 'companion', ['gnash-the-butcher-of-bloodmire', 'honk-the-goose-rout-veteran', 'varg-ironjaw']);
+    use(g, 'tobin-quill-goose-keeper', 'flock');
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'tobinPick').toBe(true);
+    // Only the Goose is on offer (plus "none").
+    expect((d as Extract<Decision, { kind: 'choose' }>).options.map((o) => o.value)).toEqual([card(g, 'honk-the-goose-rout-veteran'), 'none']);
+    pick(g, card(g, 'honk-the-goose-rout-veteran'));
+    // A is at the companion limit, so the usual discard follows: let Pell go.
+    const next = g.s.pending!;
+    expect(next.kind === 'choose' && next.purpose === 'discardCompanion').toBe(true);
+    pick(g, card(g, 'pell-quillon-collegium-prodigy'));
+    expect(player(g, g.A).companions).toEqual([card(g, 'tobin-quill-goose-keeper'), card(g, 'honk-the-goose-rout-veteran')]);
+    expect(g.s.discards.companion).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'pell-quillon-collegium-prodigy')]));
+    expect(g.s.turn.setAside).not.toContain(card(g, 'gnash-the-butcher-of-bloodmire'));
+  });
+
+  it('Tobin with no Goose among the three discards them all', () => {
+    const g = newGame();
+    standard(g, { companions: ['tobin-quill-goose-keeper', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    restart(g);
+    until(g, activateFor(g.A, 'beforeBidding'));
+    onTop(g.s, 'companion', ['gnash-the-butcher-of-bloodmire', 'varg-ironjaw', 'kesh-the-bog-huntress']);
+    use(g, 'tobin-quill-goose-keeper', 'flock');
+    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'tobinPick').toBe(false);
+    expect(g.s.discards.companion).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'kesh-the-bog-huntress')]));
+  });
+
+  it("Tansy draws a resource at the start of her controller's turn for every Goose in play, anyone's", () => {
+    const g = newGame();
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'honk-the-goose-rout-veteran'], hand: [] }, { companions: ['duchess-the-pub-goose', 'varg-ironjaw'] });
+    restart(g);
+    finishTurn(g); // A's turn 1 (triggers don't fire in the opening turn)
+    finishTurn(g); // B's turn 2
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && /Tansy/.test(e.reason) && e.cards.length === 2)).toHaveLength(1);
+  });
+
+  it('Sigrun: look at three discarded cards and take one, once per turn', () => {
+    const g = newGame();
+    standard(g, { companions: ['sigrun-stonefast-metal-singer', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    const cards = ['the-axe-of-doom', 'honey-biscuit', 'feathered-cap', 'scrying-lenses', 'mask-of-many-faces'].map((d) => idOf(g.s, d));
+    for (const c of cards) { detach(g.s, c); g.s.discards.resource.push(c); }
+    const before = g.s.discards.resource.length;
+    restart(g);
+    const d = g.s.pending as Extract<Decision, { kind: 'choose' }>;
+    expect(d.purpose).toBe('sigrunPick');
+    expect(d.options.map((o) => o.value).filter((v) => v !== 'deck')).toHaveLength(3);
+    const taken = d.options[0]!.value;
+    pick(g, taken);
+    expect(player(g, g.A).hand).toContain(taken);
+    expect(g.s.discards.resource).not.toContain(taken);
+    expect(g.s.discards.resource.length).toBeGreaterThanOrEqual(before - 1);
+    expect(g.s.turn.used[`sigrun:${g.A}`]).toBe(1);
+  });
+
+  it('Mogra lets Sigrun look at four cards', () => {
+    const g = newGame();
+    standard(g, { companions: ['sigrun-stonefast-metal-singer', 'mogra-swiftfoot-goblin-runner'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    for (const d of ['the-axe-of-doom', 'honey-biscuit', 'feathered-cap', 'scrying-lenses', 'mask-of-many-faces']) { const c = idOf(g.s, d); detach(g.s, c); g.s.discards.resource.push(c); }
+    restart(g);
+    const d = g.s.pending as Extract<Decision, { kind: 'choose' }>;
+    expect(d.purpose).toBe('sigrunPick');
+    expect(d.options.map((o) => o.value).filter((v) => v !== 'deck')).toHaveLength(4);
+  });
+
+  it('Posy and Osric let one companion borrow the hero stat, up to +2', () => {
+    const g = newGame();
+    // Corvin: P4 M9 G5. Physical challenge. Posy P3, Pell P2: the best-placed companion gains +2 (cap), the other nothing.
+    standard(g, { companions: ['posy-marchbank-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
+    expect(tb.companions.reduce((a, c) => a + c.value, 0)).toBe(3 + 2 + 2);
+  });
+});
+
+describe('bots and Tova', () => {
+  /** What a normal bot answers at A's before-bidding window with this team and hand. */
+  function tovaAnswer(hero: string, others: string[], hand: string[], strongRival = false) {
+    const g = newGame();
+    // A weak rival (Physical 4 + 3) by default; a strong one (Maren 6 + two 5s) when asked.
+    standard(g, { hero, companions: ['tova-emberdeep-keeper-of-the-underway-door', ...others] },
+      strongRival ? { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] } : { hero: 'lord-vaelis-nightbloom', companions: ['tobin-quill-goose-keeper'] });
+    restart(g);
+    until(g, activateFor(g.A, 'beforeBidding'));
+    give(g.s, g.A, { hand }); // the turn-start refill dealt a hand; swap in the one under test
+    const cmd = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
+    return cmd?.type === 'ability.use' ? cmd.ability : cmd?.type;
+  }
+
+  it('rests when her Physical (1) is not needed to survive', () => {
+    expect(tovaAnswer('lord-paladin-aldric-ashcroft', ['gnash-the-butcher-of-bloodmire'], ['honey-biscuit'])).toBe('rest');
+  });
+
+  it('rests when one card makes up for her; keeps her when only weak cards are held', () => {
+    // Barnaby P4 + Tova 1 + Mogra 3 = 8 against 10: without Tova 7, a gap of 3.
+    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'])).toBe('rest');
+    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], ['feathered-cap', 'honey-biscuit', 'sprig-of-heather'])).toBe('ability.done');
+  });
+
+  it('keeps her when sitting out would hand a valuable location to a stronger rival', () => {
+    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'], true)).toBe('ability.done');
+  });
+
+  it('rests when the turn is lost anyway', () => {
+    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], [])).toBe('rest');
   });
 });

@@ -217,7 +217,7 @@ export type ChoosePurpose =
   | 'marenTarget' | 'marenGive' | 'pipClaim'
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
   | 'counterAbility' | 'oskarNegate' | 'appleSwap'
-  | 'hallOfRest' | 'gauntlet' | 'sigrunDraw' | 'waystoneDraw' | 'companionMinion'
+  | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'companionMinion'
   | 'heroDraft' | 'heroKeep' | 'companionDraft' | 'companionPick';
 
 export type Decision = CompanionOfferDecision | CompanionPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;

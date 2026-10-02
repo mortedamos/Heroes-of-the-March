@@ -10,7 +10,7 @@ import { abilityOf } from './abilities';
 import { getDef } from './cards';
 import type { Challenge, CompanionDef, HeroDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
-import { activeAbility, activeEffects, hasGroup } from './effects';
+import { activeAbility, activeEffects, bidsBeingRevealed, hasGroup } from './effects';
 import type { Bid, CardId, PlayerId, PlayerState } from './types';
 
 export type Visible = (owner: PlayerState, bid: Bid) => boolean;
@@ -108,6 +108,25 @@ function heroValue(ctx: Ctx, p: PlayerState, stat: Stat): number {
   return v;
 }
 
+/**
+ * Posy and Osric: one of the player's companions may use the hero's Mental / Guile in place of its own
+ * stat, gaining at most `cap`. Applied to whichever companion gains most (a silenced one gains nothing).
+ */
+function liftOneCompanion(ctx: Ctx, p: PlayerState, companions: Contribution[]): void {
+  let lift: { stat: Stat; cap: number } | undefined;
+  for (const c of p.companions) lift ??= activeAbility(ctx, c)?.companionLift;
+  if (!lift) return;
+  const heroStat = (getDef(ctx.defId(p.hero)) as HeroDef).stats[lift.stat];
+  let best: Contribution | null = null;
+  let bestGain = 0;
+  for (const c of companions) {
+    if (activeEffects(ctx, 'silenceCompanion').some((e) => e.target === c.source)) continue;
+    const gain = Math.min(lift.cap, heroStat - c.value);
+    if (gain > bestGain) { best = c; bestGain = gain; }
+  }
+  if (best) best.value += bestGain;
+}
+
 function companionValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat): number {
   if (activeEffects(ctx, 'silenceCompanion').some((e) => e.target === card && hostileApplies(ctx, p, e.owner))) return 0;
   const d = getDef(ctx.defId(card)) as CompanionDef;
@@ -136,6 +155,7 @@ export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverrid
   if (!stat) return null;
   const hero = heroValue(ctx, p, stat);
   const companions = p.companions.map((c) => ({ source: c, value: companionValue(ctx, p, c, stat) }));
+  liftOneCompanion(ctx, p, companions);
   if (companions.length > 2 && activeAbility(ctx, p.hero)?.extraCompanionHalf) {
     const weakest = companions.reduce((a, b) => (b.value < a.value ? b : a));
     weakest.value = Math.floor(weakest.value / 2);
@@ -146,7 +166,7 @@ export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverrid
   let bonus = 0;
   for (const c of p.companions) {
     const mb = activeAbility(ctx, c)?.multiBidBonus;
-    if (mb && counted.length >= mb.cards) bonus += mb.bonus * counted.length;
+    if (mb && bidsBeingRevealed(ctx) && counted.length >= mb.cards) bonus += mb.bonus * counted.length;
   }
   for (const e of activeEffects(ctx, 'statBonus')) {
     if (e.target === p.id && (e.stat === 'all' || e.stat === stat)) bonus += e.amount ?? 0;

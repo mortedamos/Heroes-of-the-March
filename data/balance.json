@@ -66,5 +66,55 @@
     "abilityName": "The Book of Grudges",
     "abilityText": "Once per turn, on any turn, when a face-down resource card is turned face up, you may have any numeric bonus it grants count as a negative instead.",
     "note": "Now once per turn (was every card revealed on your turn); ability renamed The Book of Grudges."
+  },
+  "Honk, the Goose Rout Veteran": {
+    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is 3 or more, gain 3 physical. Discard it either way. You keep this companion's stats.",
+    "note": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats (was an 88% relative win rate; the roll almost never got used)."
+  },
+  "Sergeant Waddle": {
+    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is odd, gain 2 physical. Discard it either way. You keep this companion's stats.",
+    "note": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats."
+  },
+  "Duchess, the Pub Goose": {
+    "abilityName": "Hiss",
+    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is 4 or more, gain 5 guile. Discard it either way. You keep this companion's stats.",
+    "note": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats."
+  },
+  "Cobra Chicken": {
+    "abilityName": "Hiss",
+    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If it is a Wand, gain 3 guile. Discard it either way. You keep this companion's stats.",
+    "note": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats."
+  },
+  "Tobin Quill, Goose-Keeper": {
+    "abilityText": "Once per turn, before bidding, reveal the top three companions. If one or more is a Goose, you may put one of them into play as a companion (normal companion limits apply). Discard the rest.",
+    "note": "Was a draw when a Goose entered play, which almost never happened (effective on about 8% of triggers)."
+  },
+  "Tansy Brambleby, Barmaid and Volunteer": {
+    "abilityText": "At the start of your turn, draw a resource card for every Goose in play anywhere.",
+    "note": "Was a draw when a Goose entered play, which almost never happened; now counts every Goose in play at the start of your turn."
+  },
+  "Mogra Swiftfoot, Goblin Runner": {
+    "abilityText": "On your turn, if an ability would require you to roll a die to determine the outcome, you may roll twice and choose one of the results. Whenever one of your abilities reveals cards from a stack to see whether it works, reveal one more and use either.",
+    "note": "Made useful with the new goose, Tobin and Sigrun reveals (the die ability alone almost never mattered)."
+  },
+  "Sigrun Stonefast, Metal Singer": {
+    "abilityText": "Once per turn, when you would draw a resource card, you may instead look at three random cards from the resource discard stack, take one and leave the rest.",
+    "note": "Was a random card from the discard pile; now a choice of one from three, once per turn."
+  },
+  "Pell Quillon, Collegium Prodigy": {
+    "abilityText": "At the end of bidding, as resource cards are revealed, if you played at least two resource cards, each of them gains 2 to its value.",
+    "note": "Bonus 1 → 2, and the wording now says when it applies (was worth almost nothing)."
+  },
+  "Nettle Burrows, Trouble Maker": {
+    "stats": { "G": 5 },
+    "note": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter."
+  },
+  "Posy Marchbank, Marchguard Clerk": {
+    "abilityText": "You may use your hero's mental stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 2.",
+    "note": "Companions can now borrow the hero's stat too (up to 2); was a below-average card."
+  },
+  "Sir Osric Vane, Marshal of the Old Guard": {
+    "abilityText": "You may use your hero's guile stat in place of another stat. One of your companions may also use it in place of its own stat, gaining at most 2.",
+    "note": "Companions can now borrow the hero's stat too (up to 2); was a below-average card."
   }
 }

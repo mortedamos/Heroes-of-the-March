@@ -16,7 +16,7 @@ import type { Stat } from '../engine/cardTypes';
 import type { Command } from '../engine/types';
 import type { AbilityOptionView, GameView, PendingView, PlayerPublicView } from '../engine/view';
 import {
-  AVG_COMPANION_SCORE, AVG_HERO_STAT, HIDDEN_BID_ESTIMATE, Table, companionDef, companionScore, heroDef, heroValue, locationRenown,
+  AVG_COMPANION_SCORE, AVG_HERO_STAT, HIDDEN_BID_ESTIMATE, SPECIAL_VALUE, Table, companionDef, companionScore, heroDef, heroValue, locationRenown,
 } from './knowledge';
 
 export type BotLevel = 'easy' | 'normal' | 'hard';
@@ -96,16 +96,11 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
       const worst = Math.min(...t.view.hand.map((h) => t.handValue(h.card.id)));
       return worst <= 2 && t.others.some((p) => p.handCount >= 2);
     }
-    case 'rest': {
-      if (!stat) return false;
-      const tova = t.me.companions.find((c) => c.id === a.source.id);
-      const tovaStat = tova ? companionDef(tova).stats[stat] : 0;
-      const handSum = t.view.hand.reduce((s, h) => s + t.handValue(h.card.id), 0);
-      const mine = t.myEstimate();
-      return mine + handSum < t.bestRivalEstimate() - 2 && mine - tovaStat >= t.difficultyFor(t.me);
-    }
+    case 'rest': return restWorthIt(t, a, level);
     // End of bidding: everything is revealed, so the numbers are exact.
-    case 'honk': return gooseWorthIt(t, a);
+    case 'honk': case 'hiss': return flipWorthIt(t, a);
+    // Free to use: the cards it turns up are only discarded.
+    case 'flock': return level !== 'easy' || rand() < 0.6;
     case 'queen': return magsWorthIt(t);
     case 'stonetouched': return miraWorthIt(t, level);
     // During bidding.
@@ -159,13 +154,39 @@ function standing(t: Table): { mine: number; best: number; diff: number; winning
   return { mine, best, diff, winning: mine >= diff && mine > best };
 }
 
-function gooseWorthIt(t: Table, a: AbilityOptionView): boolean {
-  if (t.stat !== 'P') return false; // +3 Physical is useless off-stat, and failing costs the goose's stats
+/** The geese reveal a card for a bonus in one stat; the stats are theirs to keep, so it costs nothing to try when it matters. */
+function flipWorthIt(t: Table, a: AbilityOptionView): boolean {
+  const stat = a.ability === 'honk' ? 'P' : 'G';
+  if (t.stat !== stat) return false;
   const { mine, best, diff, winning } = standing(t);
-  const gooseP = companionDef(a.source).stats.P;
-  if (winning && mine - gooseP > best && mine - gooseP >= diff) return false; // safe already
-  if (!winning && mine + 3 > best && mine + 3 >= diff) return true; // a 2-in-3 shot at the location
-  return mine < diff && mine + 3 >= diff && !t.me.fallPending; // a shot at survival
+  const safe = winning && mine >= diff + 5 && mine > best + 5; // nothing the bonus could change
+  return !safe;
+}
+
+/**
+ * Tova rests for a turn (no stats from her) to draw two extra cards on her next turn. Worth it when her stat
+ * isn't needed to survive, or one card from the hand covers it, or the turn is lost anyway.
+ */
+function restWorthIt(t: Table, a: AbilityOptionView, level: BotLevel): boolean {
+  const stat = t.stat;
+  if (!stat || level === 'easy') return false;
+  const tova = t.me.companions.find((c) => c.id === a.source.id);
+  if (!tova) return false;
+  const gives = companionDef(tova).stats[stat];
+  if (gives >= 5 || t.me.renown + t.prize >= t.target) return false;
+  const mine = t.myEstimate();
+  const diff = t.difficultyFor(t.me);
+  const hand = t.view.hand.map((h) => t.handValue(h.card.id)).sort((x, y) => y - x);
+  const handSum = hand.reduce((sum, v) => sum + Math.max(0, v), 0);
+  if (mine + handSum < diff) return true; // the turn is lost either way; Tova's stat changes nothing
+  const without = mine - gives;
+  // A prize worth fighting for: don't fall clearly behind the strongest rival by sitting out.
+  const rival = Math.max(-Infinity, ...t.others.map((p) => t.estimate(p)));
+  const holdsLead = t.prize < 4 || without + 2 >= rival;
+  const gap = diff - without;
+  const margin = level === 'hard' ? 0 : 1;
+  if (gap <= -margin) return holdsLead; // she isn't needed to survive
+  return hand.length >= 3 && (hand[0] ?? 0) >= gap && holdsLead; // one card makes up for her; she returns with two
 }
 
 function magsWorthIt(t: Table): boolean {
@@ -521,8 +542,23 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const weakest = mineAll.length ? Math.min(...mineAll.map((x) => companionScore(x.def))) : 0;
       return room || companionScore(optionCard(best)?.def ?? '') > weakest ? [best] : [];
     }
-    case 'sigrunDraw':
-      return [level === 'hard' && t.view.discards.resource.count >= 8 ? 'discard' : 'deck'];
+    case 'sigrunPick': {
+      // Take the best of the discarded cards if it beats an average draw (about 3), otherwise draw as usual.
+      const cards = values.filter((v) => v !== 'deck');
+      const worth = (v: string) => { const d = optionCard(v) ? getDef(optionCard(v)!.def) : null; return d && d.kind === 'resource' ? SPECIAL_VALUE[d.id] ?? d.value : 0; };
+      if (level === 'easy' || !cards.length) return ['deck'];
+      const best = cards.reduce((x, y) => (worth(y) > worth(x) ? y : x));
+      return [worth(best) >= 4 ? best : 'deck'];
+    }
+    case 'tobinPick': {
+      const geese = values.filter((v) => v !== 'none');
+      if (!geese.length) return ['none'];
+      const best = pickMax((v) => (v === 'none' ? -1 : companionScore(optionCard(v)?.def ?? '')));
+      const mineAll = [...t.me.companions, ...t.me.inactiveCompanions, ...t.me.resting];
+      const room = mineAll.length < t.me.maxCompanions;
+      const weakest = mineAll.length ? Math.min(...mineAll.map((x) => companionScore(x.def))) : 0;
+      return room || companionScore(optionCard(best)?.def ?? '') > weakest ? [best] : ['none'];
+    }
     case 'waystoneDraw':
       return ['draw'];
   }

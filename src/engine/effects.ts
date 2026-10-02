@@ -4,7 +4,7 @@ import type { CardDef, CardKind, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import { abilityOf, type Ability, type Source, type TriggerName, type TriggerPayload } from './abilities';
 import { nextInt } from './rng';
-import type { CardId, EffectKind, PlayerId, PlayerState, TurnEffect } from './types';
+import type { CardId, DeckName, EffectKind, PlayerId, PlayerState, TurnEffect } from './types';
 
 // --- groups ---------------------------------------------------------------
 
@@ -73,11 +73,18 @@ export function isIgnored(ctx: Ctx, e: TurnEffect): boolean {
   return hostileVictim(ctx, e) !== null;
 }
 
+/** The turn has reached the end of bidding: resource cards are being (or have been) revealed. */
+export function bidsBeingRevealed(ctx: Ctx): boolean {
+  const step = ctx.s.turn.step;
+  return step === 'reveal' || step === 'winEndOfBidding' || step === 'resolve' || step === 'turnEnd';
+}
+
 /**
- * Pell Quillon's "Proofs and Theorems" is a standing bonus: show it the first time it takes effect
- * in a turn (the moment the player has put out enough confirmed resource cards).
+ * Pell Quillon's "Proofs and Theorems": at the end of bidding, as the cards are revealed, if two or more
+ * were played each gains value. Show it the first time it takes effect in a turn.
  */
 export function noteMultiBid(ctx: Ctx, p: PlayerState): void {
+  if (!bidsBeingRevealed(ctx)) return;
   const confirmed = p.bids.filter((b) => b.visible).length;
   for (const c of p.companions) {
     const mb = activeAbility(ctx, c)?.multiBidBonus;
@@ -195,14 +202,21 @@ export function drawResources(ctx: Ctx, player: PlayerId, n: number, reason: str
     // Shown as a zap into the resource deck (no big card: it happens on every draw).
     if (ctx.s.turn.number > 0 && p.hero) ctx.emit({ type: 'abilityZap', player, source: ctx.ref(p.hero), deck: 'resource', pile: 'deck' });
   }
-  // Sigrun Stonefast: may take random cards from the discard pile instead.
-  const sigrun = ctx.s.discards.resource.length ? playerHas(ctx, p, (a) => a.drawFromDiscardChoice) : null;
+  // Sigrun Stonefast: once per turn, may look at three random discarded cards and take one instead.
+  const sigrun = ctx.s.discards.resource.length && !ctx.s.turn.used[`sigrun:${player}`] ? playerHas(ctx, p, (a) => a.drawFromDiscardChoice) : null;
   if (sigrun && ctx.s.turn.number > 0) {
+    const pile = ctx.s.discards.resource;
+    const looks = Math.min(pile.length, 3 + extraReveals(ctx, player));
+    const picked: CardId[] = [];
+    while (picked.length < looks) {
+      const c = pile[nextInt(ctx.s.rng, pile.length)]!;
+      if (!picked.includes(c)) picked.push(c);
+    }
     ctx.queueFirst({
-      t: 'choose', purpose: 'sigrunDraw', player, source: ctx.def(sigrun).name,
-      prompt: `Encore! Draw ${count} from the resource stack, or take ${count} at random from the discard pile?`,
-      options: [{ value: 'deck', label: 'Draw from the stack' }, { value: 'discard', label: `Random from discard (${ctx.s.discards.resource.length})` }],
-      min: 1, max: 1, data: { n: count, reason },
+      t: 'choose', purpose: 'sigrunPick', player, source: ctx.def(sigrun).name,
+      prompt: `Encore! Take one of these ${looks} cards from the discard pile instead of drawing, or draw from the stack as usual.`,
+      options: [...picked.map((c) => cardOption(ctx, c)), { value: 'deck', label: 'Draw from the stack instead' }],
+      min: 1, max: 1, data: { n: count, reason, sigrun },
     });
     return 0;
   }
@@ -356,3 +370,28 @@ export function sourceName(ctx: Ctx, card: CardId): string {
 }
 
 export type { CardKind };
+
+// --- ability reveals (Mogra's Against the Odds) -----------------------------------
+
+/** Extra cards an ability of `owner`'s reveals: one, if they control Mogra (who says so in the log). */
+export function extraReveals(ctx: Ctx, owner: PlayerId): number {
+  const mogra = playerHas(ctx, ctx.player(owner), (a) => a.extraReveal);
+  if (!mogra) return 0;
+  ctx.log(owner, ctx.def(mogra).name, 'Against the Odds: reveals one extra card');
+  return 1;
+}
+
+/**
+ * Turn up the top `n` cards of a stack (refilling it from the discard if needed) to see whether an
+ * ability works. Everyone sees them. The caller discards or keeps them.
+ */
+export function revealTop(ctx: Ctx, owner: PlayerId, deck: DeckName, n: number, reason: string): CardId[] {
+  const out: CardId[] = [];
+  for (let i = 0; i < n; i++) {
+    const c = ctx.take(deck);
+    if (!c) break;
+    out.push(c);
+    ctx.emit({ type: 'cardShown', player: owner, card: ctx.ref(c), reason });
+  }
+  return out;
+}
