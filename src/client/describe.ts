@@ -21,8 +21,6 @@ export function describe(e: ClientEvent, view: GameView): string | null {
     case 'heroChanged': return e.reason === 'fell'
       ? `${who(e.player)}: ${card(e.to.def)} takes up the banner.`
       : `${who(e.player)} ${e.player === view.you ? 'ride' : 'rides'} out with ${card(e.to.def)}.`;
-    case 'tavernTaken': return `${who(e.player)} ${e.player === view.you ? 'recruit' : 'recruits'} ${card(e.card.def)} from the tavern.`;
-    case 'tavernRefilled': return null;
     case 'companionPlayed': return e.replaced
       ? `${who(e.player)} recruited ${card(e.card.def)}, replacing ${card(e.replaced.def)}.`
       : `${who(e.player)} recruited ${card(e.card.def)}.`;

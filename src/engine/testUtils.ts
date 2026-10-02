@@ -22,7 +22,6 @@ export function locateAll(s: GameState): Map<CardId, string[]> {
   const put = (c: CardId, place: string) => where.set(c, [...(where.get(c) ?? []), place]);
   for (const [k, pile] of Object.entries(s.decks)) for (const c of pile) put(c, `deck:${k}`);
   for (const [k, pile] of Object.entries(s.discards)) for (const c of pile) put(c, `discard:${k}`);
-  for (const c of s.tavern) put(c, "tavern");
   for (const p of s.players) {
     if (p.hero) put(p.hero, `${p.id}:hero`);
     for (const c of p.companions) put(c, `${p.id}:companion`);

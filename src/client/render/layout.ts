@@ -60,7 +60,6 @@ export const discardPos = (d: DeckName) => {
 };
 
 const LOCATION_POS = { x: -1.6, z: -1.05 };
-export const TAVERN_POS = { x: -3.55, z: 1.45 };
 const ENCOUNTER_POS = { x: -0.15, z: -1.05 };
 
 /** Where opponent j of k sits, in turn order after you. */
@@ -202,11 +201,6 @@ export function computeLayout(view: GameView, shape: Shape = 'wide'): Layout {
   ];
   extras.forEach((m, i) => {
     cards.push({ key: m.ref.id, def: m.ref.def, back: m.back, x: ENCOUNTER_POS.x + 1.35 + i * 0.95, y: CARD_Y, z: ENCOUNTER_POS.z + 0.1, scale: 0.85, faceUp: true, spawn: m.spawn });
-  });
-
-  // The tavern: face-up companions beside the companion stack.
-  view.tavern.forEach((c, i) => {
-    cards.push({ key: c.id, def: c.def, back: 'companion', x: TAVERN_POS.x + i * 0.62, y: CARD_Y, z: TAVERN_POS.z, scale: 0.55, faceUp: true, spawn: deckPos('companion') });
   });
 
   // Discard tops.

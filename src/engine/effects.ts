@@ -245,17 +245,6 @@ export function maxCompanions(ctx: Ctx, p: PlayerState): number {
   return Math.max(ctx.s.rules.maxCompanions, heroMax ?? 0);
 }
 
-/** Top the tavern back up to its size with face-up companions. */
-export function refillTavern(ctx: Ctx): void {
-  const t = ctx.s.tavern;
-  while (t.length < ctx.s.rules.tavernSize) {
-    const c = ctx.take('companion');
-    if (!c) break;
-    t.push(c);
-    ctx.emit({ type: 'tavernRefilled', card: ctx.ref(c) });
-  }
-}
-
 /** Companions counting toward the limit (including face-down and resting ones). */
 export function companionCount(p: PlayerState): number {
   return p.companions.length + p.inactiveCompanions.length + p.resting.length;

@@ -22,7 +22,7 @@ function idOf(s: GameState, def: string): CardId {
 
 /** Remove a card from wherever it is (not from a hero slot). */
 function detach(s: GameState, id: CardId): void {
-  for (const pile of [...Object.values(s.decks), ...Object.values(s.discards), s.tavern]) {
+  for (const pile of [...Object.values(s.decks), ...Object.values(s.discards)]) {
     const i = pile.indexOf(id);
     if (i >= 0) pile.splice(i, 1);
   }
@@ -69,14 +69,26 @@ function onTop(s: GameState, deck: DeckName, defs: string[]): void {
 
 interface Game { s: GameState; events: GameEvent[]; A: PlayerId; B: PlayerId; C?: PlayerId }
 
+/** Answer every opening companion draft with the first cards on offer. */
+function finishOpeningDraft(state: GameState): GameState {
+  let st = state;
+  while (st.pending?.kind === 'choose' && st.pending.purpose === 'companionDraft') {
+    const d = st.pending;
+    const r = applyCommand(st, d.player, { type: 'choose', decision: d.id, picks: d.options.slice(0, d.min).map((o) => o.value) });
+    if (!r.ok) throw new Error(r.error);
+    st = r.state;
+  }
+  return st;
+}
+
 function newGame(n = 2, sd = 1, rules?: Partial<HouseRules>): Game {
   // Card-mechanic tests deal heroes blind and use the v0.3 hand rule and printed
   // difficulties (no fall cost) so card counts and survival are predictable; the
   // house rules have their own tests.
-  const { state } = createGame({
+  const state = finishOpeningDraft(createGame({
     players: seats(n), seed: seed(sd),
     rules: { heroDraft: 1, handModel: 'refill', fallCost: false, ...rules },
-  });
+  }).state);
   const A = state.players[state.turn.active]!.id;
   const others = state.players.filter((p) => p.id !== A).map((p) => p.id);
   return { s: state, events: [], A, B: others[0]!, ...(others[1] ? { C: others[1] } : {}) };
@@ -87,6 +99,21 @@ function restart(g: Game): void {
   const s = g.s;
   s.pending = null;
   s.tasks = [];
+  // newGame stops partway through turn 1 (after the opening draft): put that turn's cards away.
+  const t = s.turn;
+  if (t.location) s.discards.location.push(t.location);
+  s.decks.location.push(...t.extraLocations);
+  s.discards.encounter.push(...(t.encounter ? [t.encounter] : []), ...t.minions, ...t.setAside);
+  s.discards.companion.push(...t.companionMinions);
+  for (const p of s.players) {
+    s.discards.resource.push(...p.bids.map((b) => b.card));
+    s.decks.hero.push(...p.councilHeroes);
+    p.bids = [];
+    p.councilHeroes = [];
+    p.statOverride = null;
+  }
+  t.location = null; t.extraLocations = []; t.encounter = null; t.minions = []; t.setAside = []; t.companionMinions = [];
+  t.failed = []; t.effects = []; t.used = {}; t.wandsDisabled = false; t.noFalls = false;
   s.turn.step = 'turnStart';
   s.turn.number = 0;
   s.hold = 'encounter'; // borrow the resume path
@@ -527,45 +554,35 @@ describe('Aldric counters abilities as they are used', () => {
 });
 
 describe('the opening turn', () => {
-  it('no ability can be used until every player has picked companions', () => {
-    const g = newGame();
-    standard(g, { companions: ['wren-nightingale-relic-hunter', 'pell-quillon-collegium-prodigy'] });
-    restart(g);
-    // Wren is a start-of-turn ability: on turn 1 it must wait for the companion phase.
-    expect(g.s.turn.number).toBe(1);
-    expect(g.s.pending?.kind).toBe('companion.offer');
-    until(g, activateFor(g.A, 'turnStart'));
-    expect(g.s.turn.step).toBe('winTurnStart');
-    const offered = g.events.filter((e) => e.type === 'abilityUsed');
-    expect(offered).toHaveLength(0);
-  });
-
-  it('a recruited companion enters play, and draws, only when the opening phase ends', () => {
-    const g = newGame();
-    standard(g, { companions: ['pell-quillon-collegium-prodigy'], hand: [] });
-    restart(g);
-    const sera = card(g, 'seraphine-moonveil-warden-scholar');
-    // Put Seraphine (draws 2 when she enters play) in the tavern.
-    for (const pile of Object.values(g.s.decks)) { const i = pile.indexOf(sera); if (i >= 0) pile.splice(i, 1); }
-    g.s.discards.companion = g.s.discards.companion.filter((c) => c !== sera);
-    g.s.decks.companion.push(g.s.tavern[0]!);
-    g.s.tavern[0] = sera;
-    const handBefore = player(g, g.A).hand.length;
-    let handWhenBPicks = -1;
-    until(g, (s) => s.turn.step === 'winTurnStart' || s.turn.step === 'location' || s.turn.step === 'bidding', (s, d) => {
-      if (d.kind === 'companion.offer' && d.player !== g.A && handWhenBPicks < 0) handWhenBPicks = player(g, g.A).hand.length;
-      if (d.kind === 'companion.offer' && d.player === g.A && s.tavern.includes(sera)) return { type: 'companion.take', decision: d.id, card: sera };
-      if (d.kind === 'companion.place' && d.player === g.A) {
-        return { type: 'companion.keep', decision: d.id, replace: null };
-      }
-      return undefined;
-    });
-    // Seraphine is in play for A, and her draw has happened by the time the phase is over.
-    expect(player(g, g.A).companions.includes(sera)).toBe(true);
-    expect(handWhenBPicks).toBe(handBefore); // nothing drawn while others are still picking
-    expect(player(g, g.A).hand.length).toBeGreaterThanOrEqual(handBefore + 2);
-    const order = g.events.map((e) => e.type);
-    expect(order.indexOf('companionPlayed')).toBeLessThan(order.lastIndexOf('drew'));
+  it('drafted companions enter play, and draw, only when every player has picked', () => {
+    const { state } = createGame({ players: seats(2), seed: seed(1), rules: { heroDraft: 1, handModel: 'refill', fallCost: false } });
+    const g: Game = { s: state, events: [], A: '', B: '' };
+    const sera = card(g, 'seraphine-moonveil-warden-scholar'); // draws 2 when she enters play
+    // Rig her onto the top of the companion stack and redo the draft step.
+    onTop(g.s, 'companion', ['seraphine-moonveil-warden-scholar']);
+    g.s.pending = null;
+    g.s.tasks = [];
+    for (const p of g.s.players) { delete p.used['companionDraft']; p.companions = []; }
+    g.s.turn.step = 'companionDraft';
+    g.s.hold = 'encounter';
+    const r = resume(g.s);
+    if (!r.ok) throw new Error(r.error);
+    g.s = r.state;
+    const first = g.s.pending!;
+    if (first.kind !== 'choose') throw new Error('expected a companion draft');
+    const a = first.player;
+    const handBefore = player(g, a).hand.length;
+    const seraOption = first.options.find((o) => o.card?.def === 'seraphine-moonveil-warden-scholar')!;
+    expect(seraOption).toBeTruthy();
+    act(g, { type: 'choose', decision: first.id, picks: [seraOption.value, first.options.find((o) => o !== seraOption)!.value] });
+    // A has picked, but B has not: nothing has entered play yet.
+    const second = g.s.pending!;
+    expect(second.kind === 'choose' && second.purpose).toBe('companionDraft');
+    expect(second.player).not.toBe(a);
+    expect(player(g, a).companions).toContain(sera);
+    expect(player(g, a).hand.length).toBe(handBefore);
+    g.s = finishOpeningDraft(g.s);
+    expect(player(g, a).hand.length).toBeGreaterThanOrEqual(handBefore + 2);
   });
 });
 
@@ -832,17 +849,16 @@ describe('hero draft: look at three, keep one', () => {
         expect(viewFor(g.s, other.id).pending!.detail).toBeUndefined();
       }
       expect(viewFor(g.s, d.player).players.find((p) => p.id === d.player)!.hero).toBeNull();
-      // Heroes come first: no companions, hands or tavern until everyone has chosen.
+      // Heroes come first: no companions or hands until everyone has chosen.
       for (const p of g.s.players) expect([p.companions.length, p.hand.length]).toEqual([0, 0]);
-      expect(g.s.tavern).toHaveLength(0);
       picked[d.player] = d.options[1]!.value;
       act(g, { type: 'choose', decision: d.id, picks: [d.options[1]!.value] });
     }
     for (const p of g.s.players) expect(g.s.cards[p.hero]).toBe(picked[p.id]);
-    for (const p of g.s.players) expect(p.companions).toHaveLength(g.s.rules.startingCompanions);
-    expect(g.s.tavern).toHaveLength(g.s.rules.tavernSize);
+    // Then the companion draft: nobody is dealt companions, they pick them.
+    for (const p of g.s.players) expect(p.companions).toHaveLength(0);
+    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose).toBe('companionDraft');
     expect(g.s.decks.hero).toHaveLength(15 - 3); // the passed-over heroes went back
-    expect(g.s.turn.number).toBe(1);
     checkInvariants(g.s);
   });
 
@@ -893,10 +909,8 @@ describe('hero draft: look at three, keep one', () => {
 
 describe('the opening companion draft', () => {
   it('starts everyone with no companions, lets them pick two of five, and skips the first-turn companion phase', () => {
-    const g = newGame(3, 1, { companionDraft: 5, handModel: 'refill' });
-    // newGame deals heroes blind (heroDraft 1) and starts the game directly: rebuild with the draft on.
-    const { state } = createGame({ players: seats(3), seed: seed(7), rules: { heroDraft: 1, companionDraft: 5 } });
-    g.s = state;
+    const { state } = createGame({ players: seats(3), seed: seed(7), rules: { heroDraft: 1 } });
+    const g: Game = { s: state, events: [], A: '', B: '' };
     for (const p of g.s.players) expect(p.companions).toHaveLength(0);
     const picked: Record<string, string[]> = {};
     for (let i = 0; i < 3; i++) {
@@ -929,9 +943,8 @@ describe('abilities that reach into a deck', () => {
 
 describe('the opening companion draft and Ysolde', () => {
   it('gives a hero with a limit of three three slots from the same pool of five', () => {
-    const g = newGame(2, 1, { companionDraft: 5 });
-    const { state } = createGame({ players: seats(2), seed: seed(11), rules: { heroDraft: 1, companionDraft: 5 } });
-    g.s = state;
+    const { state } = createGame({ players: seats(2), seed: seed(11), rules: { heroDraft: 1 } });
+    const g: Game = { s: state, events: [], A: '', B: '' };
     // Hand the first player to draft Ysolde (limit 3); the other keeps a normal hero.
     const first = g.s.players[g.s.turn.active]!;
     const ysolde = idOf(g.s, 'ysolde-of-the-wellspring');
@@ -957,39 +970,44 @@ describe('the opening companion draft and Ysolde', () => {
   });
 });
 
-describe('the tavern', () => {
-  it('shows three face-up companions to everyone', () => {
-    const g = newGame(3);
-    expect(g.s.tavern).toHaveLength(3);
-    for (const p of g.s.players) expect(viewFor(g.s, p.id).tavern.map((c) => c.id)).toEqual(g.s.tavern);
-  });
-
-  it('recruiting from the tavern refills it and then asks where the companion goes', () => {
+describe('the companion phase: draw three, pick one', () => {
+  it('shows the three only to the player drawing, and a pick must be exactly one', () => {
     const g = newGame();
     until(g, (_s, d) => d.kind === 'companion.offer');
+    const offer = g.s.pending!;
+    const deckBefore = g.s.decks.companion.length;
+    act(g, { type: 'companion.draw', decision: offer.id });
     const d = g.s.pending!;
-    const taken = g.s.tavern[1]!;
-    act(g, { type: 'companion.take', decision: d.id, card: taken });
-    expect(g.s.tavern).toHaveLength(3);
-    expect(g.s.tavern).not.toContain(taken);
+    if (d.kind !== 'choose' || d.purpose !== 'companionPick') throw new Error('expected a companion pick');
+    expect(d.options).toHaveLength(3);
+    expect([d.min, d.max]).toEqual([1, 1]);
+    for (const p of g.s.players.filter((x) => x.id !== d.player)) expect(viewFor(g.s, p.id).pending!.detail).toBeUndefined();
+    expect(applyCommand(g.s, d.player, { type: 'choose', decision: d.id, picks: [] })).toEqual({ ok: false, error: 'bad_pick_count' });
+    act(g, { type: 'choose', decision: d.id, picks: [d.options[1]!.value] });
+    // The pick is recruited (the other two went back); at the limit it replaces one.
     const place = g.s.pending!;
-    expect(place.kind === 'companion.place' && place.drawn).toBe(taken);
-    act(g, { type: 'companion.keep', decision: place.id, replace: player(g, place.player).companions[0]! });
-    expect(player(g, place.player).companions).toContain(taken);
+    if (place.kind !== 'companion.place') throw new Error('expected placement');
+    expect(g.s.cards[place.drawn]).toBe(d.options[1]!.value);
+    expect(place.mustReplace).toBe(true);
+    expect(g.s.decks.companion).toHaveLength(deckBefore - 1);
+    const old = player(g, place.player).companions[0]!;
+    act(g, { type: 'companion.keep', decision: place.id, replace: old });
+    expect(player(g, place.player).companions).toContain(place.drawn);
+    expect(player(g, place.player).companions).not.toContain(old);
   });
 
-  it('only tavern cards can be recruited', () => {
+  it('under the limit, the pick just joins', () => {
     const g = newGame();
     until(g, (_s, d) => d.kind === 'companion.offer');
+    const offer = g.s.pending!;
+    const p = player(g, offer.player);
+    g.s.decks.companion.push(p.companions.pop()!);
+    act(g, { type: 'companion.draw', decision: offer.id });
     const d = g.s.pending!;
-    const notThere = g.s.decks.companion[0]!;
-    expect(applyCommand(g.s, d.player, { type: 'companion.take', decision: d.id, card: notThere })).toEqual({ ok: false, error: 'not_in_tavern' });
-  });
-
-  it('tavernSize 0 turns it off', () => {
-    const g = newGame(2, 1, { tavernSize: 0 });
-    expect(g.s.tavern).toHaveLength(0);
-    expect(viewFor(g.s, g.A).tavern).toHaveLength(0);
+    if (d.kind !== 'choose') throw new Error('expected a pick');
+    act(g, { type: 'choose', decision: d.id, picks: [d.options[0]!.value] });
+    const place = g.s.pending!;
+    expect(place.kind === 'companion.place' && place.mustReplace).toBe(false);
   });
 });
 
@@ -1036,10 +1054,13 @@ describe('hand model', () => {
     const g = newGame(3, 1, { handModel: 'steady', activeDraw: 2, othersDraw: 1, handLimit: 4 });
     standard(g, { hero: 'thorgar-twice-buried', hand: ['honey-biscuit'] }, { hand: ['feathered-cap', 'jesters-cap', 'tin-whistle', 'sprig-of-heather'] });
     give(g.s, g.C!, { hand: ['bag-of-toffees'] });
+    const before = g.events.length;
     restart(g);
-    expect(player(g, g.A).hand).toHaveLength(3); // 1 + 2
-    expect(player(g, g.B).hand).toHaveLength(4); // already at the limit
-    expect(player(g, g.C!).hand).toHaveLength(2); // 1 + 1
+    // Count what each player drew at the start of the turn (later location effects may draw more).
+    const drawn = (pid: string) => g.events.slice(before).flatMap((e) => (e.type === 'drew' && e.player === pid && e.reason === 'Start of turn' ? [e.cards.length] : [])).reduce((a, b) => a + b, 0);
+    expect(drawn(g.A)).toBe(2);
+    expect(drawn(g.B)).toBe(0); // already at the limit
+    expect(drawn(g.C!)).toBe(1);
   });
 
   it('refill (v0.3): only the current player refills, to the draw size', () => {

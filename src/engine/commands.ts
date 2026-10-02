@@ -9,7 +9,9 @@
 // Errors returned to clients are short codes and never include internals.
 
 import { Ctx, IllegalMove } from './context';
-import { companionCount, companionEnters, maxCompanions, noteMultiBid, refillTavern } from './effects';
+import { peekTop } from './abilities';
+import { companionCount, companionEnters, maxCompanions, noteMultiBid, peekOption } from './effects';
+import { COMPANION_PHASE_POOL } from './rules';
 import { advance, applyChoice, resolveBid, useActivation } from './flow';
 import type { CardId, Command, GameEvent, GameState, PlayerId } from './types';
 
@@ -31,7 +33,6 @@ const isPicks: Check = (v) =>
 
 const SCHEMAS: Record<Command['type'], Schema> = {
   'companion.draw': { required: { decision: isDecision } },
-  'companion.take': { required: { decision: isDecision, card: isCardId } },
   'companion.skip': { required: { decision: isDecision } },
   'companion.keep': { required: { decision: isDecision, replace: isCardIdOrNull } },
   'companion.discard': { required: { decision: isDecision } },
@@ -126,7 +127,7 @@ export function resume(state: GameState): ApplyResult {
 }
 
 const KIND_FOR: Record<Command['type'], ReadonlyArray<string>> = {
-  'companion.draw': ['companion.offer'], 'companion.take': ['companion.offer'], 'companion.skip': ['companion.offer'],
+  'companion.draw': ['companion.offer'], 'companion.skip': ['companion.offer'],
   'companion.keep': ['companion.place'], 'companion.discard': ['companion.place'],
   'bid.play': ['bid'], 'bid.pass': ['bid'],
   'ability.use': ['bid', 'activate'], 'ability.done': ['activate'],
@@ -142,20 +143,16 @@ function handle(ctx: Ctx, seat: PlayerId, cmd: Command): void {
 
   switch (cmd.type) {
     case 'companion.draw': {
-      const card = ctx.take('companion');
-      if (!card) { s.turn.cursor += 1; return; }
-      ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(card)], reason: 'Companion phase' });
-      ctx.decide({ kind: 'companion.place', player: p.id, drawn: card, mustReplace: companionCount(p) >= maxCompanions(ctx, p) });
-      return;
-    }
-    case 'companion.take': {
-      // Recruit a face-up companion from the tavern; the tavern refills at once.
-      const i = s.tavern.indexOf(cmd.card);
-      if (i < 0) throw new IllegalMove('not_in_tavern');
-      s.tavern.splice(i, 1);
-      ctx.emit({ type: 'tavernTaken', player: p.id, card: ctx.ref(cmd.card) });
-      refillTavern(ctx);
-      ctx.decide({ kind: 'companion.place', player: p.id, drawn: cmd.card, mustReplace: companionCount(p) >= maxCompanions(ctx, p) });
+      // Look at the top few companions and pick one (applyChoice 'companionPick' continues from there).
+      const offered = peekTop(ctx, 'companion', COMPANION_PHASE_POOL);
+      if (!offered.length) { s.turn.cursor += 1; return; }
+      ctx.emit({ type: 'peeked', player: p.id, deck: 'companion', count: offered.length });
+      ctx.queueFirst({
+        t: 'choose', purpose: 'companionPick', player: p.id, source: 'Companion phase',
+        prompt: `Pick one of these ${offered.length} companion${offered.length === 1 ? '' : 's'} to recruit.`,
+        options: offered.map((c) => peekOption(ctx, ctx.defId(c), c, ctx.def(c).name)),
+        min: 1, max: 1,
+      });
       return;
     }
     case 'companion.skip':

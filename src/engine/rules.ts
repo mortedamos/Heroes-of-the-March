@@ -25,10 +25,6 @@ export interface HouseRules {
   heroDraft: number;
   /** Also look at `heroDraft` heroes whenever a fallen hero is replaced (house rule, off by default). Otherwise you draw one and may send it back once. */
   draftOnReplace: boolean;
-  /** Face-up companions in the tavern to recruit from. 0 = off (v0.3: blind draws only). */
-  tavernSize: number;
-  /** At the start, each player privately picks this many... from a pool of this size (0 = deal starting companions at random). */
-  companionDraft: number;
   /**
    * How resource cards come in.
    *  'refill' (v0.3): the current player refills to the draw size at the start of their turn.
@@ -53,13 +49,16 @@ export const DEFAULT_RULES: HouseRules = {
   fallCost: true,
   heroDraft: 3,
   draftOnReplace: false,
-  tavernSize: 3,
-  companionDraft: 0,
   handModel: 'steady',
   activeDraw: 2,
   othersDraw: 1,
   handLimit: 6,
 };
+
+/** At the start of the game each player looks at this many companions and keeps `startingCompanions` (Ysolde: one more). */
+export const OPENING_COMPANION_POOL = 5;
+/** On later turns the companion phase lets you look at this many and keep one. */
+export const COMPANION_PHASE_POOL = 3;
 
 export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 6;
@@ -69,14 +68,12 @@ export interface RuleNote { id: string; topic: string; ruling: string }
 export const RULE_NOTES: RuleNote[] = [
   { id: 'hero-draft', topic: 'Hero draft (house rule)',
     ruling: 'At the start of the game everyone looks at the top 3 heroes, keeps one and shuffles the rest back; nobody else sees them. When your hero falls you instead draw the top hero and may keep it or send it back and draw one more (which you must keep). The Hall of Rest still lets you choose from the whole hero stack. Option: look at 3 every time (draftOnReplace).' },
-  { id: 'tavern', topic: 'The tavern (house rule)',
-    ruling: 'Three companions lie face up. In the companion phase you may recruit one of them instead of drawing blind; the tavern refills immediately. You can recruit a companion and then let them go (denying them to others) at the cost of your recruit.' },
   { id: 'hand-model', topic: 'Steady draws (house rule)',
     ruling: 'Replaces "refill to the draw size on your turn": at the start of every turn the current player draws 2 resources and every other player draws 1, but routine draws stop at a hand of 6. Opening hands are still the player count. Draws from card abilities can go past 6. The v0.3 refill rule can be chosen when starting a game.' },
   { id: 'one-stat', topic: 'One stat per encounter (house rule)',
     ruling: 'There is no challenge roll. Each encounter is faced on one stat, its highest printed difficulty (ties were settled by the designers so each stat comes up equally often). Ability dice, Iron Mites and tiebreaks still roll.' },
   { id: 'opening', topic: 'The opening companion phase (house rule)',
-    ruling: 'On turn 1 nobody can use or trigger any hero or companion ability until every player has picked their companions. Companions recruited then "enter play" (draws and other enter-play effects) when that phase ends, in turn order; start-of-turn abilities follow.' },
+    ruling: 'At the start of the game each player draws 5 companions and picks 2 (a hero that can keep a third, Ysolde, picks 3); the rest are shuffled back unseen. Nobody can use or trigger any hero or companion ability until every player has picked. The picked companions "enter play" (draws and other enter-play effects) when that phase ends, in turn order; start-of-turn abilities follow.' },
   { id: 'difficulty', topic: 'Harder challenges (house rule)',
     ruling: 'Every encounter card is printed 1 to 3 harder than the original game (easier ones more, and ones that already draw minions or have a condition less), so surviving is no longer a given and spending to survive is a real choice.' },
   { id: 'fall-cost', topic: 'Falling costs (house rule)',
@@ -100,7 +97,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'fall-timing', topic: 'Fall timing',
     ruling: 'Failing on your own turn: your hero falls at the end of that turn. Failing on another player\'s turn: it falls at the start of your next turn. Failing again in between has no extra effect.' },
   { id: 'companion-phase', topic: 'Companion phase',
-    ruling: 'Starting with the current player and going clockwise, each player may draw one companion, then keep it (replacing one if at the limit) or discard it. Toggle: companionPhase.' },
+    ruling: 'From turn 2, starting with the current player and going clockwise, each player may draw 3 companions and pick 1 (the rest are shuffled back unseen). If that would take you past your companion limit, you must replace one of your companions. Toggle: companionPhase.' },
   { id: 'draw-size', topic: 'Draw size',
     ruling: 'Draw size counts every seat, bots included.' },
   { id: 'empty-decks', topic: 'Empty stacks',

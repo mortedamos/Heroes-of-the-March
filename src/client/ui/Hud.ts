@@ -350,11 +350,11 @@ export class Hud {
       return;
     }
     this.counter = null;
-    const companionDraft = mine?.kind === 'choose' && mine.purpose === 'companionDraft';
+    const companionDraft = mine?.kind === 'choose' && (mine.purpose === 'companionDraft' || mine.purpose === 'companionPick');
     if (companionDraft) {
       this.stage.classList.remove('hidden');
       this.renderCompanionDraft(v, d!.id, mine);
-      append(this.prompt, h('span', { class: 'waiting' }, 'Choose your companions.'));
+      append(this.prompt, h('span', { class: 'waiting' }, mine.purpose === 'companionPick' ? 'Pick a companion.' : 'Choose your companions.'));
       return;
     }
     const draft = mine?.kind === 'choose' && (mine.purpose === 'heroDraft' || mine.purpose === 'heroKeep' || mine.purpose === 'hallOfRest') && mine.options.length > 0;
@@ -381,23 +381,6 @@ export class Hud {
       const who = d ? nameOf(v, d.player) : null;
       const what = d?.kind === 'bid' ? 'bidding' : d?.kind === 'choose' ? 'choosing' : d?.kind === 'activate' ? 'considering an ability' : d ? 'recruiting a companion' : '';
       append(this.prompt, h('span', { class: 'waiting' }, d ? `Waiting for ${who}… (${what})` : v.hold ? '…' : ''));
-    } else if (mine.kind === 'companion.offer') {
-      const tavern = h('div', { class: 'options' });
-      for (const c of v.tavern) {
-        const recruit = () => this.deps.send({ type: 'companion.take', decision: d!.id, card: c.id });
-        tavern.appendChild(this.thumbButton(c, size.option, this.armed?.card === c.id ? 'selected' : 'playable',
-          this.confirmTap(v, d!.id, c, `Recruit ${shortName(c.def)}`, recruit)));
-      }
-      append(this.prompt, h('div', { class: 'decision' },
-        v.tavern.length ? tavern : '',
-        h('div', { class: 'decision-body' },
-          h('div', { class: 'decision-title' }, 'Companion phase'),
-          v.tavern.length ? this.hint('tavern', d!.id, touch
-            ? 'Tap a tavern companion to read it; tap again to recruit.'
-            : 'Click a tavern companion to recruit them.') : '',
-          h('div', { class: 'decision-buttons' },
-            h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'companion.draw', decision: d!.id }) } }, 'Draw blind'),
-            h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'companion.skip', decision: d!.id }) } }, 'Skip')))));
     } else if (mine.kind === 'companion.place') {
       const me = v.players.find((p) => p.id === v.you)!;
       const drawn = mine.drawn;
@@ -483,15 +466,23 @@ export class Hud {
         this.selected.add(o.value);
         rerender();
       }));
-    const confirm = h('button', { class: 'btn primary', on: { click: () => { const p = [...this.selected]; this.selected.clear(); this.deps.send({ type: 'choose', decision, picks: p }); } } }, 'Confirm companions');
+    const phasePick = c.purpose === 'companionPick';
+    const confirm = h('button', { class: 'btn primary', on: { click: () => { const p = [...this.selected]; this.selected.clear(); this.deps.send({ type: 'choose', decision, picks: p }); } } }, phasePick ? 'Recruit' : 'Confirm companions');
     confirm.disabled = this.selected.size !== c.max;
     const hero = me.hero ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w + 40, 200))) : '';
+    const mineNow = [...me.companions, ...me.inactiveCompanions].map((m) => this.thumbButton(m, Math.round(w * 0.8)));
+    const total = me.companions.length + me.inactiveCompanions.length + me.resting.length;
     replace(this.stage, h('div', { class: 'stage-panel' }, hero, h('div', { class: 'stage-main' },
-      h('h2', {}, 'Choose your companions'),
-      h('section', { class: 'stage-section' }, h('h3', {}, `Your companions (${this.selected.size}/${c.max})`),
-        h('p', { class: 'stage-hint' }, 'Click a companion below to fill a slot. Click one in a slot to put it back.'),
+      h('h2', {}, phasePick ? 'Pick a companion' : 'Choose your companions'),
+      phasePick && mineNow.length
+        ? h('section', { class: 'stage-section' }, h('h3', {}, `Your companions (${total}/${me.maxCompanions})`),
+          total >= me.maxCompanions ? h('p', { class: 'stage-hint' }, "You're at your companion limit: whoever you pick will replace one of these.") : '',
+          h('div', { class: 'stage-row' }, ...mineNow))
+        : '',
+      h('section', { class: 'stage-section' }, h('h3', {}, phasePick ? 'Recruit' : `Your companions (${this.selected.size}/${c.max})`),
+        h('p', { class: 'stage-hint' }, phasePick ? 'Click the companion you want. The others are shuffled back unseen.' : 'Click a companion below to fill a slot. Click one in a slot to put it back.'),
         h('div', { class: 'stage-row' }, ...slots)),
-      h('section', { class: 'stage-section' }, h('h3', {}, 'Available'), h('div', { class: 'stage-row' }, ...pool)),
+      h('section', { class: 'stage-section' }, h('h3', {}, phasePick ? 'Your three' : `Drawn (pick ${c.max})`), h('div', { class: 'stage-row' }, ...pool)),
       h('div', { class: 'decision-buttons' }, confirm))));
   }
 
@@ -535,7 +526,7 @@ export class Hud {
 
   /**
    * The companion phase (every turn, and before anything can be used at the start): a large
-   * panel with your hero, your current companions and the tavern (or the drawn
+   * panel with your hero and your current companions (or the picked
    * card and whom it could replace), so you can look for abilities that combine.
    */
   private renderStage(v: GameView, decision: number, mine: NonNullable<PendingView['detail']>): void {
@@ -552,13 +543,11 @@ export class Hud {
 
     if (mine.kind === 'companion.offer') {
       const buttons = h('div', { class: 'decision-buttons' },
-        h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'companion.draw', decision }) } }, 'Draw blind'),
+        h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'companion.draw', decision }) } }, 'Draw 3, pick 1'),
         h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'companion.skip', decision }) } }, 'Skip'));
       children.push(
-        section('Your companions ' + limit, '', row(mineCards, (c) => this.thumbButton(c, w), 'None yet.')),
-        section('In the tavern', touch ? 'Tap a companion to read it; tap again to recruit them, or draw blind from the stack. If you are at your companion limit, you will need to replace one.' : 'Click a companion to recruit them or draw blind from the stack. If you are at your companion limit, you will need to replace one.',
-          row(v.tavern, (c) => this.thumbButton(c, w, this.armed?.card === c.id ? 'selected' : 'playable',
-            this.confirmTap(v, decision, c, 'Recruit ' + shortName(c.def), () => this.deps.send({ type: 'companion.take', decision, card: c.id }))), 'The tavern is empty.')),
+        section('Your companions ' + limit, 'Draw three companions and recruit one of them; the rest are shuffled back unseen. If you are at your companion limit, you will need to replace one.',
+          row(mineCards, (c) => this.thumbButton(c, w), 'None yet.')),
         buttons);
     } else if (mine.kind === 'companion.place') {
       const buttons = h('div', { class: 'decision-buttons' });

@@ -16,7 +16,7 @@
       "length": "0.2-0.4 s",
       "priority": true,
       "wired": true,
-      "plays": "A card is dealt or drawn; the tavern refills",
+      "plays": "A card is dealt or drawn",
       "search": "card deal, card slide, card draw"
     },
     {
@@ -43,7 +43,7 @@
       "length": "0.15-0.3 s",
       "priority": false,
       "wired": true,
-      "plays": "A card is picked up (hover or select in hand; taken from the tavern)",
+      "plays": "A card is picked up (hover or select in hand)",
       "search": "card pick up"
     },
     {

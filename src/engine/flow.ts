@@ -12,10 +12,11 @@ import type { Ctx } from './context';
 import { IllegalMove } from './context';
 import type { CompanionDef, EncounterDef, Stat } from './cardTypes';
 import {
-  activeAbility, activeEffects, addEffect, cardOption, companionEnters, councilHeroes, disabledCards, discardCompanion,
+  activeAbility, activeEffects, addEffect, cardOption, companionCount, companionEnters, councilHeroes, disabledCards, discardCompanion,
   drawRaw, drawResources, enforceCompanionLimit, fire, maxCompanions, flushOpeningEntrants, noteMultiBid, hasGroup, leaveLocation, locationEnters, ownerOf, peekOption,
-  playerHas, refillTavern, replaceLocation, statName,
+  playerHas, replaceLocation, statName,
 } from './effects';
+import { OPENING_COMPANION_POOL } from './rules';
 import { nextFloat } from './rng';
 import { ALL_VISIBLE, challengeStat, difficultyFor, resourceValue, totalFor } from './totals';
 import {
@@ -31,27 +32,18 @@ export function drawSize(ctx: Ctx): number {
 
 /**
  * Once everyone has a hero: each player's starting companions and resource
- * hand, then the tavern. The hero comes first: you choose who you are, then
- * who rides with you.
+ * hand. The hero comes first: you choose who you are, then who rides with you
+ * (the opening companion draft; nobody is dealt companions).
  */
 export function dealStartingTeams(ctx: Ctx): void {
   const size = drawSize(ctx);
-  // With the opening companion draft, nobody is dealt companions: they choose them.
-  const dealt = ctx.s.rules.companionDraft > 0 ? 0 : ctx.s.rules.startingCompanions;
   for (const p of ctx.s.players) {
-    for (let i = 0; i < dealt; i++) {
-      const c = ctx.take('companion');
-      if (!c) break;
-      p.companions.push(c);
-      ctx.emit({ type: 'companionPlayed', player: p.id, card: ctx.ref(c), replaced: null });
-    }
     for (let i = 0; i < size; i++) {
       const c = ctx.take('resource');
       if (c) p.hand.push(c);
     }
     ctx.emit({ type: 'drew', player: p.id, deck: 'resource', cards: p.hand.map((c) => ctx.ref(c)), reason: 'Setup' });
   }
-  refillTavern(ctx);
 }
 
 export function advance(ctx: Ctx): void {
@@ -250,7 +242,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     const p = ctx.clockwise().find((x) => x.hero === NO_HERO);
     if (!p) {
       dealStartingTeams(ctx);
-      goTo(ctx, ctx.s.rules.companionDraft > 0 ? 'companionDraft' : 'turnStart');
+      goTo(ctx, 'companionDraft');
       return;
     }
     queueHeroDraft(ctx, p, 'Choose your hero');
@@ -264,7 +256,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     // A hero who may keep more companions (Ysolde: three) gets the extra slot here too (the pool stays the same size).
     const extra = Math.max(0, maxCompanions(ctx, p) - ctx.s.rules.maxCompanions);
     const need = Math.max(0, ctx.s.rules.startingCompanions + extra);
-    const offered = peekTop(ctx, 'companion', ctx.s.rules.companionDraft);
+    const offered = peekTop(ctx, 'companion', OPENING_COMPANION_POOL);
     if (!offered.length || need === 0) return;
     const n = Math.min(need, offered.length);
     ctx.queueFirst({
@@ -313,8 +305,8 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
 
   companions(ctx) {
     const t = ctx.s.turn;
-    // With the opening companion draft there is no first-turn companion phase: everyone already chose.
-    const count = t.number === 1 && ctx.s.rules.companionDraft > 0 ? 0 : ctx.s.rules.companionPhase === 'everyone' ? ctx.s.players.length : 1;
+    // There is no first-turn companion phase: everyone already chose in the opening draft.
+    const count = t.number === 1 ? 0 : ctx.s.rules.companionPhase === 'everyone' ? ctx.s.players.length : 1;
     if (t.cursor >= count) {
       if (t.number === 1) {
         goTo(ctx, 'winTurnStart');
@@ -323,7 +315,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       return;
     }
     const p = ctx.s.players[(t.active + t.cursor) % ctx.s.players.length]!;
-    if (ctx.s.decks.companion.length + ctx.s.discards.companion.length + ctx.s.tavern.length === 0) { t.cursor += 1; return; }
+    if (ctx.s.decks.companion.length + ctx.s.discards.companion.length === 0) { t.cursor += 1; return; }
     ctx.decide({ kind: 'companion.offer', player: p.id });
   },
 
@@ -907,6 +899,18 @@ export function applyChoice(
           ctx.emit({ type: 'companionPlayed', player: p.id, card: ctx.ref(card), replaced: null });
           ctx.s.turn.openingEntrants.push({ player: p.id, card });
         }
+        // The ones passed over go back unseen, so the next player doesn't see a leftover pool.
+        if (pick === picks[picks.length - 1]) ctx.shuffle('companion');
+        break;
+      }
+      case 'companionPick': {
+        // Companion phase: the pick is recruited; the others are shuffled back unseen.
+        const card = ctx.takeMatching('companion', (c) => ctx.defId(c) === pick);
+        ctx.shuffle('companion');
+        if (!card) { t.cursor += 1; break; }
+        ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(card)], reason: 'Companion phase' });
+        // At your limit you must replace one of your companions.
+        ctx.decide({ kind: 'companion.place', player: p.id, drawn: card, mustReplace: companionCount(p) >= maxCompanions(ctx, p) });
         break;
       }
       case 'heroKeep': {

@@ -20,7 +20,7 @@ describe('full bot games', () => {
 
   it('games with the opening companion draft finish and conserve every card', () => {
     for (let g = 0; g < 6; g++) {
-      const { state } = simulate(4, seed(3000 + g), 'normal', { rules: { companionDraft: 5 } });
+      const { state } = simulate(4, seed(3000 + g), 'normal', { rules: {} });
       expect(state.winner).not.toBeNull();
     }
   });
@@ -52,16 +52,18 @@ describe('full bot games', () => {
 });
 
 describe('setup', () => {
-  it('deals heroes, two companions and draw-size resources to each player', () => {
+  it('deals heroes and draw-size resources, then opens the companion draft (five on offer, two to keep)', () => {
     const { state } = createGame({ players: seats(4), seed: seed(1), rules: { heroDraft: 1 } });
     checkInvariants(state);
     for (const p of state.players) {
-      expect(p.companions).toHaveLength(2);
+      expect(p.companions).toHaveLength(0);
       expect(state.cards[p.hero]).toBeDefined();
     }
     // The first player has drawn up to draw size; everyone else was dealt 4.
     for (const p of state.players) expect(p.hand.length).toBeGreaterThanOrEqual(4);
-    expect(state.pending).not.toBeNull();
+    const d = state.pending;
+    expect(d?.kind === 'choose' && d.purpose).toBe('companionDraft');
+    expect(d?.kind === 'choose' && [d.options.length, d.min, d.max]).toEqual([5, 2, 2]);
   });
 
   it('rejects bad player counts and seat ids', () => {

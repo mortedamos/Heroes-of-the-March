@@ -79,7 +79,6 @@ export interface PublicRules {
   renownToWin: number;
   fallCost: boolean;
   heroDraft: number;
-  tavernSize: number;
   handModel: 'refill' | 'steady';
   activeDraw: number;
   othersDraw: number;
@@ -109,8 +108,6 @@ export interface GameView {
     result: TurnResult | null;
   };
   decks: Record<DeckName, number>;
-  /** Face-up companions anyone may recruit. */
-  tavern: CardRef[];
   discards: Record<DeckName, { count: number; top: CardRef | null }>;
   pending: PendingView | null;
   /** Your hand, with each card's value if you bid it now. Empty for spectators. */
@@ -211,7 +208,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
     version: state.version,
     rules: {
       renownToWin: state.rules.renownToWin, fallCost: state.rules.fallCost, heroDraft: state.rules.heroDraft,
-      tavernSize: state.rules.tavernSize, handModel: state.rules.handModel, activeDraw: state.rules.activeDraw,
+      handModel: state.rules.handModel, activeDraw: state.rules.activeDraw,
       othersDraw: state.rules.othersDraw, handLimit: state.rules.handLimit,
       drawSize: state.rules.drawSize === 'playerCount' ? state.players.length : state.rules.drawSize,
     },
@@ -233,7 +230,6 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       result: t.result ? structuredClone(t.result) : null,
     },
     decks,
-    tavern: state.tavern.map(ref),
     discards,
     pending,
     hand: me ? me.hand.map((c) => ({ card: ref(c), value: resourceValue(ctx, me, c) })) : [],
@@ -258,7 +254,7 @@ export type ClientEvent =
 const EVENT_POLICY: Record<GameEvent['type'], 'public' | 'redact'> = {
   gameStarted: 'public', turnStarted: 'public', shuffled: 'public', heroChanged: 'public',
   companionPlayed: 'public', companionDiscarded: 'public', companionDeclined: 'public',
-  companionSkipped: 'public', companionFaceDown: 'public', companionMinion: 'public', tavernTaken: 'public', tavernRefilled: 'public', locationRevealed: 'public',
+  companionSkipped: 'public', companionFaceDown: 'public', companionMinion: 'public', locationRevealed: 'public',
   locationReplaced: 'public', extraLocation: 'public', encounterRevealed: 'public', encounterReplaced: 'public',
   minionDrawn: 'public', dieRolled: 'public', challengeSelected: 'public', passed: 'public',
   revealed: 'public', resourceDiscarded: 'public', councilHero: 'public', ability: 'public',

@@ -48,13 +48,7 @@ export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.ran
   switch (detail.kind) {
     case 'companion.offer': {
       if (level === 'easy' && rand() < 0.3) return { type: 'companion.skip', decision };
-      // Recruit from the tavern when a face-up companion beats what a blind draw is worth.
-      const best = [...view.tavern].sort((a, b) => companionScore(b.def) - companionScore(a.def))[0];
-      const mine = [...t.me.companions, ...t.me.inactiveCompanions, ...t.me.resting];
-      const full = mine.length >= t.me.maxCompanions;
-      const weakest = mine.length ? Math.min(...mine.map((c) => companionScore(c.def))) : 0;
-      const bar = Math.max(AVG_COMPANION_SCORE + (level === 'easy' ? 0 : 0.5), full ? weakest + 0.5 : 0);
-      if (best && companionScore(best.def) > bar) return { type: 'companion.take', decision, card: best.id };
+      // Looking at three and keeping the best is never worse than skipping (the pick can still be let go).
       return { type: 'companion.draw', decision };
     }
 
@@ -422,7 +416,7 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const worth = level !== 'easy' && user && (user === t.biggestThreat() || t.threat(user) > 8);
       return [worth ? 'counter' : 'allow'];
     }
-    case 'companionDraft': {
+    case 'companionDraft': case 'companionPick': {
       // Choose the strongest companions (easy bots pick at random).
       const sorted = level === 'easy' ? [...values].sort(() => rand() - 0.5) : [...values].sort((a, b) => companionScore(optionCard(b)?.def ?? '') - companionScore(optionCard(a)?.def ?? ''));
       return sorted.slice(0, c.max);

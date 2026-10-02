@@ -218,7 +218,7 @@ export type ChoosePurpose =
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
   | 'counterAbility' | 'oskarNegate' | 'appleSwap'
   | 'hallOfRest' | 'gauntlet' | 'sigrunDraw' | 'waystoneDraw' | 'companionMinion'
-  | 'heroDraft' | 'heroKeep' | 'companionDraft';
+  | 'heroDraft' | 'heroKeep' | 'companionDraft' | 'companionPick';
 
 export type Decision = CompanionOfferDecision | CompanionPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;
 
@@ -246,8 +246,6 @@ export interface GameState {
   players: PlayerState[];
   decks: Record<DeckName, CardId[]>;
   discards: Record<DeckName, CardId[]>;
-  /** Face-up companions anyone may recruit instead of drawing blind (public). */
-  tavern: CardId[];
   /** Card instance id -> card definition id. SECRET: reveals hidden cards. */
   cards: Record<CardId, string>;
   turn: TurnState;
@@ -270,7 +268,6 @@ export interface GameState {
 
 export type Command =
   | { type: 'companion.draw'; decision: number }
-  | { type: 'companion.take'; decision: number; card: CardId }
   | { type: 'companion.skip'; decision: number }
   | { type: 'companion.keep'; decision: number; replace: CardId | null }
   | { type: 'companion.discard'; decision: number }
@@ -300,8 +297,6 @@ export type GameEvent =
   | { type: 'companionSkipped'; player: PlayerId }
   | { type: 'companionFaceDown'; player: PlayerId; card: CardRef; faceDown: boolean }
   | { type: 'companionMinion'; player: PlayerId; card: CardRef }
-  | { type: 'tavernTaken'; player: PlayerId; card: CardRef }
-  | { type: 'tavernRefilled'; card: CardRef }
   | { type: 'locationRevealed'; card: CardRef; reason: string }
   | { type: 'locationReplaced'; from: CardRef; to: CardRef; reason: string }
   | { type: 'extraLocation'; count: number }

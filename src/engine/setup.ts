@@ -53,8 +53,6 @@ function sanitizeRules(r: Partial<HouseRules> | undefined): HouseRules {
   if (typeof r.fallCost === 'boolean') out.fallCost = r.fallCost;
   out.heroDraft = int(r.heroDraft, 1, 5, out.heroDraft);
   if (typeof r.draftOnReplace === 'boolean') out.draftOnReplace = r.draftOnReplace;
-  out.tavernSize = int(r.tavernSize, 0, 5, out.tavernSize);
-  out.companionDraft = int(r.companionDraft, 0, 8, out.companionDraft);
   if (r.handModel === 'refill' || r.handModel === 'steady') out.handModel = r.handModel;
   out.activeDraw = int(r.activeDraw, 0, 5, out.activeDraw);
   out.othersDraw = int(r.othersDraw, 0, 5, out.othersDraw);
@@ -81,7 +79,6 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
     decks: empty(),
     discards: empty(),
     cards: Object.create(null) as Record<string, string>,
-    tavern: [],
     turn: {
       number: 0, active: 0, step: 'turnStart', cursor: 0,
       location: null, extraLocations: [], encounter: null, minions: [], companionMinions: [], setAside: [], openingEntrants: [],
@@ -129,7 +126,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
       ctx.emit({ type: 'heroChanged', player: p.id, from: null, to: ctx.ref(p.hero), reason: 'setup' });
     }
     dealStartingTeams(ctx);
-    if (state.rules.companionDraft > 0) state.turn.step = 'companionDraft';
+    state.turn.step = 'companionDraft';
   }
   advance(ctx);
   return { state, events: ctx.events };

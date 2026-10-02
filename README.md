@@ -54,7 +54,7 @@ On compact shapes the camera fits the whole play area to the space the dock leav
 
 Cards are shown as large as the space allows, and their text is repeated as plain text only when the card comes out too small to read (`Hud.inspect`, using the print size from `rulesTextSize`).
 
-Choosing a card works the same everywhere: a bid, a tavern recruit or a one-card choice happens on click. On touch screens there's no hover, so the first tap shows the card full size with its action button, and a second tap (or the button) confirms. Holding an ability button opens its card without using it.
+Choosing a card works the same everywhere: a bid, a companion pick or a one-card choice happens on click. On touch screens there's no hover, so the first tap shows the card full size with its action button, and a second tap (or the button) confirms. Holding an ability button opens its card without using it.
 
 ## Multiplayer hooks
 

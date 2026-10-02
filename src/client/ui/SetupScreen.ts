@@ -15,7 +15,6 @@ export interface SetupChoice {
   name: string;
   bots: number;
   level: BotLevel;
-  tavern: boolean;
   handModel: HandModelChoice;
   draftOnReplace: boolean;
 }
@@ -23,8 +22,6 @@ export interface SetupChoice {
 /** The house rules a setup choice turns into (the engine validates them again). */
 export function rulesFor(c: SetupChoice): Partial<HouseRules> {
   return {
-    tavernSize: c.tavern ? 3 : 0,
-    companionDraft: c.tavern ? 5 : 0, // with the tavern: choose your two starting companions from five
     handModel: c.handModel,
     heroDraft: 3, // at the start: look at three heroes, keep one
     draftOnReplace: c.draftOnReplace,
@@ -49,7 +46,6 @@ function loadPrefs(): Partial<SetupChoice> {
     if (typeof v['name'] === 'string') out.name = v['name'].slice(0, 24);
     if (Number.isInteger(v['bots'])) out.bots = Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, v['bots'] as number));
     if (v['level'] === 'easy' || v['level'] === 'normal' || v['level'] === 'hard') out.level = v['level'];
-    if (typeof v['tavern'] === 'boolean') out.tavern = v['tavern'];
     if (typeof v['draftOnReplace'] === 'boolean') out.draftOnReplace = v['draftOnReplace'];
     if (v['handModel'] === 'steady' || v['handModel'] === 'refill') out.handModel = v['handModel'];
     return out;
@@ -92,7 +88,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
     }
     level.value = prefs.level ?? 'normal';
 
-    const tavern = checkbox('setup-tavern', prefs.tavern ?? true);
     const draftOnReplace = checkbox('setup-draft-replace', prefs.draftOnReplace ?? false);
     const handModel = h('select', { id: 'setup-hand' });
     for (const [v, label] of [
@@ -115,8 +110,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
       // Folded away: the defaults are what most players want.
       h('details', { class: 'house-rules' },
         h('summary', {}, 'House rules'),
-        h('label', { class: 'check' }, tavern,
-          h('span', {}, h('strong', {}, 'Tavern'), ': three face-up companions you can recruit instead of drawing blind.')),
         h('label', { class: 'check' }, draftOnReplace,
           h('span', {}, h('strong', {}, 'Draft from three after a fall'), ': pick from three heroes every time, not just at the start. Otherwise you draw one and may send it back once.')),
         h('label', { class: 'stack' }, h('span', {}, 'Resource cards'), handModel)),
@@ -129,7 +122,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
         name: name.value,
         bots: Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, Number.parseInt(bots.value, 10) || 2)),
         level: (['easy', 'normal', 'hard'] as const).find((x) => x === level.value) ?? 'normal',
-        tavern: tavern.checked,
         handModel: handModel.value === 'refill' ? 'refill' : 'steady',
         draftOnReplace: draftOnReplace.checked,
       };
