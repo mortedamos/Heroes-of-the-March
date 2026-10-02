@@ -2,275 +2,275 @@
 
 | Card | P/M/G | Σ | 3p win % (95% CI) | 4p win % (95% CI) | Relative win rate (1.00 = fair) ±95% | Stats-only rel. | Ability worth | Effects /turn held | Held ≥3 turns, never fired | Impl. / kind |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Ysolde of the Wellspring | 6/8/4 | 18 | 54.0 (51–57) | 43.3 (41–46) | **1.67** ±0.06 ▲ | 0.56 | +1.11 | 0.24 | 13% | full / triggered |
-| Mayor Hobby Trickgrin | 4/6/11 | 21 | 42.0 (39–45) | 40.3 (38–43) | **1.41** ±0.06 ▲ | 0.58 | +0.83 | 1.31 | 1% | full / triggered |
-| High Thane Brunna Stonefast | 8/6/7 | 21 | 42.9 (40–46) | 36.1 (33–39) | **1.35** ±0.06 ▲ | 0.77 | +0.58 | 0.24 | 14% | full / triggered |
-| Lord-Paladin Aldric Ashcroft | 11/4/6 | 21 | 41.4 (39–44) | 29.3 (27–32) | **1.21** ±0.06 ▲ | 0.73 | +0.49 | 0.57 | 5% | full / activated |
-| Thorgar Twice-Buried | 6/6/8 | 20 | 36.0 (33–39) | 24.8 (22–27) | **1.04** ±0.06  | 0.60 | +0.44 | 0.35 | 7% | full / triggered |
-| Kazra Emberdeep | 6/6/8 | 20 | 32.9 (30–36) | 24.6 (22–27) | **0.99** ±0.06  | 0.59 | +0.39 | 0.54 | 5% | full / triggered |
-| Aelthir Moonveil | 5/7/10 | 22 | 35.4 (33–38) | 21.4 (19–24) | **0.97** ±0.06  | 0.61 | +0.37 | 1.08 | 0% | full / activated |
-| Hesk of Two Homes | 8/7/8 | 23 | 32.3 (30–35) | 23.6 (21–26) | **0.96** ±0.06  | 0.77 | +0.19 | 0.23 | 18% | full / triggered |
-| Queen Maren Ashcroft | 6/10/6 | 22 | 33.2 (31–36) | 22.7 (20–25) | **0.96** ±0.06  | 0.68 | +0.27 | 0.44 | 5% | full / activated |
-| Warchief Grukka Ironjaw | 9/8/5 | 22 | 30.1 (28–33) | 22.7 (20–25) | **0.90** ±0.06 ▼ | 0.73 | +0.17 | 0.39 | 14% | full / activated |
-| Urzha Half-Tusk | 8/7/8 | 23 | 27.2 (25–30) | 19.4 (17–22) | **0.80** ±0.06 ▼ | 0.78 | +0.02 (n.s.) | 0.03 | 91% | full / activated |
-| Professor Barnaby Pickwort | 4/10/10 | 24 | 26.9 (24–29) | 17.8 (16–20) | **0.77** ±0.06 ▼ | 0.70 | +0.07 (n.s.) | 0.21 | 27% | full / activated |
-| Archmage Corvin Varro | 4/9/5 | 18 | 24.4 (22–27) | 18.3 (16–21) | **0.73** ±0.06 ▼ | 0.51 | +0.22 | 0.21 | 28% | full / triggered |
-| Pip Wanderfoot | 5/8/7 | 20 | 22.1 (20–25) | 17.0 (15–19) | **0.67** ±0.06 ▼ | 0.56 | +0.11 | 0.81 | 1% | full / activated |
-| Lord Vaelis Nightbloom | 4/6/10 | 20 | 20.7 (18–23) | 13.8 (12–16) | **0.59** ±0.06 ▼ | 0.49 | +0.10 | 0.34 | 15% | full / activated |
+| Ysolde of the Wellspring | 6/8/4 | 18 | 54.0 (51–57) | 42.7 (40–45) | **1.66** ±0.06 ▲ | 0.57 | +1.09 | 0.24 | 13% | full / triggered |
+| Mayor Hobby Trickgrin | 4/6/11 | 21 | 42.9 (40–45) | 40.6 (38–43) | **1.43** ±0.06 ▲ | 0.59 | +0.84 | 1.31 | 1% | full / triggered |
+| High Thane Brunna Stonefast | 8/6/7 | 21 | 44.0 (41–47) | 36.2 (34–39) | **1.38** ±0.06 ▲ | 0.78 | +0.60 | 0.24 | 14% | full / triggered |
+| Lord-Paladin Aldric Ashcroft | 11/4/6 | 21 | 40.9 (38–43) | 29.7 (27–32) | **1.21** ±0.06 ▲ | 0.71 | +0.50 | 0.57 | 5% | full / activated |
+| Thorgar Twice-Buried | 6/6/8 | 20 | 35.9 (33–38) | 24.5 (22–27) | **1.04** ±0.06  | 0.59 | +0.44 | 0.35 | 7% | full / triggered |
+| Kazra Emberdeep | 6/6/8 | 20 | 33.2 (31–36) | 24.8 (23–27) | **0.99** ±0.06  | 0.60 | +0.39 | 0.54 | 5% | full / triggered |
+| Hesk of Two Homes | 8/7/8 | 23 | 33.7 (31–36) | 23.8 (22–26) | **0.98** ±0.06  | 0.77 | +0.22 | 0.23 | 18% | full / triggered |
+| Aelthir Moonveil | 5/7/10 | 22 | 35.1 (33–38) | 22.1 (20–24) | **0.98** ±0.06  | 0.60 | +0.38 | 1.08 | 0% | full / activated |
+| Queen Maren Ashcroft | 6/10/6 | 22 | 34.0 (32–37) | 23.1 (21–25) | **0.98** ±0.06  | 0.68 | +0.30 | 0.44 | 5% | full / activated |
+| Warchief Grukka Ironjaw | 9/8/5 | 22 | 30.5 (28–33) | 22.6 (20–25) | **0.91** ±0.06 ▼ | 0.72 | +0.18 | 0.39 | 14% | full / activated |
+| Urzha Half-Tusk | 8/7/8 | 23 | 26.9 (25–29) | 19.4 (17–21) | **0.79** ±0.06 ▼ | 0.78 | +0.01 (n.s.) | 0.03 | 91% | full / activated |
+| Professor Barnaby Pickwort | 4/10/10 | 24 | 26.7 (24–29) | 17.6 (16–20) | **0.76** ±0.06 ▼ | 0.69 | +0.07 (n.s.) | 0.21 | 27% | full / activated |
+| Archmage Corvin Varro | 4/9/5 | 18 | 24.0 (22–26) | 18.4 (16–20) | **0.73** ±0.06 ▼ | 0.50 | +0.22 | 0.21 | 28% | full / triggered |
+| Pip Wanderfoot | 5/8/7 | 20 | 21.5 (19–24) | 17.4 (16–19) | **0.67** ±0.06 ▼ | 0.56 | +0.11 | 0.81 | 1% | full / activated |
+| Lord Vaelis Nightbloom | 4/6/10 | 20 | 21.0 (19–23) | 14.2 (13–16) | **0.60** ±0.06 ▼ | 0.50 | +0.10 | 0.34 | 15% | full / activated |
 
-Spread: relative win rates run from 0.59 to 1.67; sd 0.288 against a pure-noise sd of about 0.032. Heterogeneity χ² = 1243 on 14 df (the 95% cut-off for pure noise is about 23).
-Stat total vs relative win rate: r = -0.25.
+Spread: relative win rates run from 0.60 to 1.66; sd 0.289 against a pure-noise sd of about 0.029. Heterogeneity χ² = 1502 on 14 df (the 95% cut-off for pure noise is about 23).
+Stat total vs relative win rate: r = -0.24.
 
 ## Companions (controlled: each companion forced into a rotating seat's opening pair; all opening drafts random)
 
 | Card | P/M/G | Σ | 3p win % (95% CI) | 4p win % (95% CI) | Relative win rate (1.00 = fair) ±95% | Stats-only rel. | Ability worth | Effects /turn held | Held ≥3 turns, never fired | Impl. / kind |
 |---|---|---|---|---|---|---|---|---|---|---|
-| Loremaster Oskar Grimgate | 3/5/3 | 11 | 48.7 (45–53) | 33.2 (30–37) | **1.40** ±0.09 ▲ | 0.83 | +0.57 | 0.00 | 100% | full / static |
-| Mags Tolliver, Market Trader | 3/2/5 | 10 | 41.2 (37–45) | 33.3 (30–37) | **1.28** ±0.09 ▲ | 0.91 | +0.37 | 0.48 | 41% | full / activated |
-| Marshal Hedda Ironvow | 5/2/4 | 11 | 35.7 (32–40) | 31.0 (27–35) | **1.14** ±0.09 ▲ | 0.85 | +0.29 | 0.53 | 7% | full / triggered |
-| Tansy Brambleby, Barmaid and Volunteer | 3/3/4 | 10 | 38.0 (34–42) | 27.0 (24–31) | **1.11** ±0.09 ▲ | 0.93 | +0.18 | 0.48 | 38% | full / triggered |
-| Fennick Puffcap, Mycomancer | 2/4/3 | 9 | 35.0 (31–39) | 27.3 (24–31) | **1.07** ±0.09  | 0.93 | +0.14 | 0.60 | 37% | full / triggered |
-| Seraphine Moonveil, Warden-Scholar | 2/6/3 | 11 | 35.5 (32–39) | 26.8 (23–31) | **1.07** ±0.09  | 0.93 | +0.14 | 0.26 | 0% | full / triggered |
-| Sister Aurelie Dane, Physician | 2/5/3 | 10 | 34.5 (31–38) | 27.0 (24–31) | **1.05** ±0.09  | 0.89 | +0.16 | 0.00 | 100% | full / static |
-| Varg Ironjaw | 5/3/3 | 11 | 34.2 (30–38) | 26.8 (23–31) | **1.05** ±0.09  | 0.91 | +0.13 | 0.34 | 8% | full / triggered |
-| Gnash, the Butcher of Bloodmire | 6/2/2 | 10 | 35.0 (31–39) | 26.0 (23–30) | **1.05** ±0.09  | 0.82 | +0.22 | 0.00 | 100% | full / static |
-| Mogra Swiftfoot, Goblin Runner | 3/3/2 | 8 | 37.3 (34–41) | 22.3 (19–26) | **1.02** ±0.09  | 1.03 | -0.00 (n.s.) | 0.00 | 100% | full / static |
-| Clemence Fairbrook, Temple Cook | 3/4/2 | 9 | 33.8 (30–38) | 25.8 (22–29) | **1.02** ±0.09  | 1.00 | +0.02 (n.s.) | 0.12 | 66% | full / activated |
-| Nettle Burrows, Trouble Maker | 2/3/4 | 9 | 33.3 (30–37) | 26.2 (23–30) | **1.02** ±0.09  | 1.06 | -0.04 (n.s.) | 0.00 | 100% | full / static |
-| Tobin Quill, Goose-Keeper | 3/4/2 | 9 | 34.3 (31–38) | 24.3 (21–28) | **1.01** ±0.09  | 0.96 | +0.05 (n.s.) | 0.39 | 25% | full / triggered |
-| Pell Quillon, Collegium Prodigy | 2/5/3 | 10 | 32.2 (29–36) | 26.0 (23–30) | **1.00** ±0.09  | 0.96 | +0.04 (n.s.) | 0.00 | 100% | full / static |
-| Duchess, the Pub Goose | 4/3/1 | 8 | 34.0 (30–38) | 24.2 (21–28) | **1.00** ±0.09  | 0.99 | +0.00 (n.s.) | 0.04 | 91% | full / activated |
-| Cobra Chicken | 4/3/3 | 10 | 31.8 (28–36) | 26.2 (23–30) | **0.99** ±0.09  | 1.01 | -0.01 (n.s.) | 0.05 | 86% | full / activated |
-| Brisa Blastcap, Bombardier | 5/3/3 | 11 | 31.7 (28–35) | 25.2 (22–29) | **0.97** ±0.09  | 0.89 | +0.09 (n.s.) | 0.58 | 6% | full / activated |
-| Mira Coldwater, the Stonetouched | 3/3/4 | 10 | 32.5 (29–36) | 24.3 (21–28) | **0.97** ±0.09  | 0.83 | +0.15 | 0.11 | 54% | full / activated |
-| Sir Hugo Pellam, Marchguard Surgeon | 4/2/4 | 10 | 31.0 (27–35) | 25.5 (22–29) | **0.97** ±0.09  | 0.95 | +0.02 (n.s.) | 0.32 | 35% | full / activated |
-| Liriel Nightbloom | 2/5/3 | 10 | 31.8 (28–36) | 24.5 (21–28) | **0.97** ±0.09  | 0.93 | +0.03 (n.s.) | 0.46 | 13% | full / activated |
-| Goldie Trickgrin, Keeper of the Goose & Kettle | 2/4/5 | 11 | 34.2 (30–38) | 21.7 (19–25) | **0.96** ±0.09  | 0.85 | +0.10 (n.s.) | 0.00 | 100% | full / static |
-| Sir Osric Vane, Marshal of the Old Guard | 4/2/4 | 10 | 33.3 (30–37) | 22.5 (19–26) | **0.96** ±0.09  | 0.90 | +0.05 (n.s.) | 0.00 | 100% | full / static |
-| Posy Marchbank, Marchguard Clerk | 3/3/4 | 10 | 30.8 (27–35) | 25.0 (22–29) | **0.96** ±0.09  | 0.91 | +0.05 (n.s.) | 0.00 | 100% | full / static |
-| Sergeant Waddle | 4/3/2 | 9 | 30.8 (27–35) | 25.0 (22–29) | **0.96** ±0.09  | 0.94 | +0.02 (n.s.) | 0.04 | 88% | full / activated |
-| Sigrun Stonefast, Metal Singer | 2/3/5 | 10 | 30.8 (27–35) | 24.0 (21–28) | **0.94** ±0.09  | 0.97 | -0.03 (n.s.) | 0.00 | 100% | full / static |
-| Tova Emberdeep, Keeper of the Underway Door | 1/3/4 | 8 | 30.7 (27–34) | 24.0 (21–28) | **0.94** ±0.09  | 0.94 | +0.00 (n.s.) | 0.00 | 100% | full / activated |
-| Captain Rook Halloran, Skyship Captain | 5/2/5 | 12 | 30.0 (26–34) | 23.8 (21–27) | **0.92** ±0.09  | 0.84 | +0.08 (n.s.) | 0.18 | 27% | full / triggered |
-| Kesh the Bog Huntress | 5/1/4 | 10 | 31.3 (28–35) | 22.5 (19–26) | **0.92** ±0.09  | 0.96 | -0.04 (n.s.) | 0.53 | 8% | full / activated |
-| Thessaly of the Grove | 2/5/3 | 10 | 31.3 (28–35) | 22.2 (19–26) | **0.92** ±0.09  | 0.82 | +0.10 (n.s.) | 0.58 | 8% | full / activated |
-| Caelan the Exile | 2/4/4 | 10 | 28.3 (25–32) | 23.5 (20–27) | **0.89** ±0.09 ▼ | 0.85 | +0.03 (n.s.) | 0.33 | 27% | full / activated |
-| Wren Nightingale, Relic-Hunter | 4/3/6 | 13 | 29.8 (26–34) | 21.8 (19–25) | **0.89** ±0.09 ▼ | 0.90 | -0.02 (n.s.) | 1.11 | 0% | full / activated |
-| Honk, the Goose Rout Veteran | 4/3/1 | 8 | 29.8 (26–34) | 21.0 (18–24) | **0.87** ±0.09 ▼ | 0.85 | +0.02 (n.s.) | 0.04 | 87% | full / activated |
-| Elder Ilvena of the Conclave | 2/5/3 | 10 | 15.8 (13–19) | 13.8 (11–17) | **0.51** ±0.09 ▼ | 0.76 | -0.25 | 0.77 | 1% | full / activated |
+| Loremaster Oskar Grimgate | 3/5/3 | 11 | 49.2 (46–53) | 33.1 (30–37) | **1.41** ±0.08 ▲ | 0.84 | +0.57 | 0.00 | 100% | full / static |
+| Mags Tolliver, Market Trader | 3/2/5 | 10 | 41.9 (38–46) | 33.5 (30–37) | **1.29** ±0.08 ▲ | 0.92 | +0.38 | 0.48 | 41% | full / activated |
+| Marshal Hedda Ironvow | 5/2/4 | 11 | 36.0 (33–40) | 30.8 (28–34) | **1.15** ±0.08 ▲ | 0.88 | +0.26 | 0.54 | 7% | full / triggered |
+| Seraphine Moonveil, Warden-Scholar | 2/6/3 | 11 | 36.7 (33–40) | 27.6 (24–31) | **1.10** ±0.08 ▲ | 0.95 | +0.16 | 0.26 | 0% | full / triggered |
+| Tansy Brambleby, Barmaid and Volunteer | 3/3/4 | 10 | 37.2 (34–41) | 26.9 (24–30) | **1.10** ±0.08 ▲ | 0.92 | +0.18 | 0.48 | 38% | full / triggered |
+| Varg Ironjaw | 5/3/3 | 11 | 34.9 (31–38) | 26.8 (24–30) | **1.06** ±0.08  | 0.93 | +0.12 | 0.34 | 8% | full / triggered |
+| Fennick Puffcap, Mycomancer | 2/4/3 | 9 | 34.9 (31–38) | 26.5 (23–30) | **1.05** ±0.08  | 0.95 | +0.10 (n.s.) | 0.60 | 36% | full / triggered |
+| Tobin Quill, Goose-Keeper | 3/4/2 | 9 | 35.7 (32–39) | 24.4 (21–28) | **1.03** ±0.08  | 0.95 | +0.08 (n.s.) | 0.39 | 25% | full / triggered |
+| Gnash, the Butcher of Bloodmire | 6/2/2 | 10 | 34.3 (31–38) | 25.7 (23–29) | **1.03** ±0.08  | 0.85 | +0.17 | 0.00 | 100% | full / static |
+| Sister Aurelie Dane, Physician | 2/5/3 | 10 | 34.0 (31–38) | 25.8 (23–29) | **1.03** ±0.08  | 0.89 | +0.14 | 0.00 | 100% | full / static |
+| Mogra Swiftfoot, Goblin Runner | 3/3/2 | 8 | 37.1 (34–41) | 22.5 (20–26) | **1.02** ±0.08  | 1.02 | -0.00 (n.s.) | 0.00 | 100% | full / static |
+| Pell Quillon, Collegium Prodigy | 2/5/3 | 10 | 32.2 (29–36) | 27.2 (24–31) | **1.02** ±0.08  | 0.95 | +0.07 (n.s.) | 0.00 | 100% | full / static |
+| Nettle Burrows, Trouble Maker | 2/3/4 | 9 | 33.6 (30–37) | 25.7 (23–29) | **1.02** ±0.08  | 1.04 | -0.02 (n.s.) | 0.00 | 100% | full / static |
+| Clemence Fairbrook, Temple Cook | 3/4/2 | 9 | 33.6 (30–37) | 24.7 (22–28) | **1.00** ±0.08  | 0.98 | +0.02 (n.s.) | 0.12 | 66% | full / activated |
+| Sigrun Stonefast, Metal Singer | 2/3/5 | 10 | 32.6 (29–36) | 24.9 (22–28) | **0.99** ±0.08  | 0.98 | +0.00 (n.s.) | 0.00 | 100% | full / static |
+| Duchess, the Pub Goose | 4/3/1 | 8 | 33.8 (30–37) | 23.6 (21–27) | **0.98** ±0.08  | 0.98 | +0.00 (n.s.) | 0.04 | 91% | full / activated |
+| Goldie Trickgrin, Keeper of the Goose & Kettle | 2/4/5 | 11 | 34.4 (31–38) | 22.8 (20–26) | **0.98** ±0.08  | 0.86 | +0.12 | 0.00 | 100% | full / static |
+| Cobra Chicken | 4/3/3 | 10 | 31.7 (28–35) | 25.4 (22–29) | **0.98** ±0.08  | 0.99 | -0.01 (n.s.) | 0.05 | 86% | full / activated |
+| Sir Hugo Pellam, Marchguard Surgeon | 4/2/4 | 10 | 31.5 (28–35) | 25.1 (22–28) | **0.97** ±0.08  | 0.93 | +0.04 (n.s.) | 0.32 | 35% | full / activated |
+| Posy Marchbank, Marchguard Clerk | 3/3/4 | 10 | 30.8 (28–34) | 25.4 (22–29) | **0.96** ±0.08  | 0.91 | +0.05 (n.s.) | 0.00 | 100% | full / static |
+| Mira Coldwater, the Stonetouched | 3/3/4 | 10 | 31.4 (28–35) | 24.4 (21–28) | **0.96** ±0.08  | 0.85 | +0.11 (n.s.) | 0.11 | 55% | full / activated |
+| Brisa Blastcap, Bombardier | 5/3/3 | 11 | 31.1 (28–35) | 24.6 (22–28) | **0.95** ±0.08  | 0.89 | +0.07 (n.s.) | 0.58 | 6% | full / activated |
+| Tova Emberdeep, Keeper of the Underway Door | 1/3/4 | 8 | 30.4 (27–34) | 25.0 (22–28) | **0.95** ±0.08  | 0.95 | +0.00 (n.s.) | 0.00 | 100% | full / activated |
+| Sergeant Waddle | 4/3/2 | 9 | 30.4 (27–34) | 24.6 (22–28) | **0.94** ±0.08  | 0.92 | +0.02 (n.s.) | 0.04 | 88% | full / activated |
+| Kesh the Bog Huntress | 5/1/4 | 10 | 31.8 (29–35) | 23.1 (20–26) | **0.94** ±0.08  | 0.94 | +0.00 (n.s.) | 0.53 | 8% | full / activated |
+| Sir Osric Vane, Marshal of the Old Guard | 4/2/4 | 10 | 32.5 (29–36) | 22.4 (19–26) | **0.94** ±0.08  | 0.89 | +0.05 (n.s.) | 0.00 | 100% | full / static |
+| Liriel Nightbloom | 2/5/3 | 10 | 31.1 (28–35) | 23.5 (21–27) | **0.94** ±0.08  | 0.90 | +0.04 (n.s.) | 0.45 | 13% | full / activated |
+| Captain Rook Halloran, Skyship Captain | 5/2/5 | 12 | 28.9 (26–32) | 24.0 (21–27) | **0.91** ±0.08 ▼ | 0.82 | +0.08 (n.s.) | 0.18 | 27% | full / triggered |
+| Wren Nightingale, Relic-Hunter | 4/3/6 | 13 | 30.8 (28–34) | 21.8 (19–25) | **0.90** ±0.08 ▼ | 0.90 | +0.00 (n.s.) | 1.11 | 0% | full / activated |
+| Caelan the Exile | 2/4/4 | 10 | 28.9 (26–32) | 23.6 (21–27) | **0.90** ±0.08 ▼ | 0.85 | +0.05 (n.s.) | 0.33 | 27% | full / activated |
+| Thessaly of the Grove | 2/5/3 | 10 | 31.3 (28–35) | 21.1 (18–24) | **0.90** ±0.08 ▼ | 0.80 | +0.09 (n.s.) | 0.58 | 8% | full / activated |
+| Honk, the Goose Rout Veteran | 4/3/1 | 8 | 29.9 (27–33) | 21.5 (19–25) | **0.88** ±0.08 ▼ | 0.87 | +0.01 (n.s.) | 0.04 | 86% | full / activated |
+| Elder Ilvena of the Conclave | 2/5/3 | 10 | 17.2 (15–20) | 13.6 (11–16) | **0.53** ±0.08 ▼ | 0.78 | -0.25 | 0.77 | 1% | full / activated |
 
-Spread: relative win rates run from 0.51 to 1.40; sd 0.136 against a pure-noise sd of about 0.045. Heterogeneity χ² = 305 on 32 df (the 95% cut-off for pure noise is about 45).
-Stat total vs relative win rate: r = 0.07.
+Spread: relative win rates run from 0.53 to 1.41; sd 0.135 against a pure-noise sd of about 0.041. Heterogeneity χ² = 361 on 32 df (the 95% cut-off for pure noise is about 45).
+Stat total vs relative win rate: r = 0.09.
 
 ### Turn-order check (hero experiment): win rate by seat relative to first player
 
 |  | first | 2nd | 3rd | 4th |
 |---|---|---|---|---|
-| 3p | 35.5% | 32.9% | 31.9% |
-| 4p | 26.1% | 24.8% | 24.6% | 24.5% |
+| 3p | 35.4% | 33.2% | 32.2% |
+| 4p | 26.3% | 25.0% | 24.9% | 24.3% |
 
 ### Turn-order check (comp experiment): win rate by seat relative to first player
 
 |  | first | 2nd | 3rd | 4th |
 |---|---|---|---|---|
-| 3p | 34.9% | 32.1% | 32.0% |
-| 4p | 26.4% | 24.5% | 24.3% | 24.6% |
+| 3p | 34.8% | 32.4% | 32.1% |
+| 4p | 26.1% | 24.5% | 24.4% | 24.6% |
 
-## Natural play (12000 games, bots draft and play normally)
+## Natural play (14400 games, bots draft and play normally)
 
 | Players | Games | Avg turns | Capped (turn limit) | Falls /game |
 |---|---|---|---|---|
-| 2 | 1714 | 7.4 | 0 | 1.07 |
-| 3 | 3429 | 9.5 | 0 | 2.44 |
-| 4 | 3429 | 11.5 | 0 | 4.01 |
-| 5 | 1714 | 13.3 | 0 | 5.39 |
-| 6 | 1714 | 15.1 | 0 | 6.73 |
+| 2 | 2057 | 7.4 | 0 | 1.05 |
+| 3 | 4115 | 9.5 | 0 | 2.44 |
+| 4 | 4114 | 11.5 | 0 | 4.03 |
+| 5 | 2057 | 13.3 | 0 | 5.40 |
+| 6 | 2057 | 15.2 | 0 | 6.78 |
 
 ### Heroes in the final roster of winners vs. fair share
 
 | Card | Player-games held | Picked (final roster) | Win ratio (final roster) | z | Win ratio (ever held) | Effects/turn: winners | losers |
 |---|---|---|---|---|---|---|---|
-| Mayor Hobby Trickgrin | 2536 | 1356 | 1.67 ▲ | 14.3 | 1.41 | 1.95 | 1.71 |
-| Ysolde of the Wellspring | 3519 | 2526 | 1.54 ▲ | 15.9 | 1.40 | 0.28 | 0.27 |
-| High Thane Brunna Stonefast | 2796 | 2393 | 1.32 ▲ | 9.1 | 1.28 | 0.31 | 0.26 |
-| Aelthir Moonveil | 8158 | 4087 | 1.24 ▲ | 9.8 | 1.08 | 1.07 | 1.11 |
-| Lord-Paladin Aldric Ashcroft | 4864 | 2541 | 1.22 ▲ | 6.5 | 1.11 | 0.67 | 0.65 |
-| Queen Maren Ashcroft | 7462 | 3904 | 1.03 | 1.2 | 0.99 | 0.44 | 0.40 |
-| Warchief Grukka Ironjaw | 7552 | 3955 | 0.95 | -1.9 | 0.92 | 0.40 | 0.38 |
-| Thorgar Twice-Buried | 5765 | 4611 | 0.94 ▼ | -2.5 | 0.95 | 0.39 | 0.37 |
-| Hesk of Two Homes | 4327 | 2786 | 0.92 ▼ | -2.4 | 0.94 | 0.26 | 0.24 |
-| Professor Barnaby Pickwort | 8744 | 3861 | 0.81 ▼ | -7.4 | 0.82 | 0.22 | 0.20 |
-| Urzha Half-Tusk | 6679 | 4124 | 0.78 ▼ | -8.6 | 0.81 | 0.02 | 0.02 |
-| Pip Wanderfoot | 5710 | 2130 | 0.77 ▼ | -6.5 | 0.78 | 0.81 | 0.84 |
-| Kazra Emberdeep | 2590 | 1989 | 0.73 ▼ | -6.9 | 0.78 | 0.47 | 0.43 |
-| Lord Vaelis Nightbloom | 2906 | 1694 | 0.67 ▼ | -7.8 | 0.72 | 0.56 | 0.52 |
-| Archmage Corvin Varro | 3420 | 1785 | 0.67 ▼ | -8.3 | 0.75 | 0.21 | 0.20 |
+| Mayor Hobby Trickgrin | 3015 | 1631 | 1.72 ▲ | 16.7 | 1.43 | 1.97 | 1.72 |
+| Ysolde of the Wellspring | 4228 | 3047 | 1.53 ▲ | 16.9 | 1.39 | 0.28 | 0.27 |
+| High Thane Brunna Stonefast | 3366 | 2875 | 1.31 ▲ | 9.5 | 1.27 | 0.31 | 0.26 |
+| Aelthir Moonveil | 9783 | 4887 | 1.24 ▲ | 10.5 | 1.08 | 1.07 | 1.11 |
+| Lord-Paladin Aldric Ashcroft | 5863 | 3060 | 1.20 ▲ | 6.5 | 1.10 | 0.67 | 0.65 |
+| Queen Maren Ashcroft | 8973 | 4688 | 1.04 | 1.6 | 0.99 | 0.44 | 0.40 |
+| Warchief Grukka Ironjaw | 9088 | 4736 | 0.95 ▼ | -2.0 | 0.93 | 0.40 | 0.38 |
+| Thorgar Twice-Buried | 6911 | 5531 | 0.94 ▼ | -2.5 | 0.96 | 0.39 | 0.37 |
+| Hesk of Two Homes | 5187 | 3320 | 0.92 ▼ | -2.7 | 0.92 | 0.26 | 0.24 |
+| Professor Barnaby Pickwort | 10457 | 4609 | 0.81 ▼ | -8.3 | 0.81 | 0.22 | 0.20 |
+| Pip Wanderfoot | 6923 | 2584 | 0.77 ▼ | -7.1 | 0.77 | 0.82 | 0.84 |
+| Urzha Half-Tusk | 8046 | 4942 | 0.77 ▼ | -9.8 | 0.81 | 0.02 | 0.02 |
+| Kazra Emberdeep | 3119 | 2396 | 0.75 ▼ | -7.1 | 0.79 | 0.48 | 0.43 |
+| Lord Vaelis Nightbloom | 3501 | 2045 | 0.70 ▼ | -8.0 | 0.72 | 0.56 | 0.52 |
+| Archmage Corvin Varro | 4115 | 2124 | 0.68 ▼ | -8.7 | 0.76 | 0.22 | 0.20 |
 
 ### Companions in the final roster of winners vs. fair share
 
 | Card | Player-games held | Picked (final roster) | Win ratio (final roster) | z | Win ratio (ever held) | Effects/turn: winners | losers |
 |---|---|---|---|---|---|---|---|
-| Mira Coldwater, the Stonetouched | 6879 | 1818 | 1.79 ▲ | 18.9 | 1.25 | 0.13 | 0.09 |
-| Loremaster Oskar Grimgate | 12129 | 9224 | 1.52 ▲ | 31.3 | 1.40 | 0.00 | 0.00 |
-| Mags Tolliver, Market Trader | 6248 | 461 | 1.37 ▲ | 4.4 | 1.33 | 0.39 | 0.37 |
-| Gnash, the Butcher of Bloodmire | 6950 | 2444 | 1.29 ▲ | 8.2 | 1.12 | 0.00 | 0.00 |
-| Marshal Hedda Ironvow | 7082 | 2409 | 1.27 ▲ | 7.7 | 1.19 | 0.60 | 0.58 |
-| Sister Aurelie Dane, Physician | 6956 | 2484 | 1.16 ▲ | 4.5 | 1.08 | 0.00 | 0.00 |
-| Pell Quillon, Collegium Prodigy | 3847 | 299 | 1.09 | 0.9 | 1.06 | 0.00 | 0.00 |
-| Sir Osric Vane, Marshal of the Old Guard | 6982 | 2428 | 1.08 ▲ | 2.2 | 1.03 | 0.00 | 0.00 |
-| Brisa Blastcap, Bombardier | 12444 | 8905 | 1.05 ▲ | 3.2 | 1.01 | 0.59 | 0.62 |
-| Posy Marchbank, Marchguard Clerk | 6910 | 2377 | 1.03 | 0.8 | 1.01 | 0.00 | 0.00 |
-| Captain Rook Halloran, Skyship Captain | 12476 | 8886 | 1.01 | 0.4 | 0.99 | 0.20 | 0.20 |
-| Seraphine Moonveil, Warden-Scholar | 6996 | 2321 | 0.99 | -0.3 | 1.02 | 0.22 | 0.20 |
-| Goldie Trickgrin, Keeper of the Goose & Kettle | 7058 | 2361 | 0.93 | -1.9 | 1.00 | 0.00 | 0.00 |
-| Tansy Brambleby, Barmaid and Volunteer | 3910 | 333 | 0.93 | -0.7 | 1.02 | 0.19 | 0.19 |
-| Wren Nightingale, Relic-Hunter | 11878 | 11317 | 0.93 ▼ | -4.9 | 0.92 | 1.06 | 1.05 |
-| Varg Ironjaw | 7066 | 2335 | 0.90 ▼ | -2.7 | 0.99 | 0.30 | 0.28 |
-| Sir Hugo Pellam, Marchguard Surgeon | 6891 | 2274 | 0.90 ▼ | -2.8 | 0.93 | 0.38 | 0.42 |
-| Liriel Nightbloom | 7000 | 2251 | 0.88 ▼ | -3.2 | 0.94 | 0.49 | 0.52 |
-| Sigrun Stonefast, Metal Singer | 2845 | 205 | 0.88 | -1.0 | 0.97 | 0.00 | 0.00 |
-| Fennick Puffcap, Mycomancer | 2384 | 145 | 0.86 | -1.0 | 1.08 | 0.56 | 0.54 |
-| Nettle Burrows, Trouble Maker | 3937 | 348 | 0.84 | -1.8 | 1.02 | 0.00 | 0.00 |
-| Cobra Chicken | 2821 | 207 | 0.82 | -1.5 | 1.02 | 0.06 | 0.06 |
-| Duchess, the Pub Goose | 1693 | 52 | 0.80 | -0.9 | 1.05 | 0.05 | 0.05 |
-| Kesh the Bog Huntress | 6999 | 2201 | 0.79 ▼ | -5.6 | 0.88 | 0.57 | 0.59 |
-| Thessaly of the Grove | 6930 | 2272 | 0.76 ▼ | -6.4 | 0.88 | 0.59 | 0.63 |
-| Caelan the Exile | 6927 | 2309 | 0.76 ▼ | -6.6 | 0.89 | 0.35 | 0.38 |
-| Clemence Fairbrook, Temple Cook | 2723 | 178 | 0.74 ▼ | -2.0 | 1.02 | 0.13 | 0.14 |
-| Tobin Quill, Goose-Keeper | 2076 | 114 | 0.66 ▼ | -2.2 | 1.03 | 0.35 | 0.32 |
-| Mogra Swiftfoot, Goblin Runner | 1673 | 29 | 0.60 | -1.2 | 0.95 | 0.00 | 0.00 |
-| Sergeant Waddle | 2019 | 123 | 0.60 ▼ | -2.7 | 0.95 | 0.06 | 0.06 |
-| Honk, the Goose Rout Veteran | 1623 | 37 | 0.50 | -1.9 | 0.97 | 0.07 | 0.05 |
-| Elder Ilvena of the Conclave | 12417 | 8846 | 0.48 ▼ | -30.1 | 0.57 | 0.73 | 0.73 |
-| Tova Emberdeep, Keeper of the Underway Door | 1694 | 45 | 0.36 ▼ | -2.5 | 1.04 | 0.00 | 0.00 |
+| Mira Coldwater, the Stonetouched | 8279 | 2186 | 1.81 ▲ | 21.4 | 1.27 | 0.13 | 0.09 |
+| Loremaster Oskar Grimgate | 14574 | 11058 | 1.53 ▲ | 35.2 | 1.41 | 0.00 | 0.00 |
+| Mags Tolliver, Market Trader | 7516 | 568 | 1.39 ▲ | 5.2 | 1.33 | 0.39 | 0.37 |
+| Gnash, the Butcher of Bloodmire | 8352 | 2937 | 1.30 ▲ | 9.2 | 1.12 | 0.00 | 0.00 |
+| Marshal Hedda Ironvow | 8452 | 2873 | 1.27 ▲ | 8.2 | 1.18 | 0.60 | 0.58 |
+| Sister Aurelie Dane, Physician | 8368 | 2999 | 1.14 ▲ | 4.2 | 1.06 | 0.00 | 0.00 |
+| Sir Osric Vane, Marshal of the Old Guard | 8397 | 2933 | 1.08 ▲ | 2.5 | 1.02 | 0.00 | 0.00 |
+| Brisa Blastcap, Bombardier | 14932 | 10683 | 1.05 ▲ | 3.2 | 1.01 | 0.59 | 0.62 |
+| Pell Quillon, Collegium Prodigy | 4632 | 360 | 1.04 | 0.5 | 1.05 | 0.00 | 0.00 |
+| Captain Rook Halloran, Skyship Captain | 14972 | 10643 | 1.01 | 0.4 | 0.99 | 0.20 | 0.20 |
+| Posy Marchbank, Marchguard Clerk | 8349 | 2879 | 1.01 | 0.2 | 1.02 | 0.00 | 0.00 |
+| Seraphine Moonveil, Warden-Scholar | 8425 | 2765 | 0.98 | -0.5 | 1.01 | 0.22 | 0.20 |
+| Varg Ironjaw | 8515 | 2829 | 0.93 ▼ | -2.0 | 1.00 | 0.30 | 0.29 |
+| Wren Nightingale, Relic-Hunter | 14264 | 13598 | 0.92 ▼ | -5.8 | 0.91 | 1.06 | 1.05 |
+| Goldie Trickgrin, Keeper of the Goose & Kettle | 8472 | 2801 | 0.92 ▼ | -2.5 | 0.99 | 0.00 | 0.00 |
+| Tansy Brambleby, Barmaid and Volunteer | 4715 | 387 | 0.90 | -1.2 | 1.02 | 0.18 | 0.19 |
+| Liriel Nightbloom | 8335 | 2690 | 0.89 ▼ | -3.3 | 0.94 | 0.50 | 0.52 |
+| Fennick Puffcap, Mycomancer | 2855 | 168 | 0.89 | -0.9 | 1.10 | 0.55 | 0.54 |
+| Sir Hugo Pellam, Marchguard Surgeon | 8293 | 2740 | 0.88 ▼ | -3.4 | 0.92 | 0.38 | 0.42 |
+| Sigrun Stonefast, Metal Singer | 3425 | 247 | 0.87 | -1.2 | 0.97 | 0.00 | 0.00 |
+| Nettle Burrows, Trouble Maker | 4725 | 405 | 0.84 | -1.9 | 1.03 | 0.00 | 0.00 |
+| Duchess, the Pub Goose | 2053 | 61 | 0.82 | -0.8 | 1.01 | 0.05 | 0.05 |
+| Cobra Chicken | 3394 | 247 | 0.80 | -1.8 | 1.03 | 0.06 | 0.06 |
+| Kesh the Bog Huntress | 8462 | 2664 | 0.78 ▼ | -6.4 | 0.89 | 0.57 | 0.59 |
+| Clemence Fairbrook, Temple Cook | 3265 | 216 | 0.77 | -1.9 | 0.99 | 0.13 | 0.14 |
+| Thessaly of the Grove | 8304 | 2723 | 0.77 ▼ | -6.8 | 0.90 | 0.59 | 0.63 |
+| Caelan the Exile | 8353 | 2768 | 0.75 ▼ | -7.4 | 0.89 | 0.35 | 0.38 |
+| Tobin Quill, Goose-Keeper | 2489 | 139 | 0.68 ▼ | -2.2 | 1.00 | 0.35 | 0.33 |
+| Sergeant Waddle | 2437 | 136 | 0.60 ▼ | -2.8 | 0.99 | 0.06 | 0.06 |
+| Mogra Swiftfoot, Goblin Runner | 1991 | 35 | 0.59 | -1.4 | 0.94 | 0.00 | 0.00 |
+| Honk, the Goose Rout Veteran | 1949 | 43 | 0.51 ▼ | -2.0 | 0.98 | 0.08 | 0.06 |
+| Elder Ilvena of the Conclave | 14955 | 10649 | 0.48 ▼ | -33.2 | 0.57 | 0.72 | 0.73 |
+| Tova Emberdeep, Keeper of the Underway Door | 2034 | 56 | 0.42 ▼ | -2.6 | 1.04 | 0.00 | 0.00 |
 
 ### Abilities that rarely do anything (natural play)
 
 | Card | Kind | Impl. | Turns held | Effects/turn | Held ≥3 turns, never fired | Activations used/offered | Hooks effective/called |
 |---|---|---|---|---|---|---|---|
-| Mogra Swiftfoot, Goblin Runner | companion | full (static only) | 1893 | 0.000 | 100% | – | – |
-| Loremaster Oskar Grimgate | companion | full (static only) | 98538 | 0.000 | 100% | – | – |
-| Posy Marchbank, Marchguard Clerk | companion | full (static only) | 37305 | 0.000 | 100% | – | – |
-| Sir Osric Vane, Marshal of the Old Guard | companion | full (static only) | 37242 | 0.000 | 100% | – | – |
-| Sigrun Stonefast, Metal Singer | companion | full (static only) | 4821 | 0.000 | 100% | – | – |
-| Gnash, the Butcher of Bloodmire | companion | full (static only) | 37053 | 0.000 | 100% | – | – |
-| Sister Aurelie Dane, Physician | companion | full (static only) | 37664 | 0.000 | 100% | – | – |
-| Nettle Burrows, Trouble Maker | companion | full (static only) | 7731 | 0.000 | 100% | – | – |
-| Pell Quillon, Collegium Prodigy | companion | full (static only) | 7502 | 0.000 | 100% | – | – |
-| Tova Emberdeep, Keeper of the Underway Door | companion | full | 1947 | 0.000 | 100% | 0/2336 | – |
-| Goldie Trickgrin, Keeper of the Goose & Kettle | companion | full (static only) | 36732 | 0.000 | 100% | – | – |
-| Urzha Half-Tusk | hero | full | 53830 | 0.024 | 90% | 664/206783 | 642/642 |
-| Cobra Chicken | companion | full | 4800 | 0.064 | 82% | 306/4492 | – |
-| Sergeant Waddle | companion | full | 2778 | 0.067 | 79% | 187/2810 | – |
-| Duchess, the Pub Goose | companion | full | 1947 | 0.059 | 78% | 114/1979 | – |
-| Honk, the Goose Rout Veteran | companion | full | 1882 | 0.065 | 77% | 123/1877 | – |
-| Clemence Fairbrook, Temple Cook | companion | full | 4603 | 0.176 | 64% | 811/2757 | – |
-| Tansy Brambleby, Barmaid and Volunteer | companion | full | 7639 | 0.211 | 64% | – | 1610/29001 |
-| Mira Coldwater, the Stonetouched | companion | full | 32316 | 0.106 | 45% | 3422/23556 | – |
-| Tobin Quill, Goose-Keeper | companion | full | 2849 | 0.398 | 44% | – | 1134/14383 |
-| Fennick Puffcap, Mycomancer | companion | full | 3544 | 0.802 | 37% | – | 2844/15038 |
-| Archmage Corvin Varro | hero | full | 19885 | 0.209 | 32% | – | 4153/27950 |
-| Mags Tolliver, Market Trader | companion | full | 13446 | 0.477 | 29% | 6416/14721 | – |
-| Professor Barnaby Pickwort | hero | full | 63730 | 0.208 | 24% | 2307/15779 | 10934/91572 |
-| Captain Rook Halloran, Skyship Captain | companion | full | 95932 | 0.199 | 23% | – | 19066/318045 |
-| Sir Hugo Pellam, Marchguard Surgeon | companion | full | 35924 | 0.417 | 21% | 14969/97568 | – |
-| Caelan the Exile | companion | full | 36176 | 0.377 | 20% | 13633/100591 | – |
-| Hesk of Two Homes | hero | full | 31137 | 0.250 | 16% | – | 7771/47227 |
-| High Thane Brunna Stonefast | hero | full | 16074 | 0.277 | 16% | – | 4451/17839 |
-| Ysolde of the Wellspring | hero | full | 24019 | 0.270 | 13% | – | 6496/25258 |
-| Warchief Grukka Ironjaw | hero | full | 56807 | 0.386 | 13% | 7847/57685 | 14074/85794 |
-| Liriel Nightbloom | companion | full | 35459 | 0.517 | 9% | 18322/88661 | – |
-| Kazra Emberdeep | hero | full | 13734 | 0.452 | 9% | – | 6211/42431 |
-| Varg Ironjaw | companion | full | 36886 | 0.303 | 8% | – | 11186/82467 |
-| Brisa Blastcap, Bombardier | companion | full | 96434 | 0.614 | 6% | 59165/224931 | – |
-| Marshal Hedda Ironvow | companion | full | 36922 | 0.600 | 6% | – | 22136/138400 |
-| Queen Maren Ashcroft | hero | full | 57550 | 0.416 | 6% | 9802/14503 | 14119/83129 |
-| Kesh the Bog Huntress | companion | full | 35076 | 0.593 | 5% | 20783/78774 | – |
-| Thorgar Twice-Buried | hero | full | 50996 | 0.375 | 5% | – | 19112/51578 |
-| Thessaly of the Grove | companion | full | 35541 | 0.629 | 4% | 22355/76852 | – |
-| Lord-Paladin Aldric Ashcroft | hero | full | 35287 | 0.661 | 4% | 6103/51179 | 17237/117114 |
-| Lord Vaelis Nightbloom | hero | full | 15907 | 0.553 | 4% | 1483/18887 | 7316/7316 |
-| Mayor Hobby Trickgrin | hero | full | 11677 | 1.879 | 3% | – | 21941/21941 |
-| Elder Ilvena of the Conclave | companion | full | 95810 | 0.730 | 1% | 69899/114985 | – |
-| Pip Wanderfoot | hero | full | 36024 | 0.839 | 1% | 21659/21659 | 8580/47230 |
-| Seraphine Moonveil, Warden-Scholar | companion | full | 36031 | 0.219 | 0% | – | 7883/7883 |
-| Wren Nightingale, Relic-Hunter | companion | full | 110935 | 1.055 | 0% | 117048/302019 | – |
-| Aelthir Moonveil | hero | full | 63434 | 1.102 | 0% | 54241/62482 | 15685/62108 |
+| Mogra Swiftfoot, Goblin Runner | companion | full (static only) | 2258 | 0.000 | 100% | – | – |
+| Loremaster Oskar Grimgate | companion | full (static only) | 118563 | 0.000 | 100% | – | – |
+| Posy Marchbank, Marchguard Clerk | companion | full (static only) | 45004 | 0.000 | 100% | – | – |
+| Sir Osric Vane, Marshal of the Old Guard | companion | full (static only) | 44789 | 0.000 | 100% | – | – |
+| Sigrun Stonefast, Metal Singer | companion | full (static only) | 5783 | 0.000 | 100% | – | – |
+| Gnash, the Butcher of Bloodmire | companion | full (static only) | 44558 | 0.000 | 100% | – | – |
+| Sister Aurelie Dane, Physician | companion | full (static only) | 45590 | 0.000 | 100% | – | – |
+| Nettle Burrows, Trouble Maker | companion | full (static only) | 9272 | 0.000 | 100% | – | – |
+| Pell Quillon, Collegium Prodigy | companion | full (static only) | 9094 | 0.000 | 100% | – | – |
+| Tova Emberdeep, Keeper of the Underway Door | companion | full | 2334 | 0.000 | 100% | 0/2801 | – |
+| Goldie Trickgrin, Keeper of the Goose & Kettle | companion | full (static only) | 44086 | 0.000 | 100% | – | – |
+| Urzha Half-Tusk | hero | full | 64931 | 0.024 | 90% | 798/249661 | 770/770 |
+| Sergeant Waddle | companion | full | 3368 | 0.067 | 83% | 227/3384 | – |
+| Cobra Chicken | companion | full | 5746 | 0.065 | 82% | 373/5388 | – |
+| Duchess, the Pub Goose | companion | full | 2361 | 0.061 | 73% | 145/2398 | – |
+| Honk, the Goose Rout Veteran | companion | full | 2255 | 0.069 | 71% | 156/2246 | – |
+| Clemence Fairbrook, Temple Cook | companion | full | 5531 | 0.177 | 64% | 981/3362 | – |
+| Tansy Brambleby, Barmaid and Volunteer | companion | full | 9191 | 0.211 | 64% | – | 1939/34860 |
+| Mira Coldwater, the Stonetouched | companion | full | 38899 | 0.106 | 45% | 4111/28416 | – |
+| Tobin Quill, Goose-Keeper | companion | full | 3429 | 0.403 | 43% | – | 1382/17245 |
+| Fennick Puffcap, Mycomancer | companion | full | 4241 | 0.800 | 37% | – | 3394/18065 |
+| Archmage Corvin Varro | hero | full | 23914 | 0.211 | 32% | – | 5036/33623 |
+| Mags Tolliver, Market Trader | companion | full | 16203 | 0.476 | 29% | 7711/17747 | – |
+| Professor Barnaby Pickwort | hero | full | 76303 | 0.207 | 24% | 2752/18939 | 13052/109599 |
+| Captain Rook Halloran, Skyship Captain | companion | full | 115400 | 0.199 | 23% | – | 22927/382502 |
+| Sir Hugo Pellam, Marchguard Surgeon | companion | full | 43187 | 0.417 | 21% | 18011/117349 | – |
+| Caelan the Exile | companion | full | 43679 | 0.376 | 20% | 16422/121238 | – |
+| Hesk of Two Homes | hero | full | 37462 | 0.249 | 16% | – | 9338/56648 |
+| High Thane Brunna Stonefast | hero | full | 19355 | 0.276 | 16% | – | 5335/21481 |
+| Ysolde of the Wellspring | hero | full | 29049 | 0.272 | 13% | – | 7887/30554 |
+| Warchief Grukka Ironjaw | hero | full | 68387 | 0.385 | 13% | 9398/69423 | 16961/103337 |
+| Liriel Nightbloom | companion | full | 42568 | 0.519 | 9% | 22073/106182 | – |
+| Kazra Emberdeep | hero | full | 16450 | 0.450 | 9% | – | 7396/50772 |
+| Varg Ironjaw | companion | full | 44639 | 0.303 | 7% | – | 13537/99361 |
+| Brisa Blastcap, Bombardier | companion | full | 116029 | 0.615 | 6% | 71343/270368 | – |
+| Marshal Hedda Ironvow | companion | full | 44112 | 0.599 | 6% | – | 26417/165117 |
+| Queen Maren Ashcroft | hero | full | 69391 | 0.415 | 6% | 11833/17458 | 16940/100221 |
+| Kesh the Bog Huntress | companion | full | 42696 | 0.594 | 5% | 25369/96091 | – |
+| Thorgar Twice-Buried | hero | full | 61329 | 0.375 | 5% | – | 22999/62020 |
+| Thessaly of the Grove | companion | full | 42713 | 0.627 | 4% | 26787/92329 | – |
+| Lord-Paladin Aldric Ashcroft | hero | full | 42307 | 0.660 | 4% | 7291/61119 | 20614/140624 |
+| Lord Vaelis Nightbloom | hero | full | 19103 | 0.555 | 4% | 1809/22615 | 8798/8798 |
+| Mayor Hobby Trickgrin | hero | full | 13965 | 1.896 | 2% | – | 26482/26482 |
+| Elder Ilvena of the Conclave | companion | full | 115238 | 0.730 | 1% | 84088/138381 | – |
+| Pip Wanderfoot | hero | full | 43854 | 0.839 | 1% | 26325/26325 | 10490/57616 |
+| Seraphine Moonveil, Warden-Scholar | companion | full | 43255 | 0.220 | 0% | – | 9505/9505 |
+| Wren Nightingale, Relic-Hunter | companion | full | 133552 | 1.055 | 0% | 140878/363301 | – |
+| Aelthir Moonveil | hero | full | 76257 | 1.103 | 0% | 65266/75125 | 18841/74644 |
 
 ### Locations, encounters and resources with abilities
 
 | Card | Kind | Impl. | Appearances | Hook calls | Effective | Used | Mechanisms |
 |---|---|---|---|---|---|---|---|
 | The Hall of Rest | resource | full | 0 | 0 | 0 | 0 | – |
-| The Whispering Deep | encounter | none | 2889 | 0 | 0 | 0 | – |
-| The Chained One | encounter | none | 2943 | 0 | 0 | 0 | – |
-| The Harvest Crone | encounter | none | 2959 | 0 | 0 | 0 | – |
-| The Dream-Warden | encounter | none | 2979 | 0 | 0 | 0 | – |
-| Elder Morvaine the Undying | encounter | none | 2990 | 0 | 0 | 0 | – |
-| Skarra Crowned (She Says) | encounter | none | 2992 | 0 | 0 | 0 | – |
-| The Laughing Prince | encounter | none | 2997 | 0 | 0 | 0 | – |
-| Skarra, Mistress of Wisps | encounter | none | 3019 | 0 | 0 | 0 | – |
-| Mortedamos the Necromancer | encounter | none | 3038 | 0 | 0 | 0 | – |
-| Skarra Ironjaw, the Bog-Mother | encounter | none | 3048 | 0 | 0 | 0 | – |
-| Skarra, Speaker at the Stones | encounter | none | 3054 | 0 | 0 | 0 | – |
-| The Umbral Lord | encounter | none | 3060 | 0 | 0 | 0 | – |
-| The Brood-Queen of the Webwood | encounter | none | 3063 | 0 | 0 | 0 | – |
-| Abbess Hollis of the Unremembered | encounter | none | 3064 | 0 | 0 | 0 | – |
-| The Iron Architect | encounter | none | 3141 | 0 | 0 | 0 | – |
-| Ironbound Overseer | encounter | none | 3168 | 0 | 0 | 0 | – |
-| The Iron Colossus | encounter | none | 3195 | 0 | 0 | 0 | – |
-| The Barrow King | encounter | none | 3276 | 0 | 0 | 0 | – |
-| Iron Mites | encounter | full | 3277 | 3318 | 3275 | 0 | encounterEntered |
-| The Frostfells | location | full | 5413 | 0 | 0 | 0 | groupBoost |
-| The Speaking Stones | location | full | 5505 | 0 | 0 | 0 | minionBonus |
-| Wreck of the Skyship Gallant | location | full | 5639 | 0 | 0 | 0 | groupBoost |
-| The Waystone Inn, Rivermeet | location | full | 5661 | 4363 | 4363 | 0 | onEnter |
-| The Old Quarry | location | full | 5701 | 0 | 0 | 0 | – |
-| The Goose & Kettle | location | full | 5754 | 4466 | 1283 | 0 | onEnter |
-| The Memory of the Heartwood | location | full | 5789 | 0 | 0 | 0 | challengeStat |
-| The Silverwood Hunt | location | full | 5846 | 0 | 0 | 0 | challengeStat |
-| The Pirate Fens | location | full | 5856 | 4596 | 4596 | 0 | onEnter |
-| The Storybook Glade | location | full | 5913 | 4611 | 4610 | 0 | onEnter |
-| The Last Field | location | full | 5935 | 4608 | 4607 | 0 | onEnter |
-| The Mage College Vaults | location | full | 5948 | 4614 | 3745 | 0 | onEnter |
-| The Hollow Hills | location | full | 5972 | 0 | 0 | 0 | – |
-| The Barrowlands | location | full | 5996 | 0 | 0 | 0 | groupBoost |
-| Marchguard Keep | location | full | 6025 | 4695 | 3682 | 0 | onEnter |
-| Parting Strand | location | full | 6032 | 3470 | 3464 | 0 | locationWon |
-| The Mirror Marches | location | full | 6097 | 0 | 0 | 0 | groupBoost |
-| The Heart of the Marchstone | location | full | 6105 | 0 | 0 | 0 | groupBoost |
-| Tomb of the First Wardens | location | full | 6177 | 0 | 0 | 0 | challengeStat |
-| The Endless Road | location | full | 6214 | 4828 | 4828 | 0 | onEnter |
-| The Crack in the Marchstone | location | full | 7111 | 5570 | 5570 | 0 | onEnter |
-| Call the Five Crowns | resource | full | 9874 | 10312 | 10305 | 0 | onReveal |
-| Cold Iron Barrier | resource | full | 10071 | 10393 | 0 | 0 | onReveal |
-| Torch and Tinder | resource | full | 10322 | 0 | 0 | 0 | resourceValue |
-| Gold Filings | resource | full | 10893 | 0 | 0 | 0 | resourceValue |
-| The Wardens' Horn | resource | full | 12013 | 12325 | 11897 | 0 | onReveal |
-| An Apple for the Road | resource | full | 12077 | 12360 | 10909 | 0 | onReveal |
-| Portal Rune | resource | full | 12142 | 12429 | 12429 | 0 | onReveal |
-| Gauntlet of Returning | resource | full | 12204 | 0 | 0 | 0 | – |
-| The Amulet of Aesia | resource | full | 12276 | 0 | 0 | 0 | – |
-| Wayfinder's Die | resource | full | 12307 | 12613 | 12613 | 0 | onReveal |
-| Null-Rune Seal | resource | full | 12383 | 12653 | 0 | 0 | onReveal |
-| Three Banners Raised | resource | full | 12501 | 12874 | 12849 | 0 | onReveal |
-| Warding Nail | resource | full | 12715 | 0 | 0 | 0 | resourceValue |
-| Rune of Unmaking | resource | full | 12881 | 0 | 0 | 0 | resourceValue |
-| Hourglass of Undoing | resource | full | 13877 | 14158 | 12899 | 0 | onReveal |
-| Shard of the Marchstone IV | resource | full | 13902 | 14160 | 4020 | 0 | onReveal |
-| Shard of the Marchstone I | resource | full | 13930 | 14193 | 3971 | 0 | onReveal |
-| Shard of the Marchstone V | resource | full | 13944 | 14187 | 4009 | 0 | onReveal |
-| Shard of the Marchstone VI | resource | full | 13978 | 14215 | 3937 | 0 | onReveal |
-| Arangil's Vision Glass | resource | full | 14018 | 14285 | 4898 | 0 | onReveal |
-| Crossed Paths | resource | full | 14045 | 14303 | 13041 | 0 | onReveal |
-| Shard of the Marchstone II | resource | full | 14073 | 14342 | 4075 | 0 | onReveal |
-| Shard of the Marchstone III | resource | full | 14082 | 14332 | 3933 | 0 | onReveal |
-| Blasting Powder | resource | full | 14219 | 14472 | 3962 | 0 | onReveal |
-| Wren's Silver Wand | resource | full | 14479 | 0 | 0 | 0 | – |
-| Skarra's Hexwand | resource | full | 14488 | 0 | 0 | 0 | – |
-| Shoulder to Shoulder | resource | full | 14610 | 14830 | 14780 | 0 | onReveal |
-| The Gathering of Heroes | resource | full | 14625 | 14821 | 14804 | 0 | onReveal |
-| The Umbral Ring | resource | full | 14647 | 14862 | 14862 | 0 | onReveal |
-| The Rosepearl | resource | full | 14740 | 0 | 0 | 0 | resourceValue |
-| Shield of Xorthalos | resource | full | 14837 | 15016 | 0 | 0 | onReveal |
-| The Wardens' Hall | location | full | 20547 | 11329 | 11329 | 0 | onEnter |
+| The Whispering Deep | encounter | none | 3487 | 0 | 0 | 0 | – |
+| The Chained One | encounter | none | 3558 | 0 | 0 | 0 | – |
+| The Harvest Crone | encounter | none | 3563 | 0 | 0 | 0 | – |
+| The Laughing Prince | encounter | none | 3571 | 0 | 0 | 0 | – |
+| Skarra Crowned (She Says) | encounter | none | 3572 | 0 | 0 | 0 | – |
+| The Dream-Warden | encounter | none | 3578 | 0 | 0 | 0 | – |
+| Elder Morvaine the Undying | encounter | none | 3590 | 0 | 0 | 0 | – |
+| Mortedamos the Necromancer | encounter | none | 3622 | 0 | 0 | 0 | – |
+| Skarra Ironjaw, the Bog-Mother | encounter | none | 3639 | 0 | 0 | 0 | – |
+| Skarra, Mistress of Wisps | encounter | none | 3641 | 0 | 0 | 0 | – |
+| Skarra, Speaker at the Stones | encounter | none | 3645 | 0 | 0 | 0 | – |
+| Abbess Hollis of the Unremembered | encounter | none | 3668 | 0 | 0 | 0 | – |
+| The Brood-Queen of the Webwood | encounter | none | 3684 | 0 | 0 | 0 | – |
+| The Umbral Lord | encounter | none | 3708 | 0 | 0 | 0 | – |
+| Ironbound Overseer | encounter | none | 3802 | 0 | 0 | 0 | – |
+| The Iron Architect | encounter | none | 3819 | 0 | 0 | 0 | – |
+| The Iron Colossus | encounter | none | 3883 | 0 | 0 | 0 | – |
+| Iron Mites | encounter | full | 3960 | 4010 | 3957 | 0 | encounterEntered |
+| The Barrow King | encounter | none | 3962 | 0 | 0 | 0 | – |
+| The Frostfells | location | full | 6516 | 0 | 0 | 0 | groupBoost |
+| The Speaking Stones | location | full | 6619 | 0 | 0 | 0 | minionBonus |
+| Wreck of the Skyship Gallant | location | full | 6763 | 0 | 0 | 0 | groupBoost |
+| The Waystone Inn, Rivermeet | location | full | 6799 | 5244 | 5244 | 0 | onEnter |
+| The Old Quarry | location | full | 6845 | 0 | 0 | 0 | – |
+| The Goose & Kettle | location | full | 6881 | 5338 | 1532 | 0 | onEnter |
+| The Pirate Fens | location | full | 7007 | 5500 | 5500 | 0 | onEnter |
+| The Memory of the Heartwood | location | full | 7024 | 0 | 0 | 0 | challengeStat |
+| The Silverwood Hunt | location | full | 7100 | 0 | 0 | 0 | challengeStat |
+| The Last Field | location | full | 7144 | 5542 | 5541 | 0 | onEnter |
+| The Storybook Glade | location | full | 7165 | 5568 | 5567 | 0 | onEnter |
+| The Hollow Hills | location | full | 7185 | 0 | 0 | 0 | – |
+| The Mage College Vaults | location | full | 7187 | 5571 | 4500 | 0 | onEnter |
+| Marchguard Keep | location | full | 7232 | 5636 | 4422 | 0 | onEnter |
+| Parting Strand | location | full | 7235 | 4171 | 4165 | 0 | locationWon |
+| The Barrowlands | location | full | 7246 | 0 | 0 | 0 | groupBoost |
+| The Mirror Marches | location | full | 7376 | 0 | 0 | 0 | groupBoost |
+| Tomb of the First Wardens | location | full | 7380 | 0 | 0 | 0 | challengeStat |
+| The Heart of the Marchstone | location | full | 7380 | 0 | 0 | 0 | groupBoost |
+| The Endless Road | location | full | 7444 | 5783 | 5783 | 0 | onEnter |
+| The Crack in the Marchstone | location | full | 8571 | 6721 | 6721 | 0 | onEnter |
+| Call the Five Crowns | resource | full | 11872 | 12416 | 12405 | 0 | onReveal |
+| Cold Iron Barrier | resource | full | 12057 | 12453 | 0 | 0 | onReveal |
+| Torch and Tinder | resource | full | 12407 | 0 | 0 | 0 | resourceValue |
+| Gold Filings | resource | full | 13115 | 0 | 0 | 0 | resourceValue |
+| The Wardens' Horn | resource | full | 14463 | 14844 | 14338 | 0 | onReveal |
+| An Apple for the Road | resource | full | 14572 | 14927 | 13187 | 0 | onReveal |
+| Gauntlet of Returning | resource | full | 14651 | 0 | 0 | 0 | – |
+| Portal Rune | resource | full | 14686 | 15051 | 15051 | 0 | onReveal |
+| The Amulet of Aesia | resource | full | 14734 | 0 | 0 | 0 | – |
+| Wayfinder's Die | resource | full | 14787 | 15156 | 15156 | 0 | onReveal |
+| Null-Rune Seal | resource | full | 14899 | 15244 | 0 | 0 | onReveal |
+| Three Banners Raised | resource | full | 15071 | 15532 | 15498 | 0 | onReveal |
+| Warding Nail | resource | full | 15334 | 0 | 0 | 0 | resourceValue |
+| Rune of Unmaking | resource | full | 15467 | 0 | 0 | 0 | resourceValue |
+| Hourglass of Undoing | resource | full | 16678 | 17018 | 15478 | 0 | onReveal |
+| Shard of the Marchstone IV | resource | full | 16721 | 17036 | 4808 | 0 | onReveal |
+| Shard of the Marchstone I | resource | full | 16758 | 17074 | 4764 | 0 | onReveal |
+| Shard of the Marchstone V | resource | full | 16763 | 17048 | 4848 | 0 | onReveal |
+| Shard of the Marchstone VI | resource | full | 16785 | 17069 | 4749 | 0 | onReveal |
+| Arangil's Vision Glass | resource | full | 16825 | 17138 | 5885 | 0 | onReveal |
+| Crossed Paths | resource | full | 16894 | 17213 | 15720 | 0 | onReveal |
+| Shard of the Marchstone II | resource | full | 16938 | 17266 | 4939 | 0 | onReveal |
+| Shard of the Marchstone III | resource | full | 17013 | 17324 | 4812 | 0 | onReveal |
+| Blasting Powder | resource | full | 17093 | 17405 | 4780 | 0 | onReveal |
+| Wren's Silver Wand | resource | full | 17356 | 0 | 0 | 0 | – |
+| Skarra's Hexwand | resource | full | 17424 | 0 | 0 | 0 | – |
+| Shoulder to Shoulder | resource | full | 17580 | 17851 | 17789 | 0 | onReveal |
+| The Gathering of Heroes | resource | full | 17614 | 17860 | 17841 | 0 | onReveal |
+| The Umbral Ring | resource | full | 17621 | 17885 | 17885 | 0 | onReveal |
+| The Rosepearl | resource | full | 17717 | 0 | 0 | 0 | resourceValue |
+| Shield of Xorthalos | resource | full | 17891 | 18105 | 0 | 0 | onReveal |
+| The Wardens' Hall | location | full | 24708 | 13619 | 13619 | 0 | onEnter |
