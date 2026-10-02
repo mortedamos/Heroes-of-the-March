@@ -139,3 +139,16 @@ After the geese, Tobin, Tansy, Sigrun, Pell, Mogra, Nettle, Posy, Osric and Tova
 Posy and Osric were first measured with a +2 cap on the borrowed stat and came out too strong (1.17 and 1.14, ability worth +0.25 each, against about +0.09 predicted), so the cap was lowered to +1. The table shows the +1 results.
 
 Not yet measured: The Golden Egg (added after these runs), and Tobin and Tansy's effect on opponents' win rates.
+
+## Round 3: Tova, Pell, Posy and Osric adjustments
+
+Tova 1/3/4 → 2/4/4; Pell 2/5/3 → 1/5/2 (ability still +2); Posy and Osric now gain +1 themselves when the hero's stat swap is used (replacing the "one companion borrows the stat" clause). Rerun with the same method and seed (1,200 games per card at 3 and 4 players, ±0.06; data in `docs/balance-data/v2/comp-tweak3.json`).
+
+| Card | Round 2 | Round 3 |
+|---|---|---|
+| Tova Emberdeep | 0.93 | **1.02** |
+| Pell Quillon | 1.14 | **0.97** |
+| Posy Marchbank | 1.06 (cap +1) | **1.01** |
+| Sir Osric Vane | 0.99 (cap +1) | **0.97** |
+
+All four sit inside the 0.9–1.1 target band. Pell overshot a little downward (about 0.97 against a predicted 1.10); a one-point stat restore would put her near 1.0 if you want it. The Golden Egg was in the deck for this run (75 resource cards).
