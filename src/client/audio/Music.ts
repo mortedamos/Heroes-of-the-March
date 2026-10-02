@@ -1,3 +1,4 @@
+import { inFocus, onFocusChange } from './focus';
 // Background music: a random track first, then the playlist in order, looping.
 // Browsers only allow audio after a user gesture, so playback starts on the
 // first click, tap or key press. Volume and mute are remembered per browser.
@@ -37,6 +38,8 @@ class MusicPlayer {
   /** Bumped by every track change so an older fade can tell it was superseded. */
   private changeId = 0;
   playing = false;
+  /** Music was playing when the page lost focus, so it restarts when focus returns. */
+  private resumeOnFocus = false;
 
   constructor() {
     const p = loadPrefs();
@@ -48,6 +51,15 @@ class MusicPlayer {
     this.audio.addEventListener('ended', () => this.next(1, true));
     this.audio.addEventListener('play', () => this.set({ playing: true }));
     this.audio.addEventListener('pause', () => this.set({ playing: false }));
+    // Silence the music while the page is in the background, and pick it up again on return.
+    onFocusChange((focused) => {
+      if (!focused) {
+        if (this.playing) { this.resumeOnFocus = true; this.pause(); }
+      } else if (this.resumeOnFocus) {
+        this.resumeOnFocus = false;
+        this.play();
+      }
+    });
   }
 
   get track(): string { return (this.opening ? OPENING_TRACK : TRACKS[this.index]!).replace(/\.mp3$/, '').replace(/_/g, ' '); }
@@ -118,6 +130,7 @@ class MusicPlayer {
   play(): void {
     this.started = true;
     if (!this.audio.src) this.load();
+    if (!inFocus()) { this.resumeOnFocus = true; return; } // starts once the page is back in front
     void this.audio.play().catch(() => { this.started = false; });
   }
   pause(): void { this.audio.pause(); }

@@ -1,3 +1,4 @@
+import { inFocus } from './focus';
 // Sound effects from public/sounds/.
 //
 // Only files listed in public/sounds/manifest.json are ever requested, so a sound you have
@@ -75,7 +76,7 @@ class Sfx {
 
   /** Play a sound if the manifest lists it; otherwise do nothing. */
   play(name: SfxName): void {
-    if (this.muted || this.volume === 0) return;
+    if (this.muted || this.volume === 0 || !inFocus()) return;
     const files = this.manifest[name];
     if (!files?.length) return;
     const now = performance.now();
