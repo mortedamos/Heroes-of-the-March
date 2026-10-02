@@ -1296,18 +1296,17 @@ describe('bots and Tova', () => {
     expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], [])).toBe('rest');
   });
 
-  it('The Golden Egg is worth 1, plus 2 for each of your Goose companions', () => {
-    const g = newGame();
-    standard(g, { companions: ['honk-the-goose-rout-veteran', 'duchess-the-pub-goose'], hand: ['the-golden-egg'] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
-    restart(g);
-    until(g, bidFor(g.A));
-    const value = (viewFor(g.s, g.A).hand.find((h) => h.card.def === 'the-golden-egg'))?.value;
-    expect(value).toBe(1 + 2 * 2);
-    // Opponents' geese don't count, and neither do you with none.
-    const h = newGame();
-    standard(h, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'], hand: ['the-golden-egg'] }, { companions: ['honk-the-goose-rout-veteran', 'duchess-the-pub-goose'] });
-    restart(h);
-    until(h, bidFor(h.A));
-    expect(viewFor(h.s, h.A).hand.find((x) => x.card.def === 'the-golden-egg')?.value).toBe(1);
+  it('The Golden Egg is worth 1, plus 2 for every Goose in play, anyone\'s', () => {
+    const value = (mine: string[], theirs: string[]) => {
+      const g = newGame();
+      standard(g, { companions: mine, hand: ['the-golden-egg'] }, { companions: theirs });
+      restart(g);
+      until(g, bidFor(g.A));
+      return viewFor(g.s, g.A).hand.find((h) => h.card.def === 'the-golden-egg')?.value;
+    };
+    expect(value(['honk-the-goose-rout-veteran', 'duchess-the-pub-goose'], ['varg-ironjaw', 'kesh-the-bog-huntress'])).toBe(1 + 2 * 2);
+    expect(value(['varg-ironjaw', 'kesh-the-bog-huntress'], ['honk-the-goose-rout-veteran', 'sergeant-waddle'])).toBe(1 + 2 * 2);
+    expect(value(['honk-the-goose-rout-veteran', 'varg-ironjaw'], ['sergeant-waddle', 'kesh-the-bog-huntress'])).toBe(1 + 2 * 2);
+    expect(value(['varg-ironjaw', 'kesh-the-bog-huntress'], ['gnash-the-butcher-of-bloodmire', 'liriel-nightbloom'])).toBe(1);
   });
 });
