@@ -275,7 +275,8 @@ export class Hud {
     const proj = p.projection;
     const total = proj ? h('span', { class: `plate-total ${proj.total >= proj.difficulty ? 'ok' : 'low'}`, title: 'Current total vs difficulty (hidden bids not counted)' },
       h('span', { class: 'stat-chip', style: { '--accent': STAT_COLORS[proj.stat] } }, proj.stat),
-      ` ${proj.total}${proj.hiddenBids ? `+${proj.hiddenBids}?` : ''} vs ${proj.difficulty}`) : null;
+      ` ${proj.total}${proj.hiddenBids ? `+${proj.hiddenBids}?` : ''}`,
+      h('span', { class: 'plate-vs' }, ` vs ${proj.difficulty}`)) : null;
     const effects = v.turn.effects.filter((e) => e.active && e.targetPlayer === p.id);
     const chips = effects.length
       ? h('div', { class: 'plate-effects' }, ...effects.map((e) => h('span', {
