@@ -1295,4 +1295,19 @@ describe('bots and Tova', () => {
   it('rests when the turn is lost anyway', () => {
     expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], [])).toBe('rest');
   });
+
+  it('The Golden Egg is worth 1, plus 2 for each of your Goose companions', () => {
+    const g = newGame();
+    standard(g, { companions: ['honk-the-goose-rout-veteran', 'duchess-the-pub-goose'], hand: ['the-golden-egg'] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    const value = (viewFor(g.s, g.A).hand.find((h) => h.card.def === 'the-golden-egg'))?.value;
+    expect(value).toBe(1 + 2 * 2);
+    // Opponents' geese don't count, and neither do you with none.
+    const h = newGame();
+    standard(h, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'], hand: ['the-golden-egg'] }, { companions: ['honk-the-goose-rout-veteran', 'duchess-the-pub-goose'] });
+    restart(h);
+    until(h, bidFor(h.A));
+    expect(viewFor(h.s, h.A).hand.find((x) => x.card.def === 'the-golden-egg')?.value).toBe(1);
+  });
 });

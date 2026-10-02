@@ -3294,6 +3294,18 @@
    "wand": false,
    "council": false,
    "conditionText": null
+  },
+  {
+   "kind": "resource",
+   "id": "the-golden-egg",
+   "name": "The Golden Egg",
+   "groups": [],
+   "quote": null,
+   "art": null,
+   "value": 1,
+   "wand": false,
+   "council": false,
+   "conditionText": "Any goose companions get an additional +2 for this encounter."
   }
  ]
 }

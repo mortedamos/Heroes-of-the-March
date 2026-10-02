@@ -751,6 +751,11 @@ export const ABILITIES: Record<string, Ability> = {
   'gauntlet-of-returning': { status: 'full' }, // flow.ts: end of turn
   'arangils-vision-glass': statChange('M'),
   'blasting-powder': statChange('P'),
+  // The Golden Egg: +1, and +2 for each of your Goose companions this encounter.
+  'the-golden-egg': {
+    status: 'full',
+    resourceValue: (ctx, owner, base) => base + 2 * owner.companions.filter((c) => hasGroup(ctx.def(c), 'Goose')).length,
+  },
   'the-rosepearl': {
     status: 'full',
     resourceValue: (ctx) => Math.max(0, ...companionsInPlay(ctx).map((c) => {
