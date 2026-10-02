@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "audit": "npm audit --omit=dev",
-    "sfx": "node scripts/sfx.ts"
+    "sfx": "node scripts/sfx.ts",
+    "balance:build": "rolldown scripts/balance/cli.ts --format esm --platform node --file _build/balance/cli.mjs && rolldown scripts/balance/report.ts --format esm --platform node --file _build/balance/report.mjs"
   },
   "dependencies": {
     "@fontsource/cinzel-decorative": "^5.3.0",

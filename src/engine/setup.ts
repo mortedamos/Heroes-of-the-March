@@ -15,6 +15,8 @@ export interface NewGameOptions {
   rules?: Partial<HouseRules>;
   /** Tests and replays only. Production games take a CSPRNG seed. */
   seed?: RngState;
+  /** Simulations only: deal these heroes (def ids by seat) instead of the top of the stack. Needs `heroDraft: 1`; other seats are dealt blind. */
+  heroes?: Record<PlayerId, string>;
   /** Pause at presentation checkpoints (the host resumes them). Off for simulations. */
   autoPause?: boolean;
 }
@@ -122,7 +124,9 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
     state.turn.step = 'draft'; // flow.ts: each player looks at N heroes and keeps one, then teams are dealt
   } else {
     for (const p of state.players) {
-      p.hero = ctx.take('hero')!;
+      const want = opts.heroes?.[p.id];
+      const at = want ? state.decks.hero.findIndex((c) => state.cards[c] === want) : -1;
+      p.hero = at >= 0 ? state.decks.hero.splice(at, 1)[0]! : ctx.take('hero')!;
       ctx.emit({ type: 'heroChanged', player: p.id, from: null, to: ctx.ref(p.hero), reason: 'setup' });
     }
     dealStartingTeams(ctx);
