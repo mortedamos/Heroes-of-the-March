@@ -1,6 +1,6 @@
 # Card balance review (simulated play)
 
-Status: analysis written from **6 of 10 planned rounds** (≈43,000 hero games, ≈47,000 companion games, 14,400 natural-play games). The raw data is in `docs/balance-data/`, and the full per-card tables are in `docs/CARD-BALANCE-TABLES.md`. Both are regenerated after every round, so the tables may be slightly ahead of the numbers quoted here.
+Status: **final**, from all 10 planned rounds (72,000 hero games, 79,200 companion games, 24,000 natural-play games). The raw data is in `docs/balance-data/`, and the full per-card tables are in `docs/CARD-BALANCE-TABLES.md`. The tables are the authority if any figure here differs.
 
 ## Method
 
@@ -8,35 +8,35 @@ Status: analysis written from **6 of 10 planned rounds** (≈43,000 hero games, 
 - **Heroes (controlled):** the measured hero is dealt to a rotating seat; the other seats are dealt random distinct heroes, with `heroDraft: 1` so draft choices don't skew results. 3 and 4 players. Companions are drafted by the bots as normal.
 - **Companions (controlled):** the measured companion is forced into one seat's opening pair; every opening companion draft is random, so bot preferences don't skew it. Heroes are dealt blind.
 - **Ablation:** each experiment is repeated with the measured card's ability removed (stats kept). *Ability worth* = relative win rate with the ability − without it.
-- **Relative win rate** = wins ÷ fair share (1/players), pooled over 3p and 4p. 1.00 is exactly fair, and the ± is a 95% interval. At this sample size heroes are ±0.06 and companions ±0.08.
+- **Relative win rate** = wins ÷ fair share (1/players), pooled over 3p and 4p. 1.00 is exactly fair, and the ± is a 95% interval. At this sample size heroes are ±0.04 and companions ±0.06.
 - **Natural play:** bots draft and play normally, 2–6 players. This answers "what do winners hold and use?". It is confounded by bot preferences and by survivorship (see below), so it is a pointer, not a measurement.
 - **Effects per turn held** counts triggered hooks that visibly did something plus activations used. It cannot see passive/static abilities (stat swaps, flat bonuses), which therefore show 0 and "never fired". For those, the ablation figure is the only measure.
 
 ## Headline
 
-1. **Heroes are not balanced.** Relative win rates run from 0.60 to 1.66, and the spread is about 10× what noise alone would give. Stat totals do not predict it (r = −0.24); abilities do.
-2. **Companions are much closer, but not equal.** Most sit within about ±10% of fair; there is a clear top (Oskar 1.41, Mags 1.29) and one clear outlier at the bottom (Ilvena 0.53).
-3. **Going first is worth little** (35.4% vs 32.2% for 3rd seat at 3p; 26.3% vs 24.3% at 4p). Seat is not distorting the card results, since each card is rotated through seats.
+1. **Heroes are not balanced.** Relative win rates run from 0.61 to 1.64, and the spread is about 13× what noise alone would give. Stat totals do not predict it (r = −0.23); abilities do.
+2. **Companions are much closer, but not equal.** Most sit within about ±10% of fair; there is a clear top (Oskar 1.41, Mags 1.24) and one clear outlier at the bottom (Ilvena 0.54).
+3. **Going first is worth little** (about 35% vs 32% for 3rd seat at 3p; 26% vs 24–25% at 4p). Seat is not distorting the card results, since each card is rotated through seats.
 
 ## Heroes
 
 | Tier | Hero | Rel. win rate | Stats Σ | Ability worth | Notes |
 |---|---|---|---|---|---|
-| Strong | Ysolde of the Wellspring | **1.66** | 18 | +1.09 | Entire strength is the 3rd companion slot; stats-only she would be 0.57. Still the open item from `HERO-BALANCE.md`. |
-| Strong | Mayor Hobby Trickgrin | **1.43** | 21 | +0.84 | Draw trigger fires ~1.3×/turn, plus all-face-down bidding. Strongest in natural play too (1.72 when kept to the end). |
-| Strong | High Thane Brunna Stonefast | **1.38** | 21 | +0.60 | Immunity to hostile effects plus a Physical-challenge draw. |
-| Strong | Lord-Paladin Aldric Ashcroft | **1.21** | 21 | +0.50 | Counter ability; P11. |
-| Fair | Thorgar 1.04, Kazra 0.99, Hesk 0.98, Aelthir 0.98, Maren 0.98 | | | | Within noise of fair. |
-| Slightly weak | Warchief Grukka Ironjaw | 0.91 | 22 | +0.18 | |
-| Weak | Urzha Half-Tusk | 0.79 | 23 | **+0.01** | Ability does nothing measurable and fires in only 0.02 effects/turn; 91% of games with her held 3+ turns never fire it. |
-| Weak | Professor Barnaby Pickwort | 0.76 | 24 (highest) | **+0.07** | Highest stats, ability worth ≈ 0. |
-| Weak | Archmage Corvin Varro | 0.73 | 18 | +0.22 | Low stats, ability not compensating. |
-| Weak | Pip Wanderfoot | 0.67 | 20 | +0.11 | Uses his ability constantly (every time offered) with almost no payoff. |
-| Weak | Lord Vaelis Nightbloom | **0.60** | 20 | +0.10 | Weakest hero by a margin; 9% at 4p. |
+| Strong | Ysolde of the Wellspring | **1.64** | 18 | +1.08 | Entire strength is the 3rd companion slot; stats-only she would be 0.57. Still the open item from `HERO-BALANCE.md`. |
+| Strong | Mayor Hobby Trickgrin | **1.42** | 21 | +0.81 | Draw trigger fires ~1.3×/turn, plus all-face-down bidding. Strongest in natural play too (1.72 when kept to the end). |
+| Strong | High Thane Brunna Stonefast | **1.40** | 21 | +0.62 | Immunity to hostile effects plus a Physical-challenge draw. |
+| Strong | Lord-Paladin Aldric Ashcroft | 1.17 | 21 | +0.46 | Counter ability; P11. |
+| Fair | Aelthir 1.00, Hesk 0.99, Thorgar 0.98, Kazra 0.97, Maren 0.95 | | | | Within or just inside the noise band of fair. |
+| Slightly weak | Warchief Grukka Ironjaw | 0.92 | 22 | +0.20 | |
+| Weak | Urzha Half-Tusk | 0.80 | 23 | **+0.02** | Ability does nothing measurable and fires in only 0.02 effects/turn; 91% of games with her held 3+ turns never fire it. |
+| Weak | Professor Barnaby Pickwort | 0.76 | 24 (highest) | **+0.09** | Highest stats, ability worth ≈ 0. |
+| Weak | Archmage Corvin Varro | 0.73 | 18 | +0.24 | Low stats, ability not compensating. |
+| Weak | Pip Wanderfoot | 0.69 | 20 | +0.13 | Uses his ability constantly (every time offered) with almost no payoff. |
+| Weak | Lord Vaelis Nightbloom | **0.61** | 20 | +0.08 | Weakest hero by a margin; 9% at 4p. |
 
 Takeaways:
 - Four heroes (Ysolde, Hobby, Brunna, Aldric) win ~20–65% more than their share; five (Vaelis, Pip, Corvin, Barnaby, Urzha) win 20–40% less. A good target band is roughly 0.9–1.1.
-- The weak heroes are the ones whose abilities add almost nothing (worth ≤ +0.1: Urzha, Barnaby, Pip, Vaelis). This is the same pattern `HERO-BALANCE.md` found before its tuning, so the earlier changes did not fix it for these four.
+- The weak heroes are the ones whose abilities add almost nothing (worth ≤ +0.13: Urzha, Barnaby, Pip, Vaelis). This is the same pattern `HERO-BALANCE.md` found before its tuning, so the earlier changes did not fix it for these four.
 - The numbers here do not reproduce the "after changes" table in `HERO-BALANCE.md` (e.g. Ysolde 54% at 3p here vs 44% there; Hobby 43% vs 36%). The earlier runs predate later rule changes and used a different opponent mix, and its script is no longer in the repo, so I cannot say which differences matter. Rankings broadly agree (Ysolde and Hobby on top, Urzha and Barnaby low), so treat the ordering as reliable and the absolute levels as specific to this harness.
 - Natural play agrees with the controlled results on the extremes (Hobby, Ysolde, Brunna, Aldric up; Corvin, Vaelis, Pip, Urzha, Barnaby down). It diverges for Aelthir (1.24 vs 0.98) and Kazra (0.75 vs 0.99), which suggests bot drafting and companion pairing matter for those two.
 
@@ -45,13 +45,13 @@ Takeaways:
 | Group | Card | Rel. win rate | Ability worth | Notes |
 |---|---|---|---|---|
 | Strongest | Loremaster Oskar Grimgate | **1.41** | +0.57 | Static ability, so it never shows up as "firing". Bots keep him in ~74% of natural games. Consistent in both experiments, so this is a real outlier. |
-| | Mags Tolliver | **1.29** | +0.38 | Doubles hero stats once, then leaves. |
-| | Marshal Hedda Ironvow | 1.15 | +0.26 | |
-| | Seraphine Moonveil, Tansy Brambleby | 1.10 | +0.16 / +0.18 | |
-| Weakest | Elder Ilvena of the Conclave | **0.53** | **−0.25** | Stats-only she would be 0.78. Her ability costs a resource card; bots use it on 61% of offers. Either the cost is too high, or the bot overuses it. Natural play agrees (0.57 ever-held). |
-| | Honk, Thessaly, Caelan, Wren, Captain Rook | 0.88–0.91 | ≈ 0 | Slightly below fair. |
+| | Mags Tolliver | **1.24** | +0.38 | Doubles hero stats once, then leaves. |
+| | Marshal Hedda Ironvow | 1.18 | +0.29 | |
+| | Seraphine Moonveil, Tansy Brambleby | 1.11 / 1.09 | +0.18 / +0.16 | |
+| Weakest | Elder Ilvena of the Conclave | **0.54** | **−0.25** | Stats-only she would be 0.78. Her ability costs a resource card; bots use it on 61% of offers. Either the cost is too high, or the bot overuses it. Natural play agrees (0.57 ever-held). |
+| | Caelan, Wren, Honk | 0.85–0.89 | ≈ 0 | Slightly below fair. |
 
-Everything else is between 0.94 and 1.06, inside the noise band. Stat totals do not predict results (r = 0.09), which is the desired state.
+Everything else is between about 0.9 and 1.1, near the noise band. Stat totals do not predict results (r = 0.12), which is the desired state.
 
 ### Static abilities (stat swaps and flat bonuses)
 
@@ -59,12 +59,12 @@ Effects/turn can't measure these; the ablation does. Measured worth: Oskar +0.57
 
 ## Abilities that rarely or never trigger
 
-Counted by wrapping every trigger hook and counting activations used, over 14,400 natural games.
+Counted by wrapping every trigger hook and counting activations used, over 24,000 natural games.
 
 | Card | Evidence |
 |---|---|
-| **Tova Emberdeep** | Her activation was offered 2,801 times and **used 0** times. |
-| **Urzha Half-Tusk** (hero) | Used 798 of 249,661 offers (0.3%); never fires in 90% of games where she's held 3+ turns. |
+| **Tova Emberdeep** | Her activation was offered 2,801 times and **used 0** times (4,745 offers in the final data). |
+| **Urzha Half-Tusk** (hero) | Used 1,387 of 418,452 offers (0.3%); never fires in 90% of games where she's held 3+ turns. |
 | **Goose cluster:** Sergeant Waddle, Cobra Chicken, Duchess, Honk | Used on only ~6–7% of offers; 71–83% of games never fire. Worth ≈ 0. They may depend on specific partners or locations; or the bots don't know how to use them. |
 | Clemence Fairbrook | Used 29% of offers; 64% of games never fire. |
 | Tansy Brambleby | Hook effective 6% of calls; 64% never fire. |
@@ -76,7 +76,7 @@ Counted by wrapping every trigger hook and counting activations used, over 14,40
 - Every card in the database is implemented (`statusReport()` lists none as todo or partial). The 19 encounters shown with no mechanism are vanilla stat blocks; encounters appear evenly (about 3,500–3,900 each).
 - Hook-bearing cards that were **called but never visibly did anything**: Cold Iron Barrier, Null-Rune Seal and Shield of Xorthalos (about 12,000–18,000 calls each, 0 effective). They only matter in particular situations (wands, falls), and my detector may miss their effects; a spot check is needed before calling them dead.
 - Conditionally useful: the six Shards of the Marchstone, Blasting Powder (≈28%), Arangil's Vision Glass (≈34%), and The Goose & Kettle (≈29%).
-- **The Hall of Rest was never played in 14,400 games.** Its value is 0, so the bots never bid it. That is a bot blind spot, not a card bug; it needs a hand-built scenario.
+- **The Hall of Rest was never played in 24,000 games.** Its value is 0, so the bots never bid it. That is a bot blind spot, not a card bug; it needs a hand-built scenario.
 
 ## Winners vs. others (natural play)
 
