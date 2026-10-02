@@ -7,6 +7,7 @@ import type { ClientTransport, ServerMessage } from '../net/protocol';
 import { Board } from './render/Board';
 import { TableScene } from './render/TableScene';
 import { describe, nameOf } from './describe';
+import { attentionOf } from './attention';
 import { Hud } from './ui/Hud';
 import { Die, DIE_POS } from './render/Dice';
 import { music } from './audio/Music';
@@ -126,6 +127,8 @@ export class GameClient {
   private openingMusic: boolean | null = null;
   /** What has been done to each table card this turn (card id -> lines), for the outline and its tooltip. */
   private afflictions = new Map<string, string[]>();
+  /** Ready abilities already chimed for (turn:card:ability), so repeated bid decisions don't nag. */
+  private readySeen = new Set<string>();
   /** Animations still playing; an announcement waits for them so it appears after the zap. */
   private anims: Promise<void>[] = [];
   /** The card whose ability was used most recently (what a later "looked at a stack" zaps from). */
@@ -211,8 +214,7 @@ export class GameClient {
     const click = (e: PointerEvent) => {
       const hit = this.scene.pick(e.clientX, e.clientY, this.board.meshes());
       const card = this.board.setHovered(hit?.object ?? null);
-      const def = card?.def ?? null;
-      this.hud.inspect(def && def === this.hud.pinnedCard ? null : def, true);
+      this.hud.openCard(card?.def ?? null, card?.key ?? null);
     };
     const leave = () => { this.board.setHovered(null); this.hud.inspect(null); this.hud.deckTip(null); };
     canvas.addEventListener('pointermove', move);
@@ -245,6 +247,18 @@ export class GameClient {
     }
   }
 
+  /** Cards that can act now glow, wiggle and chime (once per ability per turn). */
+  private signalReadyAbilities(view: GameView): void {
+    const ready = attentionOf(view);
+    this.board.setAttention(new Set(ready.map((a) => a.cardId)));
+    let fresh = false;
+    for (const a of ready) {
+      const key = `${view.turn.number}:${a.cardId}:${a.ability}`;
+      if (!this.readySeen.has(key)) { this.readySeen.add(key); fresh = true; }
+    }
+    if (fresh) sfx.play('ability-ready');
+  }
+
   private async present(view: GameView, events: ClientEvent[]): Promise<void> {
     const prev = this.view;
     this.view = view;
@@ -261,6 +275,7 @@ export class GameClient {
     }
     this.hud.holdCounter(true);
     this.hud.render(view, this.board.layout!);
+    this.signalReadyAbilities(view);
     for (const e of events) {
       const text = describe(e, view);
       const flashed = this.flashAbility(e);

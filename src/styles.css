@@ -224,6 +224,11 @@ body.shape-short .card-btn.fan { transform: none; }
 .inspect-actions .btn { flex: 1 1 auto; }
 .inspect-actions .btn.primary { flex-grow: 3; }
 .inspector .trigger { font-style: italic; color: #e8cf94; }
+/* A usable ability: sky blue, the same colour as the card's "can act" glow on the table. */
+.inspect-ability { margin-top: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid #4fb8ff; background: rgba(79, 184, 255, 0.12); box-shadow: 0 0 14px rgba(79, 184, 255, 0.35); }
+.inspect-ability .ability-ready { color: #bfe4ff; }
+.inspect-ability .btn.primary { background: #1d5f94; border-color: #4fb8ff; color: #fff; }
+.ability-hint { color: #7fcdff; }
 
 /* Log */
 .log {

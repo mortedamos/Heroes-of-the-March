@@ -146,6 +146,15 @@
       "search": "swap whoosh, magic exchange"
     },
     {
+      "name": "ability-ready",
+      "group": "Abilities",
+      "length": "0.4-0.7 s",
+      "priority": true,
+      "wired": true,
+      "plays": "A card of yours can use an ability now (it glows blue and wiggles): a soft two-note chime",
+      "search": "soft chime, two note notification, magic ping"
+    },
+    {
       "name": "ability-used",
       "group": "Abilities",
       "length": "0.4-0.8 s",

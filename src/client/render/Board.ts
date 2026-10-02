@@ -28,6 +28,10 @@ interface CardObj {
   yaw: number;
   /** The weak red outline on a card that an ability has been used against. */
   glow: THREE.Group | null;
+  /** The pulsing blue outline on a card whose ability can be used now. */
+  attn: THREE.Group | null;
+  /** Current wiggle (radians about the vertical axis) for an attention card. */
+  wiggle: number;
   /** Current shake strength (world units), decaying every frame. */
   shake: number;
   hover: number;
@@ -71,6 +75,16 @@ const GLOW_OUTER = frame(1.26, 1.66);
 const glowMat = (opacity: number) => new THREE.MeshBasicMaterial({ color: '#ff3b30', transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
 const GLOW_MAT_INNER = glowMat(0.5);
 const GLOW_MAT_OUTER = glowMat(0.2);
+
+/** "This card can act now": a pulsing sky-blue outline and a short wiggle every couple of seconds. */
+const ATTN_COLOR = '#4fb8ff';
+const ATTN_PULSE_MS = 1400;
+const ATTN_WIGGLE_EVERY_MS = 2600;
+const ATTN_WIGGLE_MS = 520;
+const attnMat = (opacity: number) => new THREE.MeshBasicMaterial({ color: ATTN_COLOR, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
+const ATTN_MAT_INNER = attnMat(0.6);
+const ATTN_MAT_OUTER = attnMat(0.3);
+const reducedMotion = (): boolean => typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
 
 /** Between 1° and 5° to either side, never quite straight. */
 function randomYaw(): number {
@@ -198,7 +212,7 @@ export class Board {
       mesh, key: p.key, def: p.def, back: p.back, faceUp: false,
       base: { x: p.spawn.x, y: 0.3, z: p.spawn.z, rotZ: Math.PI, scale: 0.55 },
       yaw: randomYaw(),
-      glow: null,
+      glow: null, attn: null, wiggle: 0,
       shake: 0,
       hover: 0, flashAt: null, flash: 0, removing: false,
     };
@@ -287,13 +301,21 @@ export class Board {
     const jx = obj.shake > 0.001 ? (Math.random() - 0.5) * obj.shake : 0;
     const jz = obj.shake > 0.001 ? (Math.random() - 0.5) * obj.shake : 0;
     obj.mesh.position.set(b.x + jx, b.y + obj.hover * 0.05 + obj.flash * 0.08, b.z + jz);
-    obj.mesh.rotation.set(0, obj.yaw + jx * 0.6, b.rotZ);
+    obj.mesh.rotation.set(0, obj.yaw + jx * 0.6 + obj.wiggle, b.rotZ);
     const s = b.scale * (1 + obj.hover * 0.1 + obj.flash * 0.12);
     obj.mesh.scale.set(s, 1, s);
   }
 
   private frame(now: number): void {
+    // One shared pulse for every card that can act now (they breathe together).
+    const still = reducedMotion();
+    const pulse = still ? 1 : 0.5 + 0.5 * Math.sin((now / ATTN_PULSE_MS) * Math.PI * 2);
+    ATTN_MAT_INNER.opacity = 0.3 + 0.5 * pulse;
+    ATTN_MAT_OUTER.opacity = 0.1 + 0.3 * pulse;
+    const phase = (now % ATTN_WIGGLE_EVERY_MS) / ATTN_WIGGLE_MS;
+    const wiggle = still || phase >= 1 ? 0 : Math.sin(phase * Math.PI * 4) * (1 - phase) * (4 * Math.PI / 180);
     for (const obj of this.cards.values()) {
+      obj.wiggle = obj.attn ? wiggle : 0;
       const target = obj === this.hovered ? 1 : 0;
       obj.hover += (target - obj.hover) * 0.25;
       if (obj.flashAt !== null) this.stepFlash(obj, now);
@@ -479,6 +501,24 @@ export class Board {
       } else if (!want && obj.glow) {
         obj.mesh.remove(obj.glow);
         obj.glow = null;
+      }
+    }
+  }
+
+  /** Outline exactly these cards in the "can act now" blue (others lose it). */
+  setAttention(keys: Set<string>): void {
+    for (const obj of this.cards.values()) {
+      const want = keys.has(obj.key) && !obj.removing;
+      if (want && !obj.attn) {
+        const g = new THREE.Group();
+        g.add(new THREE.Mesh(GLOW_INNER, ATTN_MAT_INNER), new THREE.Mesh(GLOW_OUTER, ATTN_MAT_OUTER));
+        g.position.y = 0.002; // above the red outline if both are shown
+        obj.mesh.add(g);
+        obj.attn = g;
+      } else if (!want && obj.attn) {
+        obj.mesh.remove(obj.attn);
+        obj.attn = null;
+        obj.wiggle = 0;
       }
     }
   }

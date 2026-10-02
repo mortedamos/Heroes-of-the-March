@@ -16,10 +16,11 @@ const SAFE_FILE = /^[A-Za-z0-9._-]+\.(mp3|ogg|wav|webm)$/;
 /** The sounds the game plays (the full list is in data/sfx-catalog.json). */
 export type SfxName =
   | 'effect-negative' | 'effect-positive' | 'shuffle' | 'deal' | 'card-flip' | 'card-place' | 'card-pickup'
-  | 'card-discard' | 'die-roll' | 'renown' | 'click' | 'effect-insight' | 'effect-draw' | 'effect-shield' | 'effect-trade';
+  | 'card-discard' | 'die-roll' | 'renown' | 'click' | 'effect-insight' | 'effect-draw' | 'effect-shield' | 'effect-trade'
+  | 'ability-ready';
 
 /** The least time (ms) between two plays of one sound, so a burst of events does not machine-gun it. */
-const MIN_GAP: Partial<Record<SfxName, number>> = { shuffle: 1500, click: 60, 'card-flip': 90, 'card-place': 90 };
+const MIN_GAP: Partial<Record<SfxName, number>> = { shuffle: 1500, click: 60, 'card-flip': 90, 'card-place': 90, 'ability-ready': 800 };
 const DEFAULT_GAP = 40;
 
 function load(): { volume: number; muted: boolean } {

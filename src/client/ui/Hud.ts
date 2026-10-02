@@ -12,12 +12,13 @@ import { nameOf } from '../describe';
 import { isTouch, onLongPress } from '../viewport';
 import { append, clear, h, replace } from './dom';
 import { toggleMusicMenu } from './MusicMenu';
+import { attentionOf } from '../attention';
 import { sfx } from '../audio/Sfx';
 import { tiltOnPointer } from './tilt';
 import { PALETTE, RUNES, type Theme } from './themes';
 
 /** A button shown under a pinned card, e.g. "Bid this card" after a tap. */
-interface InspectAction { label: string; primary?: boolean; run: () => void }
+interface InspectAction { label: string; primary?: boolean; run: () => void; /** An ability of the card: shown beside its text, always visible, with a Not now button. */ ability?: { name: string } }
 
 /** Thumbnail widths (CSS px) for the current screen. */
 function thumbSizes(): { hand: number; option: number; drawn: number } {
@@ -137,6 +138,8 @@ export class Hud {
   private faceDown = false;
   private pinned: string | null = null;
   private pinnedActions: InspectAction[] = [];
+  /** The table card (instance) the pinned view was opened from, if any. */
+  private pinnedCardId: string | null = null;
   /** Touch: the card tapped once (shown with its action); a second tap confirms. */
   private armed: { decision: number; card: string } | null = null;
   /** The decision a pinned card was opened for by choosing it; it closes when that decision ends. */
@@ -166,6 +169,24 @@ export class Hud {
   /** The card currently pinned in the inspector, if any. */
   get pinnedCard(): string | null {
     return this.pinned;
+  }
+
+  /**
+   * A click on a table card: pin it (click again to close). If the card has an ability the engine is offering
+   * now, the card view shows a Use button next to its ability text.
+   */
+  openCard(def: string | null, cardId: string | null): void {
+    if (!def || (def === this.pinned && cardId === this.pinnedCardId)) { this.pinnedCardId = null; this.inspect(def && def === this.pinned ? null : def, true); return; }
+    const v = this.view;
+    const ready = v && cardId ? attentionOf(v).filter((a) => a.cardId === cardId) : [];
+    const name = (getDef(def) as { abilityName?: string }).abilityName ?? '';
+    const actions: InspectAction[] = ready.map((a) => ({
+      label: 'Use', primary: true, ability: { name: ready.length > 1 || !name ? a.label : name },
+      run: () => { this.unpin(); this.deps.send({ type: 'ability.use', decision: a.decision, source: a.cardId, ability: a.ability }); },
+    }));
+    this.pinnedCardId = cardId;
+    this.inspect(def, true, actions);
+    if (ready.length) this.pinnedFor = ready[0]!.decision;
   }
 
   // --- top-level render -----------------------------------------------------------
@@ -404,10 +425,10 @@ export class Hud {
     } else if (mine.kind === 'activate') {
       append(this.prompt, h('div', { class: 'decision' },
         h('div', { class: 'decision-body' },
-          h('div', { class: 'decision-title' }, `${WINDOW_LABEL[mine.window] ?? 'Abilities'}: use an ability?`),
+          h('div', { class: 'decision-title' }, `${WINDOW_LABEL[mine.window] ?? 'Abilities'}: a glowing card can act`),
+          this.hint('ability', d!.id, touch ? 'Tap a glowing card to read it and use its ability.' : 'Click a glowing card to use its ability, or continue without.'),
           h('div', { class: 'decision-buttons' },
-            ...mine.abilities.map((a) => this.abilityButton(a, d!.id)),
-            h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'ability.done', decision: d!.id }) } }, 'Continue')))));
+            h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'ability.done', decision: d!.id }) } }, 'Continue')))));
     } else if (mine.kind === 'bid') {
       if (!mine.canFaceDown) this.faceDown = false;
       const faceDownToggle = mine.canFaceDown
@@ -418,20 +439,13 @@ export class Hud {
         h('span', {}, mine.faceUp && !this.faceDown ? 'Your bid: this first card is played face up.' : 'Your bid: this card is played face down.'),
         faceDownToggle,
         v.hand.length ? this.hint('bid', d!.id, touch ? 'Tap a card to read it; tap again to bid it.' : 'Click a card to bid it.') : '',
-        ...mine.abilities.map((a) => this.abilityButton(a, d!.id)),
+        mine.abilities.length ? h('span', { class: 'ability-hint' }, 'A glowing card can act.') : '',
         h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'bid.pass', decision: d!.id }) } }, 'Pass'));
     } else if (mine.kind === 'choose') {
       this.renderChoice(v, d!.id, mine);
       return;
     }
     this.renderHand(v, mine?.kind === 'bid' ? d!.id : null);
-  }
-
-  private abilityButton(a: AbilityOptionView, decision: number): HTMLButtonElement {
-    const b = h('button', { class: 'btn ability', title: a.label, on: { click: () => this.deps.send({ type: 'ability.use', decision, source: a.source.id, ability: a.ability }) } },
-      h('strong', {}, shortName(a.source.def)), `: ${a.label}`);
-    this.previewOn(b, a.source.def);
-    return b;
   }
 
   /** A how-to hint, shown for the first few decisions of its kind and then left out. */
@@ -614,6 +628,7 @@ export class Hud {
 
   private unpin(): void {
     this.pinned = null;
+    this.pinnedCardId = null;
     this.pinnedActions = [];
     this.pinnedFor = null;
     this.inspect(null);
@@ -798,7 +813,9 @@ export class Hud {
     }
     const isPinned = show === this.pinned;
     const acts = isPinned ? this.pinnedActions : [];
-    const key = `${show}|${isPinned}|${acts.map((a) => a.label).join('/')}`;
+    const key = `${show}|${isPinned}|${acts.map((a) => `${a.label}:${a.ability?.name ?? ''}`).join('/')}`;
+    const abilityActs = acts.filter((a) => a.ability);
+    const otherActs = acts.filter((a) => !a.ability);
     if (key === this.shownKey) return;
     this.shownKey = key;
 
@@ -816,8 +833,15 @@ export class Hud {
         h('div', { class: 'inspect-text' }, ...text),
         // Not printed on the card: why the web edition changed it.
         d.revision ? h('p', { class: 'revised' }, `Revised for the web edition: ${d.revision}`) : '',
-        acts.length ? h('div', { class: 'inspect-actions' },
-          ...acts.map((a) => h('button', { class: `btn${a.primary ? ' primary' : ''}`, on: { click: a.run } }, a.label)),
+        // A usable ability: always shown (even when the card image is readable), right under the card text.
+        abilityActs.length ? h('div', { class: 'inspect-ability' },
+          ...abilityActs.map((a) => h('div', { class: 'ability-row' },
+            h('span', { class: 'ability-ready' }, h('strong', {}, a.ability!.name), ' can be used now.'),
+            h('div', { class: 'inspect-actions' },
+              h('button', { class: 'btn primary', on: { click: a.run } }, a.label),
+              h('button', { class: 'btn', on: { click: () => this.disarmAndRender() } }, 'Not now'))))) : '',
+        otherActs.length ? h('div', { class: 'inspect-actions' },
+          ...otherActs.map((a) => h('button', { class: `btn${a.primary ? ' primary' : ''}`, on: { click: a.run } }, a.label)),
           h('button', { class: 'btn', on: { click: () => this.disarmAndRender() } }, 'Cancel')) : ''),
       isPinned ? h('button', { class: 'inspector-close', aria: { label: 'Close card' }, on: { click: () => this.disarmAndRender() } }, '×') : '');
     this.inspector.classList.toggle('pinned', isPinned);
