@@ -35,7 +35,6 @@ export interface PlayerPublicView {
   handCount: number;
   claimed: CardRef[];
   renown: number;
-  fallPending: boolean;
   bids: BidView[];
   councilHeroes: CardRef[];
   statOverride: Stat | null;
@@ -146,7 +145,6 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       handCount: p.hand.length,
       claimed: p.claimed.map(ref),
       renown: p.renown,
-      fallPending: p.fallPending,
       bids: p.bids.map((b): BidView => (vis(p, b) ? { hidden: false, card: ref(b.card), faceUp: b.visible } : { hidden: true })),
       councilHeroes: p.councilHeroes.map(ref),
       statOverride: p.statOverride,

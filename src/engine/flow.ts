@@ -274,7 +274,6 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     if (t.number > ctx.s.rules.maxTurns) return endGame(ctx);
     const p = ctx.active;
     ctx.emit({ type: 'turnStarted', player: p.id, turn: t.number });
-    if (p.fallPending) heroFalls(ctx, p);
     // Resting companions (Tova) return on their controller's turn.
     for (const c of [...p.resting]) {
       p.resting = p.resting.filter((x) => x !== c);
@@ -469,12 +468,10 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       }
       // The Hall of Rest: choose the next hero when this one falls.
       if (p.bids.some((b) => ctx.defId(b.card) === 'the-hall-of-rest')) p.used['hallOfRest'] = 1;
-      if (p === ctx.active) {
-        if (!t.failed.includes(p.id)) t.failed.push(p.id);
-        ctx.emit({ type: 'heroFalls', player: p.id, delayed: false });
-      } else if (!p.fallPending) {
-        p.fallPending = true;
-        ctx.emit({ type: 'heroFalls', player: p.id, delayed: true });
+      // Everyone who failed falls at the end of this turn.
+      if (!t.failed.includes(p.id)) {
+        t.failed.push(p.id);
+        ctx.emit({ type: 'heroFalls', player: p.id });
       }
     }
     goTo(ctx, 'turnEnd');
@@ -518,7 +515,8 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       p.statOverride = null;
     }
     ctx.returnToDeck('hero', borrowed);
-    for (const pid of t.failed) heroFalls(ctx, ctx.player(pid));
+    // One after another: each faller's choices (companion, new hero) finish before the next hero is drawn.
+    for (const pid of t.failed) ctx.queue({ t: 'heroFalls', player: pid });
     t.failed = [];
     t.wandsDisabled = false;
     t.noFalls = false;
@@ -559,7 +557,6 @@ export function resolveBid(ctx: Ctx, p: PlayerState, bid: Bid): void {
  * paid before the new hero arrives.
  */
 export function heroFalls(ctx: Ctx, p: PlayerState): void {
-  p.fallPending = false;
   replaceFallenHero(ctx, p);
   if (!ctx.s.rules.fallCost) return;
   // queueFirst puts it in front, so the order is: the companion, then the new hero.
@@ -707,6 +704,9 @@ function runTask(ctx: Ctx, task: Task): void {
       if (next) replaceLocation(ctx, next, task.mode, task.source);
       return;
     }
+    case 'heroFalls':
+      heroFalls(ctx, ctx.player(task.player));
+      return;
     case 'setLocation': {
       const card = ctx.takeMatching('location', (c) => ctx.defId(c) === task.defId);
       if (card) replaceLocation(ctx, card, 'shuffleBack', task.source);

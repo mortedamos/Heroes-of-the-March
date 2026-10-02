@@ -15,6 +15,9 @@ import { sfx, type SfxName } from './audio/Sfx';
 import { THEME_SOUND, themeForAbility, type Theme } from './ui/themes';
 import { isTouch, syncBodyClasses } from './viewport';
 
+/** How long a glowing card waits for a click before its chance passes by (ms). */
+const READY_PASS_MS = 8000;
+
 const ERROR_TEXT: Record<string, string> = {
   stale_decision: 'That choice was already made.',
   not_your_decision: "It isn't your decision.",
@@ -129,6 +132,11 @@ export class GameClient {
   private afflictions = new Map<string, string[]>();
   /** Ready abilities already chimed for (turn:card:ability), so repeated bid decisions don't nag. */
   private readySeen = new Set<string>();
+  /** Ready abilities that were ignored until the window passed (turn:card:ability): not offered again that turn. */
+  private passedBy = new Set<string>();
+  private readyTimer: ReturnType<typeof setInterval> | null = null;
+  /** The table card under the pointer, if any. */
+  private hoverKey: string | null = null;
   /** Animations still playing; an announcement waits for them so it appears after the zap. */
   private anims: Promise<void>[] = [];
   /** The card whose ability was used most recently (what a later "looked at a stack" zaps from). */
@@ -204,6 +212,7 @@ export class GameClient {
       const hit = this.scene.pick(e.clientX, e.clientY, [...this.board.meshes(), ...this.board.stackMeshes()]);
       const stack = hit?.object.userData['stack'] as { deck: DeckName; discard: boolean } | undefined;
       const card = this.board.setHovered(stack ? null : hit?.object ?? null);
+      this.hoverKey = card?.key ?? null;
       this.hud.inspect(card?.def ?? null);
       const afflicted = card ? this.afflictions.get(card.key) : undefined;
       const tip = stack && this.view ? deckInfo(stack.deck, stack.discard, this.view)
@@ -216,7 +225,7 @@ export class GameClient {
       const card = this.board.setHovered(hit?.object ?? null);
       this.hud.openCard(card?.def ?? null, card?.key ?? null);
     };
-    const leave = () => { this.board.setHovered(null); this.hud.inspect(null); this.hud.deckTip(null); };
+    const leave = () => { this.board.setHovered(null); this.hoverKey = null; this.hud.inspect(null); this.hud.deckTip(null); };
     canvas.addEventListener('pointermove', move);
     canvas.addEventListener('pointerdown', click);
     canvas.addEventListener('pointerleave', leave);
@@ -247,16 +256,58 @@ export class GameClient {
     }
   }
 
-  /** Cards that can act now glow, wiggle and chime (once per ability per turn). */
+  /**
+   * Cards that can act now glow, wiggle and chime (once per ability per turn).
+   *
+   * An ability window needs an answer, so if the player ignores the glowing cards for a while the client
+   * passes for them (the glow dims over the last 2 s). The wait pauses while a card view is open or the
+   * pointer is on a glowing card. An ability that passed by is not offered again this turn.
+   */
   private signalReadyAbilities(view: GameView): void {
-    const ready = attentionOf(view);
+    this.stopReadyTimer();
+    let ready = attentionOf(view);
+    const pending = view.pending;
+    const window = pending?.detail?.kind === 'activate';
+    const key = (a: { cardId: string; ability: string }) => `${view.turn.number}:${a.cardId}:${a.ability}`;
+    if (window) ready = ready.filter((a) => !this.passedBy.has(key(a)));
+    if (window && pending && ready.length === 0 && attentionOf(view).length > 0) {
+      // Everything on offer already passed by this turn: answer for the player at once.
+      const decision = pending.id;
+      queueMicrotask(() => { if (!this.disposed) this.send({ type: 'ability.done', decision }); });
+    }
     this.board.setAttention(new Set(ready.map((a) => a.cardId)));
+    this.board.setAttentionDeadline(null);
+    document.body.dataset['abilityReady'] = ready.length ? ready.map((a) => a.cardId).join(',') : ''; // for tests and styling
     let fresh = false;
     for (const a of ready) {
-      const key = `${view.turn.number}:${a.cardId}:${a.ability}`;
-      if (!this.readySeen.has(key)) { this.readySeen.add(key); fresh = true; }
+      if (!this.readySeen.has(key(a))) { this.readySeen.add(key(a)); fresh = true; }
     }
     if (fresh) sfx.play('ability-ready');
+    if (window && pending && ready.length > 0) this.startReadyTimer(pending.id, ready.map(key), new Set(ready.map((a) => a.cardId)));
+  }
+
+  private startReadyTimer(decision: number, keys: string[], cards: Set<string>): void {
+    let deadline = performance.now() + READY_PASS_MS;
+    this.board.setAttentionDeadline(deadline);
+    this.readyTimer = setInterval(() => {
+      const now = performance.now();
+      // Reading a glowing card (its view is open, or the pointer is on it) holds the window open.
+      if (this.hud.pinnedCard !== null || (this.hoverKey !== null && cards.has(this.hoverKey))) {
+        deadline = now + READY_PASS_MS;
+        this.board.setAttentionDeadline(deadline);
+        return;
+      }
+      if (now < deadline) return;
+      this.stopReadyTimer();
+      for (const k of keys) this.passedBy.add(k);
+      this.board.setAttention(new Set());
+      this.send({ type: 'ability.done', decision });
+    }, 200);
+  }
+
+  private stopReadyTimer(): void {
+    if (this.readyTimer) clearInterval(this.readyTimer);
+    this.readyTimer = null;
   }
 
   private async present(view: GameView, events: ClientEvent[]): Promise<void> {
@@ -593,6 +644,7 @@ export class GameClient {
 
   dispose(): void {
     this.disposed = true;
+    this.stopReadyTimer();
     this.caseGate?.resolve();
     this.die.hide();
     for (const u of this.unhook) u();

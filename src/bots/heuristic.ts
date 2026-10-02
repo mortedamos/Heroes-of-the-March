@@ -110,7 +110,7 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     case 'notThisFight': {
       const mine = t.myEstimate();
       const handSum = t.view.hand.reduce((s, h) => s + t.handValue(h.card.id), 0);
-      const doomed = mine + handSum < t.difficultyFor(t.me) && !t.me.fallPending;
+      const doomed = mine + handSum < t.difficultyFor(t.me);
       const hopeless = mine + handSum < t.bestRivalEstimate() - 4;
       return doomed || (level === 'hard' && hopeless && t.prize >= 4);
     }
@@ -134,7 +134,7 @@ function torchWorthIt(t: Table, level: BotLevel): boolean {
     if (!(est >= mine - 4 && est >= diff - 2)) continue; // not a rival this turn
     const top = Math.max(0, ...p.companions.map((c) => companionDef(c).stats[stat]));
     let gain = top;
-    if (est >= diff && est - top < diff && !p.fallPending) gain += 3; // it would make their hero fall
+    if (est >= diff && est - top < diff) gain += 3; // it would make their hero fall
     best = Math.max(best, gain);
   }
   return best >= (level === 'hard' ? 3 : 4);
@@ -195,7 +195,7 @@ function magsWorthIt(t: Table): boolean {
   const boost = heroDef(t.me.hero).stats[t.stat];
   const after = mine + boost;
   if (!winning && after > best && after >= diff && t.prize >= 3) return true;
-  return mine < diff && after >= diff && !t.me.fallPending && heroValue(t.me.hero?.def) >= KEEP_HERO;
+  return mine < diff && after >= diff && heroValue(t.me.hero?.def) >= KEEP_HERO;
 }
 
 function miraWorthIt(t: Table, level: BotLevel): boolean {
@@ -239,7 +239,7 @@ function bestForce(t: Table, sourceDef: string, level: BotLevel): ForceChoice {
       const competing = est >= mine - 4 && est >= t.difficultyFor(p) - 2;
       if (competing) gain += c.reduction;
       // Knocking a rival below the difficulty makes their hero fall: real sabotage.
-      if (est >= t.difficultyFor(p) && est - c.reduction < t.difficultyFor(p) && !p.fallPending) gain += level === 'hard' ? 4 : 2;
+      if (est >= t.difficultyFor(p) && est - c.reduction < t.difficultyFor(p)) gain += level === 'hard' ? 4 : 2;
       if (level === 'hard') gain *= 1 + Math.max(0, t.threat(p)) / 20;
       if (gain > best.gain) best = { value: c.value, gain };
     }
@@ -400,7 +400,7 @@ function decideBid(t: Table, d: PendingView, level: BotLevel, rand: Rand): Comma
   if (mine >= targetWin) return pass;
   const hand: HandCard[] = t.view.hand.map((h) => ({ id: h.card.id, worth: t.handValue(h.card.id) })).filter((h) => h.worth > 0);
 
-  const surviving = mine >= difficulty || t.me.fallPending;
+  const surviving = mine >= difficulty;
   const avoidFall = surviving ? 0 : fallPrice(t);
   const plans: { cards: HandCard[]; score: number }[] = [];
   const win = planSpend(hand, targetWin - mine);

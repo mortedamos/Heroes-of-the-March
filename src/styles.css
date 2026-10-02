@@ -83,7 +83,6 @@ body.touch .top-actions .btn { min-height: 36px; }
 .plate-renown { color: var(--gold); white-space: nowrap; }
 .plate-sub { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 10px; align-items: center; margin-top: 3px; color: var(--ink-dim); }
 .plate:not(.you) { width: auto; min-width: 128px; max-width: 190px; padding: 5px 8px; }
-.plate-fall { color: var(--bad); }
 .plate-total { font-weight: bold; }
 .plate-total.ok { color: var(--good); }
 .plate-total.low { color: var(--bad); }
@@ -224,11 +223,12 @@ body.shape-short .card-btn.fan { transform: none; }
 .inspect-actions .btn { flex: 1 1 auto; }
 .inspect-actions .btn.primary { flex-grow: 3; }
 .inspector .trigger { font-style: italic; color: #e8cf94; }
-/* A usable ability: sky blue, the same colour as the card's "can act" glow on the table. */
-.inspect-ability { margin-top: 10px; padding: 8px 10px; border-radius: 8px; border: 1px solid #4fb8ff; background: rgba(79, 184, 255, 0.12); box-shadow: 0 0 14px rgba(79, 184, 255, 0.35); }
-.inspect-ability .ability-ready { color: #bfe4ff; }
-.inspect-ability .btn.primary { background: #1d5f94; border-color: #4fb8ff; color: #fff; }
-.ability-hint { color: #7fcdff; }
+/* The OK button for a usable ability sits on the card face beside the ability text (Hud.placeAbilityButtons). */
+.ability-ok {
+  position: fixed; z-index: 4; padding: 0; border-radius: 8px; border: 2px solid #bfe4ff; background: #1d7fc4; color: #fff;
+  font-weight: bold; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 0 10px rgba(79, 184, 255, 0.75);
+}
+@media (hover: hover) { .ability-ok:hover { background: #2a97e6; } }
 
 /* Log */
 .log {

@@ -47,8 +47,6 @@ export interface PlayerState {
   hand: CardId[];
   claimed: CardId[];
   renown: number;
-  /** Failed an encounter on someone else's turn: the hero falls at the start of this player's turn. */
-  fallPending: boolean;
   bids: Bid[];
   /** Heroes borrowed through Council resources for this encounter. */
   councilHeroes: CardId[];
@@ -236,7 +234,9 @@ export type ChooseTask = {
 export type Task =
   | ChooseTask
   | { t: 'replaceLocation'; mode: 'shuffleBack' | 'discard'; source: string }
-  | { t: 'setLocation'; defId: string; source: string };
+  | { t: 'setLocation'; defId: string; source: string }
+  /** A hero falls (run one at a time, so each new hero is drawn after the previous faller has chosen). */
+  | { t: 'heroFalls'; player: PlayerId };
 
 // ---------------------------------------------------------------------------
 
@@ -328,7 +328,7 @@ export type GameEvent =
   | { type: 'outcome'; result: TurnResult }
   | { type: 'renownGained'; player: PlayerId; amount: number; total: number; locations: CardRef[] }
   | { type: 'fallPrevented'; player: PlayerId; source: string }
-  | { type: 'heroFalls'; player: PlayerId; delayed: boolean }
+  | { type: 'heroFalls'; player: PlayerId }
   | { type: 'turnEnded'; player: PlayerId }
   | { type: 'gameOver'; winner: PlayerId | null };
 

@@ -95,7 +95,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'fall-cost', topic: 'Falling',
     ruling: 'Falling costs no Renown. The new hero is drawn before the fallen one is shuffled back, so you never redraw the same hero.' },
   { id: 'fall-timing', topic: 'Fall timing',
-    ruling: 'Failing on your own turn: your hero falls at the end of that turn. Failing on another player\'s turn: it falls at the start of your next turn. Failing again in between has no extra effect.' },
+    ruling: 'Every player who fails the encounter falls at the end of that turn, whoever\'s turn it is. Players who fall at once choose their replacements one after another, so nobody draws the same hero.' },
   { id: 'companion-phase', topic: 'Companion phase',
     ruling: 'From turn 2, starting with the current player and going clockwise, each player may draw 3 companions and pick 1 (the rest are shuffled back unseen). If that would take you past your companion limit, you must replace one of your companions. Toggle: companionPhase.' },
   { id: 'draw-size', topic: 'Draw size',

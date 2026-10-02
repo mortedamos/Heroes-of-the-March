@@ -48,7 +48,7 @@ export function describe(e: ClientEvent, view: GameView): string | null {
     }
     case 'renownGained': return `${who(e.player)} ${e.player === view.you ? 'claim' : 'claims'} ${e.locations.map((l) => card(l.def)).join(' and ')} (+${e.amount} Renown, ${e.total} total).`;
     case 'fallPrevented': return `${e.source} saves ${e.player === view.you ? 'your' : `${who(e.player)}'s`} hero from falling.`;
-    case 'heroFalls': return e.delayed ? `${who(e.player)} failed. That hero falls at the start of their next turn.` : `${who(e.player)} failed. The hero falls.`;
+    case 'heroFalls': return `${who(e.player)} failed. The hero falls.`;
     case 'gameOver': return `Game over. ${who(e.winner)} ${e.winner === view.you ? 'hold' : 'holds'} the Marches!`;
     case 'gameStarted': return 'The Marchstone has split. The heroes ride out.';
     case 'shuffled': case 'turnEnded': case 'effectCancelled': return null;

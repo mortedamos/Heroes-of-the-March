@@ -156,3 +156,7 @@ All four sit inside the 0.9–1.1 target band. Pell overshot a little downward (
 ### Pell, Guile +1
 
 Pell is now 1/5/3 (Guile 2 → 3). Rerun with the same seed (2,400 games, ±0.06; `docs/balance-data/v2/comp-pell-g3.json`): **0.99** relative win rate, up from 0.97.
+
+### Immediate falls (spot check)
+
+Heroes now fall at the end of the turn they fail on, whoever's turn it is (previously a hero that failed on someone else's turn fell at the start of its own next turn). A 1,400-game natural-play run with the same seed shows the game length and fall rate essentially unchanged: 3 players 9.4 turns and 2.38 falls per game (was 9.5 and 2.44), 4 players 11.5 turns and 3.98 falls (was 11.5 and 4.04). The per-card tables above were measured under the old timing; the effect on them is expected to be small but they have not been rerun.

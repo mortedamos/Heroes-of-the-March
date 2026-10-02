@@ -81,6 +81,7 @@ const ATTN_COLOR = '#4fb8ff';
 const ATTN_PULSE_MS = 1400;
 const ATTN_WIGGLE_EVERY_MS = 2600;
 const ATTN_WIGGLE_MS = 520;
+const ATTN_FADE_MS = 2000;
 const attnMat = (opacity: number) => new THREE.MeshBasicMaterial({ color: ATTN_COLOR, transparent: true, opacity, depthWrite: false, side: THREE.DoubleSide });
 const ATTN_MAT_INNER = attnMat(0.6);
 const ATTN_MAT_OUTER = attnMat(0.3);
@@ -94,6 +95,7 @@ function randomYaw(): number {
 
 export class Board {
   private readonly cards = new Map<string, CardObj>();
+  private attnDeadline: number | null = null;
   private readonly faceTextures = new Map<string, THREE.CanvasTexture>();
   private readonly backMaterials = new Map<DeckName, THREE.MeshStandardMaterial>();
   private readonly stacks = new Map<string, THREE.Mesh>();
@@ -310,8 +312,9 @@ export class Board {
     // One shared pulse for every card that can act now (they breathe together).
     const still = reducedMotion();
     const pulse = still ? 1 : 0.5 + 0.5 * Math.sin((now / ATTN_PULSE_MS) * Math.PI * 2);
-    ATTN_MAT_INNER.opacity = 0.3 + 0.5 * pulse;
-    ATTN_MAT_OUTER.opacity = 0.1 + 0.3 * pulse;
+    const fade = this.attnDeadline === null ? 1 : Math.max(0, Math.min(1, (this.attnDeadline - now) / ATTN_FADE_MS));
+    ATTN_MAT_INNER.opacity = (0.3 + 0.5 * pulse) * (0.25 + 0.75 * fade);
+    ATTN_MAT_OUTER.opacity = (0.1 + 0.3 * pulse) * (0.25 + 0.75 * fade);
     const phase = (now % ATTN_WIGGLE_EVERY_MS) / ATTN_WIGGLE_MS;
     const wiggle = still || phase >= 1 ? 0 : Math.sin(phase * Math.PI * 4) * (1 - phase) * (4 * Math.PI / 180);
     for (const obj of this.cards.values()) {
@@ -506,6 +509,9 @@ export class Board {
   }
 
   /** Outline exactly these cards in the "can act now" blue (others lose it). */
+  /** When the ready glow runs out (performance.now() ms), or null: it dims over the last 2 s. */
+  setAttentionDeadline(deadline: number | null): void { this.attnDeadline = deadline; }
+
   setAttention(keys: Set<string>): void {
     for (const obj of this.cards.values()) {
       const want = keys.has(obj.key) && !obj.removing;

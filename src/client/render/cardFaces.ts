@@ -40,6 +40,14 @@ export function rulesTextSize(defId: string): number {
   return rulesSizes.get(defId) ?? Infinity;
 }
 
+/** Where a hero's or companion's ability name and sentence are printed (face pixels, CARD_W by CARD_H). */
+export interface AbilityBox { x: number; w: number; nameY: number; nameH: number; nameW: number; textBottom: number; lastLineW: number }
+const abilityBoxes = new Map<string, AbilityBox>();
+export function abilityBox(defId: string): AbilityBox | null {
+  if (!abilityBoxes.has(defId)) cardFace(defId);
+  return abilityBoxes.get(defId) ?? null;
+}
+
 /** Get (and lazily draw) the face canvas for a card definition. `onUpdate` fires when art finishes loading. */
 /** What each card's rules text says and where it sits, so the same letters can be drawn again as a glow. */
 const ruleText = new Map<string, { blocks: TextBlock[]; x: number; y: number; w: number; h: number }>();
@@ -197,7 +205,10 @@ function fitSize(g: CanvasRenderingContext2D, blocks: TextBlock[], w: number, h:
 }
 
 /** Lay out several text blocks in a box, shrinking the font until everything fits. Returns the size used. */
-function drawTextBlocks(g: CanvasRenderingContext2D, blocks: TextBlock[], x: number, y: number, w: number, h: number, start = 24, min = 13): number {
+/** Where one text block ended up: top y, height, widest line and line height (face pixels). */
+export interface BlockLayout { y: number; h: number; w: number; lh: number }
+
+function drawTextBlocks(g: CanvasRenderingContext2D, blocks: TextBlock[], x: number, y: number, w: number, h: number, start = 24, min = 13, out?: BlockLayout[]): number {
   const best = fitSize(g, blocks, w, h, start, min);
   if (best !== null) start = best;
   for (let size = start; size >= min; size--) {
@@ -212,15 +223,20 @@ function drawTextBlocks(g: CanvasRenderingContext2D, blocks: TextBlock[], x: num
     }
     if (total <= h || size === min) {
       let cy = y;
+      if (out) out.length = 0;
       for (const [i, { lines, b }] of laid.entries()) {
         if (i) cy += b.gapBefore ?? 8;
         g.font = `${b.style ?? ''} ${b.weight ?? 'normal'} ${size}px ${SERIF}`;
         g.fillStyle = b.color ?? '#2a2118';
+        const top = cy;
+        let widest = 0;
         for (const line of lines) {
           if (cy + lh > y + h + 2) return size;
           g.fillText(line, x, cy + size);
+          widest = Math.max(widest, g.measureText(line).width);
           cy += lh;
         }
+        out?.push({ y: top, h: cy - top, w: widest, lh });
       }
       return size;
     }
@@ -405,7 +421,12 @@ function drawFace(g: CanvasRenderingContext2D, def: CardDef, art: HTMLImageEleme
     const withQuote = [...blocks, { text: def.quote, style: 'italic', color: '#6b5a40', gapBefore: 10 }];
     if (fitSize(g, withQuote, tw, boxH, 24, 17) !== null) blocks.splice(0, blocks.length, ...withQuote);
   }
-  rulesSizes.set(def.id, blocks.length ? drawTextBlocks(g, blocks, tx, y, tw, boxH, 24, 12) : Infinity);
+  const laid: BlockLayout[] = [];
+  rulesSizes.set(def.id, blocks.length ? drawTextBlocks(g, blocks, tx, y, tw, boxH, 24, 12, laid) : Infinity);
+  // Where the ability name and its sentence sit, so the OK button can be placed beside them.
+  if (!emphasis && (def.kind === 'hero' || def.kind === 'companion') && def.abilityName && def.abilityText && laid.length >= 2) {
+    abilityBoxes.set(def.id, { x: tx, w: tw, nameY: laid[0]!.y, nameH: laid[0]!.lh, nameW: laid[0]!.w, textBottom: laid[1]!.y + laid[1]!.h, lastLineW: laid[1]!.w });
+  }
   if (blocks.length) (emphasis ? ruleTextBold : ruleText).set(def.id, { blocks: blocks.map((b) => ({ ...b })), x: tx, y, w: tw, h: boxH });
 
   // Revised for the web edition (data/balance.json)

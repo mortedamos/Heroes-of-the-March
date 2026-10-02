@@ -893,6 +893,27 @@ describe('hero draft: look at three, keep one', () => {
     }
   });
 
+  it('everyone who fails falls at the end of that same turn, each drawing a different new hero', () => {
+    const g = newGame();
+    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['tova-emberdeep-keeper-of-the-underway-door', 'pell-quillon-collegium-prodigy'] },
+      { hero: 'lord-vaelis-nightbloom', companions: ['tobin-quill-goose-keeper', 'varg-ironjaw'] });
+    onTop(g.s, 'encounter', ['the-sundered-warden']);
+    g.s.rules.heroDraft = 3;
+    const before = { A: player(g, g.A).hero, B: player(g, g.B).hero };
+    restart(g);
+    const answered = new Set<string>();
+    until(g, (s) => s.turn.number === 2, (_s, d) => {
+      if (d.kind === 'choose' && d.purpose === 'heroKeep') { answered.add(d.player); return { type: 'choose', decision: d.id, picks: [d.options[0]!.value] }; }
+      return undefined;
+    });
+    expect([...answered].sort()).toEqual([g.A, g.B].sort());
+    expect(player(g, g.A).hero).not.toBe(before.A);
+    expect(player(g, g.B).hero).not.toBe(before.B);
+    expect(player(g, g.A).hero).not.toBe(player(g, g.B).hero);
+    expect(g.events.filter((e) => e.type === 'heroFalls')).toHaveLength(2);
+    checkInvariants(g.s);
+  });
+
   it('heroDraft 1 deals blind (v0.3)', () => {
     const { state } = createGame({ players: seats(3), seed: seed(4), rules: { heroDraft: 1 } });
     expect(state.players.every((p) => p.hero)).toBe(true);
