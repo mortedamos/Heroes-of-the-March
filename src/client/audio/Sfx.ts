@@ -31,6 +31,11 @@ function load(): { volume: number; muted: boolean } {
   } catch { return { volume: DEFAULT_VOLUME, muted: false }; }
 }
 
+/** A random playback speed from 0.9 to 1.1; with pitch preservation off it is also the pitch (±10%). */
+export function pitchFactor(rand: () => number = Math.random): number {
+  return 0.9 + rand() * 0.2;
+}
+
 class Sfx {
   volume: number;
   muted: boolean;
@@ -86,6 +91,10 @@ class Sfx {
     const file = files[Math.floor(Math.random() * files.length)]!;
     const a = new Audio(`${import.meta.env.BASE_URL}sounds/${file}`);
     a.volume = this.volume;
+    // Each play is a little higher or lower (±10%), so repeats don't sound identical. Pitch follows speed.
+    const el = a as HTMLAudioElement & { mozPreservesPitch?: boolean; webkitPreservesPitch?: boolean };
+    el.preservesPitch = false; el.mozPreservesPitch = false; el.webkitPreservesPitch = false;
+    a.playbackRate = pitchFactor();
     void a.play().catch(() => { /* blocked until the first click */ });
   }
 }
