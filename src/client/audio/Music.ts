@@ -5,8 +5,14 @@ import { inFocus, onFocusChange } from './focus';
 
 /** Files in public/music/. Add a name here when you add a track. */
 const TRACKS = ['neutral_music_1.mp3', 'neutral_music_2.mp3', 'neutral_music_3.mp3'];
-/** Plays on the menu, the hero draft and the opening companion phase. */
+/** Plays on the title screen. */
+const TITLE_TRACK = 'title.mp3';
+/** Plays on the hero draft and the opening companion draft. */
 const OPENING_TRACK = 'hero_selection.mp3';
+
+/** 'title' and 'opening' loop their own track; 'rounds' plays the playlist. */
+export type MusicMode = 'title' | 'opening' | 'rounds';
+const FIXED_TRACK: Record<'title' | 'opening', string> = { title: TITLE_TRACK, opening: OPENING_TRACK };
 /** How long the hero-selection music takes to fade out, and the next track to fade in (ms). */
 const FADE_MS = 1800;
 /** Music plays at half volume by default. */
@@ -28,8 +34,8 @@ class MusicPlayer {
   private readonly listeners = new Set<Listener>();
   private index = Math.floor(Math.random() * TRACKS.length);
   private started = false;
-  /** True from the menu until the normal rounds begin: the hero-selection track loops. */
-  private opening = true;
+  /** What is playing: the title track, the hero-selection track, or the playlist of the normal rounds. */
+  private mode: MusicMode = 'title';
   volume: number;
   muted: boolean;
   /** 0..1 multiplier used to fade tracks out and in. */
@@ -46,7 +52,7 @@ class MusicPlayer {
     this.volume = p.volume;
     this.muted = p.muted;
     this.audio.preload = 'auto';
-    this.audio.loop = true; // the opening track loops; the playlist turns this off
+    this.audio.loop = true; // the title and opening tracks loop; the playlist turns this off
     this.applyVolume();
     this.audio.addEventListener('ended', () => this.next(1, true));
     this.audio.addEventListener('play', () => this.set({ playing: true }));
@@ -62,20 +68,24 @@ class MusicPlayer {
     });
   }
 
-  get track(): string { return (this.opening ? OPENING_TRACK : TRACKS[this.index]!).replace(/\.mp3$/, '').replace(/_/g, ' '); }
-  /** Position in the playlist, or null during the opening track. */
-  get trackNumber(): [number, number] | null { return this.opening ? null : [this.index + 1, TRACKS.length]; }
+  private get file(): string { return this.mode === 'rounds' ? TRACKS[this.index]! : FIXED_TRACK[this.mode]; }
+  get track(): string { return this.file.replace(/\.mp3$/, '').replace(/_/g, ' '); }
+  /** Position in the playlist, or null during the title and hero-selection tracks. */
+  get trackNumber(): [number, number] | null { return this.mode === 'rounds' ? [this.index + 1, TRACKS.length] : null; }
 
   /**
-   * The menu, hero draft and opening companion phase play the hero-selection track;
-   * when the normal rounds begin, the playlist starts on a random track.
+   * The title screen plays the title track; the hero draft and opening companion
+   * draft play the hero-selection track; when the normal rounds begin, the playlist
+   * starts on a random track.
    */
-  setOpening(on: boolean): void {
-    if (on === this.opening) return;
+  setOpening(on: boolean): void { this.setMode(on ? 'opening' : 'rounds'); }
+
+  setMode(mode: MusicMode): void {
+    if (mode === this.mode) return;
     const change = (): void => {
-      this.opening = on;
-      if (!on) this.index = Math.floor(Math.random() * TRACKS.length);
-      this.audio.loop = on;
+      this.mode = mode;
+      if (mode === 'rounds') this.index = Math.floor(Math.random() * TRACKS.length);
+      this.audio.loop = mode !== 'rounds';
       this.load();
       if (this.started) this.play();
       this.emit();
@@ -124,7 +134,7 @@ class MusicPlayer {
   }
 
   private load(): void {
-    this.audio.src = `${import.meta.env.BASE_URL}music/${encodeURIComponent(this.opening ? OPENING_TRACK : TRACKS[this.index]!)}`;
+    this.audio.src = `${import.meta.env.BASE_URL}music/${encodeURIComponent(this.file)}`;
   }
 
   play(): void {
@@ -138,7 +148,7 @@ class MusicPlayer {
 
   next(step = 1, gentle = false): void {
     this.changeId++;
-    if (this.opening) { this.opening = false; this.audio.loop = false; }
+    if (this.mode !== 'rounds') { this.mode = 'rounds'; this.audio.loop = false; }
     this.index = (this.index + step + TRACKS.length) % TRACKS.length;
     this.load();
     if (gentle) { this.fadeLevel = 0; this.applyVolume(); }
