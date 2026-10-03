@@ -270,8 +270,8 @@ describe('silence, steal, negate, swap', () => {
     use(g, 'aelthir-moonveil', 'torch');
     pick(g, card(g, 'sergeant-waddle'));
     until(g, bidFor(g.A));
-    // Maren P6 + Tobin P3 (Waddle silenced)
-    expect(total(g, g.A, g.B)).toBe(6 + 3);
+    // Maren's Physical + Tobin P3 (Waddle silenced)
+    expect(total(g, g.A, g.B)).toBe((getDef('queen-maren-ashcroft') as { stats: { P: number } }).stats.P + 3);
   });
 
   it('Pip claims a face-down bid on someone else\'s turn (empty hand: no swap)', () => {
@@ -309,9 +309,12 @@ describe('silence, steal, negate, swap', () => {
 
   it('a tie discards the location; each tied player draws and claims a new one with no effects', () => {
     const g = newGame();
-    standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: [] });
+    // Kazra P7 + Waddle 4 = 11 against Maren P4 + Cobra 4 + a 3-point resource = 11.
+    standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: ['scrying-lenses'] });
     onTop(g.s, 'encounter', ['iron-beetles']);
     restart(g);
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'scrying-lenses') });
     finishTurn(g);
     const outcome = g.events.find((e) => e.type === 'outcome');
     const res = outcome?.type === 'outcome' ? outcome.result : undefined;
@@ -455,7 +458,7 @@ describe('end of bidding', () => {
     until(g, activateFor(g.A, 'endOfBidding'));
     const before = total(g, g.A, g.A);
     use(g, 'mags-tolliver-market-trader', 'queen');
-    expect(total(g, g.A, g.A)).toBe(before + 4); // Corvin P4 doubled
+    expect(total(g, g.A, g.A)).toBe(before + (getDef('archmage-corvin-varro') as { stats: { P: number } }).stats.P); // Corvin's Physical doubled
     const mags = card(g, 'mags-tolliver-market-trader');
     finishTurn(g);
     expect(g.s.discards.companion).toContain(mags);
@@ -1137,7 +1140,7 @@ describe('revised heroes (data/balance.json)', () => {
 
   it('revised cards say so and carry the new stats; Kazra is unchanged', () => {
     const barnaby = getDef('professor-barnaby-pickwort');
-    expect(barnaby.kind === 'hero' && barnaby.stats.P).toBe(4);
+    expect(barnaby.kind === 'hero' && barnaby.stats.P).toBe(5);
     expect(barnaby.revision).toMatch(/Physical 2/);
     expect(getDef('kazra-emberdeep').revision).toMatch(/Ironbound/);
   });
@@ -1252,16 +1255,16 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
   });
 
   it('Posy and Osric gain +1 when the hero swap is used, and only then', () => {
-    // Corvin: P4 M9 G5. A Physical challenge: Mental 9 beats Physical 4, so Posy's swap is used and she gains +1.
+    // Barnaby: P5 M10 G11. A Physical challenge: Mental 10 beats Physical 5, so Rosalind's swap is used and she gains +1.
     const g = newGame();
-    standard(g, { companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] });
+    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] });
     restart(g);
     until(g, bidFor(g.A));
     const used = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
     expect(used.companions.find((c) => c.source === card(g, 'rosalind-marchwell-marchguard-clerk'))?.value).toBe(3 + 1);
     // Osric swaps Guile 5 for Physical 4: also used (+1). Guile 5 does not beat a Guile challenge, so no swap there.
     const h = newGame();
-    standard(h, { companions: ['sir-osric-vane-marshal-of-the-old-guard', 'pell-quillon-collegium-prodigy'], hand: [] });
+    standard(h, { hero: 'professor-barnaby-pickwort', companions: ['sir-osric-vane-marshal-of-the-old-guard', 'pell-quillon-collegium-prodigy'], hand: [] });
     restart(h);
     until(h, bidFor(h.A));
     const osric = totalFor(new Ctx(h.s), player(h, h.A), () => true)!;
@@ -1277,7 +1280,7 @@ describe('bots and Tova', () => {
     const g = newGame();
     // A weak rival (Physical 4 + 3) by default; a strong one (Maren 6 + two 5s) when asked.
     standard(g, { hero, companions: ['tova-emberdeep-keeper-of-the-underway-door', ...others] },
-      strongRival ? { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] } : { hero: 'lord-vaelis-nightbloom', companions: ['tobin-quill-goose-keeper'] });
+      strongRival ? { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] } : { hero: 'queen-maren-ashcroft', companions: ['tobin-quill-goose-keeper'] });
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
     give(g.s, g.A, { hand }); // the turn-start refill dealt a hand; swap in the one under test
@@ -1290,17 +1293,17 @@ describe('bots and Tova', () => {
   });
 
   it('rests when one card makes up for her; keeps her when only weak cards are held', () => {
-    // Barnaby P4 + Tova 1 + Mogra 3 = 8 against 10: without Tova 7, a gap of 3.
-    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'])).toBe('rest');
-    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], ['feathered-cap', 'honey-biscuit', 'sprig-of-heather'])).toBe('ability.done');
+    // Corvin P2 + Tova 3 + Osric 4 = 9 against 10: without Tova 6, a gap of 4.
+    expect(tovaAnswer('archmage-corvin-varro', ['sir-osric-vane-marshal-of-the-old-guard'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'])).toBe('rest');
+    expect(tovaAnswer('archmage-corvin-varro', ['sir-osric-vane-marshal-of-the-old-guard'], ['feathered-cap', 'honey-biscuit', 'sprig-of-heather'])).toBe('ability.done');
   });
 
   it('keeps her when sitting out would hand a valuable location to a stronger rival', () => {
-    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'], true)).toBe('ability.done');
+    expect(tovaAnswer('archmage-corvin-varro', ['mogra-swiftfoot-goblin-runner'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'], true)).toBe('ability.done');
   });
 
   it('rests when the turn is lost anyway', () => {
-    expect(tovaAnswer('professor-barnaby-pickwort', ['mogra-swiftfoot-goblin-runner'], [])).toBe('rest');
+    expect(tovaAnswer('archmage-corvin-varro', ['mogra-swiftfoot-goblin-runner'], [])).toBe('rest');
   });
 });
 
@@ -1336,9 +1339,10 @@ describe('Kin bonuses', () => {
     const g = newGame();
     standard(g, { hero: 'lord-paladin-aldric-ashcroft', companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'] });
     atBidding(g);
-    expect(heroTotal(g, g.A)).toBe(11 + 2); // Aldric P11, two Humans
-    g.s.players.find((p) => p.id === g.A)!.companions = [card(g, 'rosalind-marchwell-marchguard-clerk'), card(g, 'liriel-nightbloom')];
-    expect(heroTotal(g, g.A)).toBe(11 + 1); // an Elf does not count
+    const p = (getDef('lord-paladin-aldric-ashcroft') as { stats: { P: number } }).stats.P;
+    expect(heroTotal(g, g.A)).toBe(p + 2); // two Humans
+    g.s.players.find((x) => x.id === g.A)!.companions = [card(g, 'rosalind-marchwell-marchguard-clerk'), card(g, 'liriel-nightbloom')];
+    expect(heroTotal(g, g.A)).toBe(p + 1); // an Elf does not count
   });
 
   it('A counts a half-breed for both of his kingdoms (Hesk is an Orc and a Human)', () => {
@@ -1367,11 +1371,11 @@ describe('Kin bonuses', () => {
     standard(g, { hero: 'lord-vaelis-nightbloom' }, { companions: ['liriel-nightbloom', 'sergeant-waddle'] });
     atBidding(g); // the Silverwood Hunt: Physical
     const tb = totalFor(new Ctx(g.s), player(g, g.B), () => true)!;
-    expect(tb.companions.find((c) => c.source === card(g, 'liriel-nightbloom'))?.value).toBe(2 - 1);
+    expect(tb.companions.find((c) => c.source === card(g, 'liriel-nightbloom'))?.value).toBe((getDef('liriel-nightbloom') as { stats: { P: number } }).stats.P - 1);
     expect(tb.companions.find((c) => c.source === card(g, 'sergeant-waddle'))?.value).toBe(4);
     // Her own companions are not affected.
     give(g.s, g.A, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] });
-    expect(totalFor(new Ctx(g.s), player(g, g.A), () => true)!.companions[0]!.value).toBe(2);
+    expect(totalFor(new Ctx(g.s), player(g, g.A), () => true)!.companions[0]!.value).toBe((getDef('liriel-nightbloom') as { stats: { P: number } }).stats.P);
   });
 
   it('every hero has a Kin bonus on its card that matches the rules', async () => {

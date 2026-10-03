@@ -15,9 +15,9 @@ Every number below is a starting point; see CARD-BALANCE.md for the measured res
 | Aldric | A | Marchguard location enters play, or a Marchguard companion enters under his control |
 | Corvin | B | Undead encounter enters play |
 | Aelthir | B | Guile challenge is faced (any turn) |
-| Ysolde | A | Magic (Mental) challenge is faced (any turn); stats 5/6/3 |
-| Vaelis | C | A hero falls: draw 2; stats 4/7/11 |
-| Brunna | A | Physical challenge is faced (any turn); Guile 7 -> 6 |
+| Ysolde | A | Magic (Mental) challenge is faced (any turn) |
+| Vaelis | C | A hero falls: draw 2 |
+| Brunna | A | Physical challenge is faced (any turn) |
 | Kazra | B | Ironbound encounter enters play |
 | Thorgar | C | Location won by a margin of 3 or less |
 | Oskar (new hero) | C | Oathbreaker encounter enters play |
@@ -54,3 +54,5 @@ if the pair is broken you immediately discard down to the limit. Under Ysolde wi
 Retired: Realm, Otherworld, Healer, Underway. Locations: Capital, Wardhouse, Accord, Marchguard, Collegium plus a kingdom tag.
 Encounters: Undead 17, Ironbound 13, Oathbreaker 11, Beast 6 (+ kingdom and Skarra tags). Resources: kingdom tags (the relics) and Goose / Beast on a few.
 Companions: kingdom, Warden, Marchguard, Collegium, Goose, Beast, Goose & Kettle.
+
+Final hero and companion stats were tuned in the harness; see KINGDOM-BALANCE.md for the stats and the measured win rates.

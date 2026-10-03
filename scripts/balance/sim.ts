@@ -126,6 +126,8 @@ export interface GameSpec {
   force?: { seat: number; def: string };
   /** Everyone drafts opening companions at random (neutral) instead of by bot preference. */
   randomDraft?: boolean;
+  /** This seat is a "mono-kingdom" player: its bot is strongly pulled toward companions of its hero's kingdom. */
+  monoSeat?: number;
 }
 
 export interface PlayerRecord {
@@ -214,7 +216,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       const picks = forced ? [forced, ...pool.slice(0, d.max - 1)] : pool.slice(0, d.max);
       cmd = { type: 'choose', decision: d.id, picks };
     } else {
-      cmd = botDecide(viewFor(state, d.player), level, rand);
+      cmd = botDecide(viewFor(state, d.player), level, rand, spec.monoSeat !== undefined && d.player === `p${spec.monoSeat}` ? 6 : 0);
     }
     if (!cmd) throw new Error(`bot had no answer for ${d.kind}`);
     if (cmd.type === 'ability.use') bump(used, `${d.player}|${state.cards[cmd.source]}`);

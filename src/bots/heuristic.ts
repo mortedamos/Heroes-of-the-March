@@ -11,7 +11,9 @@
 //   hard   - as normal, plus threat-weighted sabotage (who could win the GAME with
 //            this location), bluffing and tighter survival math.
 
+import { KIN } from '../engine/abilities';
 import { allDefs, getDef } from '../engine/cards';
+import { sharesKingdom } from '../engine/effects';
 import type { Stat } from '../engine/cardTypes';
 import type { Command } from '../engine/types';
 import type { AbilityOptionView, GameView, PendingView, PlayerPublicView } from '../engine/view';
@@ -33,12 +35,30 @@ const FORCE: Record<string, { stat: Stat; on: 'companion' | 'hero' }> = {
   'grumma-ladlejaw-camp-cook': { stat: 'P', on: 'hero' },
 };
 
+/**
+ * What a companion is worth to this hero beyond its own card: sharing the hero's kingdom feeds the hero's Kin
+ * bonus (A: +1 to the hero's stats per kin companion; B: a card whenever kin enters play; C: only hurts rivals).
+ */
+const KIN_WORTH: Record<'A' | 'B' | 'C', number> = { A: 1.5, B: 1.2, C: 0.3 };
+/** Simulation only: an extra pull toward companions of the hero's kingdom (a "mono-kingdom" player). */
+let kinBias = 0;
+export function kinWorth(heroDefId: string | undefined, companionDefId: string): number {
+  if (!heroDefId) return 0;
+  if (!sharesKingdom(getDef(heroDefId), getDef(companionDefId))) return 0;
+  const kin = KIN[heroDefId];
+  return (kin ? KIN_WORTH[kin] : 0) + kinBias;
+}
+
+/** A companion's value to the bot's own team. */
+const teamScore = (t: Table, defId: string) => companionScore(defId) + kinWorth(t.me.hero?.def, defId);
+
 /** A hero worth protecting (stats + ability above the table average). */
 const KEEP_HERO = 23;
 
 type Rand = () => number;
 
-export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.random): Command | null {
+export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.random, kinPull = 0): Command | null {
+  kinBias = kinPull;
   const d = view.pending;
   if (!d || d.player !== view.you || !d.detail) return null;
   const t = new Table(view);
@@ -55,8 +75,8 @@ export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.ran
     case 'companion.place': {
       if (!detail.mustReplace) return { type: 'companion.keep', decision, replace: null };
       const all = [...t.me.companions, ...t.me.inactiveCompanions, ...t.me.resting];
-      const weakest = all.reduce((a, b) => (companionScore(a.def) <= companionScore(b.def) ? a : b));
-      return companionScore(detail.drawn.def) > companionScore(weakest.def)
+      const weakest = all.reduce((a, b) => (teamScore(t, a.def) <= teamScore(t, b.def) ? a : b));
+      return teamScore(t, detail.drawn.def) > teamScore(t, weakest.def)
         ? { type: 'companion.keep', decision, replace: weakest.id }
         : { type: 'companion.discard', decision };
     }
@@ -476,7 +496,7 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
     }
     case 'companionDraft': {
       // Choose the strongest companions (easy bots pick at random).
-      const sorted = level === 'easy' ? [...values].sort(() => rand() - 0.5) : [...values].sort((a, b) => companionScore(optionCard(b)?.def ?? '') - companionScore(optionCard(a)?.def ?? ''));
+      const sorted = level === 'easy' ? [...values].sort(() => rand() - 0.5) : [...values].sort((a, b) => teamScore(t, optionCard(b)?.def ?? '') - teamScore(t, optionCard(a)?.def ?? ''));
       return sorted.slice(0, c.max);
     }
     case 'heroKeep': {
@@ -489,7 +509,7 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       // Look at three, keep one: the strongest (easy bots pick at random).
       return [level === 'easy' ? random() : pickMax((v) => heroValue(v) + teamFit(t, v))];
     case 'discardCompanion': case 'faceDownCompanion': case 'companionMinion':
-      return [pickMin((v) => companionScore(optionCard(v)?.def ?? ''))];
+      return [pickMin((v) => teamScore(t, optionCard(v)?.def ?? ''))];
     case 'discardResource':
     case 'marenGive':
       return [pickMin((v) => t.handValue(v))];

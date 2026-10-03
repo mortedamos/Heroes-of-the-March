@@ -8,6 +8,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BotLevel } from '../../src/bots/heuristic';
+import { getDef } from '../../src/engine/cards';
 import { companionIds, heroIds, merge, mix, mulberry, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
 
 
@@ -43,9 +44,10 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
   const only = (opt.only ?? '').split(',').filter(Boolean);
   const pick = (ids: string[]) => (only.length ? ids.filter((id) => only.some((o) => id.includes(o))) : ids);
   const heroes = heroIds(), comps = pick(companionIds());
+  const heroFocus = pick(heroes); // --only also narrows which heroes are measured (the others still sit at the table)
 
   if (experiment === 'hero') {
-    for (const h of heroes) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
+    for (const h of heroFocus) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
       const seed = mix(base, hashStr(h), n, g);
       const r = mulberry(mix(seed, 1));
       const others = heroes.filter((x) => x !== h);
@@ -70,6 +72,26 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
         const spec: GameSpec = { n, seed, level, rules: { heroDraft: 1 }, force: { seat, def: c }, randomDraft: true };
         record(`${c}|${n}`, playGame(spec, cards), seat);
       } finally { restore(); }
+      played++;
+    }
+  } else if (experiment === 'mono') {
+    // One seat plays a hero of kingdom K and recruits kin whenever it can; everyone else plays normally.
+    const kingdoms = ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfellow'];
+    const kin = (k: string) => heroes.filter((h) => getDef(h).groups.includes(k));
+    for (const k of kingdoms) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
+      const pool = kin(k);
+      const h = pool[g % pool.length]!;
+      const seed = mix(base, hashStr(k), n, g);
+      const r = mulberry(mix(seed, 1));
+      const others = heroes.filter((x) => x !== h);
+      for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [others[i], others[j]] = [others[j]!, others[i]!]; }
+      const seat = g % n;
+      const dealt: Record<number, string> = {};
+      let q = 0;
+      for (let s = 0; s < n; s++) dealt[s] = s === seat ? h : others[q++]!;
+      const rec = playGame({ n, seed, level, heroes: dealt, rules: { heroDraft: 1 }, monoSeat: seat }, cards);
+      record(`${k}|${n}`, rec, seat);
+      record(`${h}|${n}`, rec, seat);
       played++;
     }
   } else if (experiment === 'nat') {

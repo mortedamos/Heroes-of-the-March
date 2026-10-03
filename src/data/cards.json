@@ -11,9 +11,9 @@
    "quote": "“Your stone was a cage. Cage bars break.”",
    "art": "portraits__grukka_defiant",
    "stats": {
-    "P": 9,
+    "P": 10,
     "M": 8,
-    "G": 5
+    "G": 6
    },
    "abilityName": "Mine Now",
    "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
@@ -32,8 +32,8 @@
    "quote": "“The mountain's had two goes at me. It can wait its turn like everyone else.”",
    "art": "portraits__thorgar_neutral",
    "stats": {
-    "P": 6,
-    "M": 6,
+    "P": 7,
+    "M": 7,
     "G": 8
    },
    "abilityName": "Dug Out Twice",
@@ -53,9 +53,9 @@
    "quote": "“I held the torch when your ancestors swore. I remember how young they all looked.”",
    "art": "portraits__aelthir_wistful",
    "stats": {
-    "P": 5,
-    "M": 7,
-    "G": 10
+    "P": 4,
+    "M": 6,
+    "G": 9
    },
    "abilityName": "I Held the Torch",
    "abilityText": "At the start of bidding on any turn, choose a companion of an opponent. That companion does not contribute any stats this turn.",
@@ -74,9 +74,9 @@
    "quote": "“One does not converse with mayflies. One outlives them.”",
    "art": "portraits__vaelis_aloof",
    "stats": {
-    "P": 4,
-    "M": 7,
-    "G": 11
+    "P": 7,
+    "M": 10,
+    "G": 13
    },
    "abilityName": "Master of Shadowsteeds",
    "abilityText": "At the start of bidding you may draw the next card from the encounter stack and use its minion bonus this turn as a bonus to all of your stats.",
@@ -95,9 +95,9 @@
    "quote": "“I never take anything. Things just find their way to me.”",
    "art": "portraits__pip_neutral",
    "stats": {
-    "P": 5,
+    "P": 7,
     "M": 8,
-    "G": 7
+    "G": 9
    },
    "abilityName": "Pockets Full of Everything",
    "abilityText": "On any turn but your own you may claim a face-down resource card from another player as your own. If you have resource cards, a random one of yours takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
@@ -116,9 +116,9 @@
    "quote": "“Titan's done. Point it at something you don't like.”",
    "art": "portraits__kazra_focused",
    "stats": {
-    "P": 6,
+    "P": 7,
     "M": 6,
-    "G": 8
+    "G": 9
    },
    "abilityName": "Point It at Something",
    "abilityText": "On any turn you can choose to ignore the bonuses granted to an encounter by minions.",
@@ -137,9 +137,9 @@
    "quote": "“The oaks at the eastern edge are angry. They would like to walk.”",
    "art": "portraits__ysolde_uncanny",
    "stats": {
-    "P": 5,
-    "M": 6,
-    "G": 3
+    "P": 4,
+    "M": 4,
+    "G": 2
    },
    "abilityName": "The Forest Walks With Me",
    "abilityText": "While this hero is in play as your hero, you may have a maximum of three companions instead of two.",
@@ -159,8 +159,8 @@
    "art": "portraits__hobby_scheming",
    "stats": {
     "P": 4,
-    "M": 6,
-    "G": 11
+    "M": 5,
+    "G": 10
    },
    "abilityName": "A Little Plan",
    "abilityText": "You may bid all of your resource cards face down, revealing them at any time. Abilities of those resource cards take effect when revealed, not while face down.",
@@ -179,8 +179,8 @@
    "quote": "“The Dawn guides my blade. And my blade has opinions.”",
    "art": "portraits__aldric_fervent",
    "stats": {
-    "P": 11,
-    "M": 4,
+    "P": 10,
+    "M": 3,
     "G": 6
    },
    "abilityName": "Shield of the Dawn",
@@ -220,9 +220,9 @@
    "quote": "“The Temple says I was chosen. The Collegium says I was elected. I say the war won't win itself.”",
    "art": "portraits__maren_resolute",
    "stats": {
-    "P": 6,
-    "M": 10,
-    "G": 6
+    "P": 4,
+    "M": 9,
+    "G": 5
    },
    "abilityName": "Royal Requisition",
    "abilityText": "Before bidding on your turn, you may trade a resource card from your hand with a random card in another player's hand.",
@@ -240,9 +240,9 @@
    "quote": "“If prayer could hold a wall, Lord-Paladin, I'd be out of a job.”",
    "art": "portraits__corvin_wry",
    "stats": {
-    "P": 4,
-    "M": 9,
-    "G": 5
+    "P": 2,
+    "M": 6,
+    "G": 2
    },
    "abilityName": "Entered Into the Record",
    "abilityText": "On your turn, any time you would draw a resource, you may draw an additional resource.",
@@ -261,9 +261,9 @@
    "quote": "“The ruins were wardhouses. The Society has known for two hundred years. Nobody ever asks.”",
    "art": "portraits__barnaby_neutral",
    "stats": {
-    "P": 4,
+    "P": 5,
     "M": 10,
-    "G": 10
+    "G": 11
    },
    "abilityName": "The Society's Maps",
    "abilityText": "On your turn you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
@@ -282,9 +282,9 @@
    "quote": "“I fought the Mountain Wars so my grandchildren wouldn't have to. Then they went and had grandchildren.”",
    "art": "units__raider",
    "stats": {
-    "P": 8,
-    "M": 7,
-    "G": 8
+    "P": 9,
+    "M": 6,
+    "G": 9
    },
    "abilityName": "Pick Your Fight",
    "abilityText": "Once per turn, before bidding, you may look at the next encounter in the encounter stack. You may replace the current encounter and its minions with it.",
@@ -303,9 +303,9 @@
    "quote": "“The Elves have 'looked at us funny.' I've underlined it.”",
    "art": "portraits__oskar_grudging",
    "stats": {
-    "P": 6,
-    "M": 8,
-    "G": 6
+    "P": 8,
+    "M": 10,
+    "G": 9
    },
    "abilityName": "Entered in the Grudge Book",
    "abilityText": "At the start of bidding, choose an opponent. If that opponent wins this encounter, they have -3 during the next encounter.",
@@ -344,9 +344,9 @@
    "quote": "“Someone has to mind the door. Sigrun certainly won't.”",
    "art": "units__foehammer_3",
    "stats": {
-    "P": 2,
+    "P": 3,
     "M": 4,
-    "G": 4
+    "G": 5
    },
    "abilityName": "Waiting at the Door",
    "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
@@ -496,7 +496,7 @@
    "art": "units__druid_1",
    "stats": {
     "P": 2,
-    "M": 5,
+    "M": 4,
     "G": 3
    },
    "abilityName": "Think It Through",
@@ -548,7 +548,7 @@
    "quote": "“My brother thinks the lesser peoples are dull. My brother has never been to a halfellow wedding.”",
    "art": "units__blade_dancer_2",
    "stats": {
-    "P": 2,
+    "P": 3,
     "M": 5,
     "G": 3
    },
@@ -568,7 +568,7 @@
    "stats": {
     "P": 2,
     "M": 5,
-    "G": 3
+    "G": 4
    },
    "abilityName": "Mind of the Grove",
    "abilityText": "You can force another player's companion to contribute their mental stat in place of another stat.",
@@ -602,7 +602,7 @@
    "stats": {
     "P": 3,
     "M": 2,
-    "G": 5
+    "G": 4
    },
    "abilityName": "Queen for a Day",
    "abilityText": "You may double your hero's stats. At the end of the encounter this card is discarded.",
@@ -694,7 +694,7 @@
    "stats": {
     "P": 3,
     "M": 3,
-    "G": 4
+    "G": 3
    },
    "abilityName": "Cross-Reference",
    "abilityText": "You may use your hero's mental stat in place of another stat. If you do, Rosalind gains +1 to mental for this encounter.",
@@ -727,7 +727,7 @@
    "quote": "“The mountain keeps a ledger. Tonight I settle it.”",
    "art": "portraits__stone",
    "stats": {
-    "P": 3,
+    "P": 2,
     "M": 3,
     "G": 4
    },
@@ -914,9 +914,9 @@
    "quote": "“The bog raised me for ten years and Kingsford for ten more. Neither of them will admit it.”",
    "art": "portraits__hesk_neutral",
    "stats": {
-    "P": 4,
+    "P": 5,
     "M": 3,
-    "G": 3
+    "G": 4
    },
    "abilityName": "Raised by Both",
    "abilityText": "Once per turn you may re-use a once-per-turn ability of another companion you control.",
@@ -934,7 +934,7 @@
    "art": "units__dire_wolf",
    "stats": {
     "P": 4,
-    "M": 2,
+    "M": 3,
     "G": 3
    },
    "abilityName": "Varg's Shadow",
@@ -952,7 +952,7 @@
    "stats": {
     "P": 4,
     "M": 3,
-    "G": 3
+    "G": 4
    },
    "abilityName": "Fire in the Hole",
    "abilityText": "At the end of bidding, before the winner is declared, you may discard this companion. If you do, every opponent has -4 to their total this encounter, or -5 if Mhorgrim's Hunt is revealed under your control.",
@@ -970,7 +970,7 @@
    "art": null,
    "stats": {
     "P": 3,
-    "M": 2,
+    "M": 3,
     "G": 3
    },
    "abilityName": "Fetch",

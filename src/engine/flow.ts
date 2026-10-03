@@ -751,6 +751,8 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
     case 'discardForCouncil':
     case 'marenGive': return keep(inHand);
     case 'fetch': return keep((v) => v === 'skip' || inHand(v));
+    // Another draw may have reshuffled the discard pile while this choice waited: those cards are hidden again.
+    case 'sigrunPick': return keep((v) => v === 'deck' || ctx.s.discards.resource.includes(v));
     case 'silenceCompanion':
     case 'forceCompanion':
     case 'rulingCompanion': return keep(opposingCompanion);
