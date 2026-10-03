@@ -28,6 +28,8 @@ export interface HeroDef extends BaseDef {
   abilityName: string;
   abilityText: string;
   triggerText: string;
+  /** The hero's Kin bonus (A, B or C), for the card face. */
+  kinText?: string;
 }
 
 export interface CompanionDef extends BaseDef {
@@ -80,3 +82,4 @@ export interface CardDatabase {
 }
 
 export const KINGDOMS = ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfellow'] as const;
+export type Kingdom = typeof KINGDOMS[number];

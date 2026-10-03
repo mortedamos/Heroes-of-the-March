@@ -25,21 +25,21 @@ export const SPECIAL_VALUE: Record<string, number> = {
 const HERO_ABILITY: Record<string, number> = {
   'warchief-grukka-ironjaw': 3, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 4, 'lord-vaelis-nightbloom': 3,
   'pip-wanderfoot': 4, 'kazra-emberdeep': 2, 'ysolde-of-the-wellspring': 5, 'mayor-hobby-trickgrin': 2,
-  'lord-paladin-aldric-ashcroft': 3, 'high-thane-brunna-stonefast': 1, 'hesk-of-two-homes': 1,
+  'lord-paladin-aldric-ashcroft': 3, 'high-thane-brunna-stonefast': 1, 'loremaster-oskar-grimgate': 3,
   'queen-maren-ashcroft': 3, 'archmage-corvin-varro': 5, 'professor-barnaby-pickwort': 3, 'urzha-half-tusk': 2,
 };
 
 /** How much a companion's ability is worth on top of its stats. */
 const COMPANION_ABILITY: Record<string, number> = {
   'liriel-nightbloom': 2, 'thessaly-of-the-grove': 2, 'kesh-the-bog-huntress': 2,
-  'sir-hugo-pellam-marchguard-surgeon': 2, 'caelan-the-exile': 2, 'brisa-blastcap-bombardier': 2, 'clemence-fairbrook-temple-cook': 1.5,
+  'hobart-thimblewick-moot-surgeon': 2, 'caelan-the-exile': 2, 'brisa-blastcap-bombardier': 2, 'grumma-ladlejaw-camp-cook': 1.5,
   'nettle-burrows-trouble-maker': 2, 'sister-aurelie-dane-physician': 2, 'gnash-the-butcher-of-bloodmire': 2,
-  'sir-osric-vane-marshal-of-the-old-guard': 2, 'posy-marchbank-marchguard-clerk': 2,
-  'elder-ilvena-of-the-conclave': 3, 'loremaster-oskar-grimgate': 2, 'mags-tolliver-market-trader': 2,
-  'mira-coldwater-the-stonetouched': 2, 'goldie-trickgrin-keeper-of-the-goose-and-kettle': 1, 'pell-quillon-collegium-prodigy': 2,
+  'sir-osric-vane-marshal-of-the-old-guard': 2, 'rosalind-marchwell-marchguard-clerk': 2,
+  'elder-ilvena-of-the-conclave': 3, 'hesk-of-two-homes': 2, 'mags-tolliver-market-trader': 2,
+  'dagny-coldhearth-the-grudge-bearer': 2, 'torvi-cinderkeg-master-gunner': 2, 'moss-dire-wolf': 1, 'gimlet-a-very-good-dog': 1.5, 'goldie-trickgrin-keeper-of-the-goose-and-kettle': 1, 'pell-quillon-collegium-prodigy': 2,
   'seraphine-moonveil-warden-scholar': 1, 'varg-ironjaw': 1, 'tansy-brambleby-barmaid-and-volunteer': 1.5,
   'fennick-puffcap-mycomancer': 1, 'captain-rook-halloran-skyship-captain': 1, 'marshal-hedda-ironvow': 1,
-  'wren-nightingale-relic-hunter': 1, 'mogra-swiftfoot-goblin-runner': 1, 'tova-emberdeep-keeper-of-the-underway-door': 1,
+  'elowen-leafwatch-treetop-warden': 1, 'mogra-swiftfoot-goblin-runner': 1, 'tova-emberdeep-keeper-of-the-underway-door': 1,
   'sigrun-stonefast-metal-singer': 1.5, 'tobin-quill-goose-keeper': 1.5,
   'honk-the-goose-rout-veteran': 1.5, 'duchess-the-pub-goose': 1.5, 'sergeant-waddle': 1, 'cobra-chicken': 0.5,
 };

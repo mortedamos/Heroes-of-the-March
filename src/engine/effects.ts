@@ -1,9 +1,10 @@
 // Shared effect primitives used by the turn flow and by card abilities.
 
-import type { CardDef, CardKind, Stat } from './cardTypes';
+import { KINGDOMS, type CardDef, type CardKind, type Stat } from './cardTypes';
 import type { Ctx } from './context';
 import { abilityOf, type Ability, type Source, type TriggerName, type TriggerPayload } from './abilities';
 import { nextInt } from './rng';
+import { challengeStat, difficultyFor } from './totals';
 import type { CardId, DeckName, EffectKind, PlayerId, PlayerState, TurnEffect } from './types';
 
 // --- groups ---------------------------------------------------------------
@@ -13,8 +14,21 @@ export function hasGroup(def: CardDef, group: string): boolean {
   return def.groups.includes(group) || def.groups.includes('All');
 }
 
-export function kingdomOf(def: CardDef): string | null {
-  return def.groups.find((g) => ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfellow'].includes(g)) ?? null;
+/** A card's kingdoms (a half-breed like Hesk has two). */
+export function kingdomsOf(def: CardDef): string[] {
+  return def.groups.filter((g) => (KINGDOMS as readonly string[]).includes(g));
+}
+
+export function sharesKingdom(a: CardDef, b: CardDef): boolean {
+  const ka = kingdomsOf(a);
+  return kingdomsOf(b).some((k) => ka.includes(k));
+}
+
+/** Companions under `p`'s control (in play, face up) that share their hero's kingdom. */
+export function kinCount(ctx: Ctx, p: PlayerState): number {
+  if (!p.hero) return 0;
+  const hero = ctx.def(p.hero);
+  return p.companions.filter((c) => sharesKingdom(hero, ctx.def(c))).length;
 }
 
 // --- turn effects -------------------------------------------------------------
@@ -40,12 +54,39 @@ export function activeEffects(ctx: Ctx, kind?: EffectKind): TurnEffect[] {
   return effects.filter((e) => (!kind || e.kind === kind) && (e.kind === 'disableAbilities' || !off.has(e.source)));
 }
 
-export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect {
+/** Effects whose target is a player, not a card. */
+export const PLAYER_TARGET_KINDS: readonly EffectKind[] = ['forceHeroStat', 'statBonus', 'heroMultiplier', 'autoWin', 'grudge'];
+
+/**
+ * Marshal Hedda Ironvow's "Hold the Line": once per turn, an opponent's ability that would affect one of
+ * her controller's companions is cancelled. Returns true if it was.
+ */
+function heldTheLine(ctx: Ctx, e: Omit<TurnEffect, 'id'>): boolean {
+  if (e.kind !== 'silenceCompanion' && e.kind !== 'forceCompanionStat' && e.kind !== 'disableAbilities') return false;
+  if (!ctx.s.cards[e.target] || ctx.def(e.target).kind !== 'companion') return false;
+  const victim = ownerOf(ctx, e.target);
+  if (!victim || victim === e.owner) return false;
+  const off = disabledCards(ctx);
+  for (const c of ctx.player(victim).companions) {
+    if (off.has(c) || !abilityOf(ctx.defId(c))?.holdTheLine) continue;
+    const key = `${c}:hold`;
+    if (ctx.s.turn.used[key]) continue;
+    ctx.s.turn.used[key] = 1;
+    ctx.emit({ type: 'abilityUsed', player: victim, source: ctx.ref(c), ability: 'hold', label: 'Cancel an opponent\'s ability that would affect your companion' });
+    ctx.emit({ type: 'abilityIgnored', player: victim, by: ctx.ref(c), source: ctx.ref(e.source), targetCard: ctx.ref(e.target) });
+    return true;
+  }
+  return false;
+}
+
+/** Add a turn effect. Returns null if it was cancelled (Hold the Line). */
+export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect | null {
+  if (heldTheLine(ctx, e)) return null;
   const t = ctx.s.turn;
   t.effectSeq += 1;
   const effect: TurnEffect = { ...e, id: t.effectSeq };
   t.effects.push(effect);
-  const cardTarget = e.kind === 'forceHeroStat' || e.kind === 'statBonus' || e.kind === 'heroMultiplier' || e.kind === 'autoWin' ? null : e.target;
+  const cardTarget = PLAYER_TARGET_KINDS.includes(e.kind) ? null : e.target;
   ctx.emit({
     type: 'effect', effect: { ...effect }, source: ctx.ref(e.source),
     targetCard: cardTarget && ctx.s.cards[cardTarget] ? ctx.ref(cardTarget) : null,
@@ -254,9 +295,22 @@ export function councilHeroes(ctx: Ctx, player: PlayerId, n: number, source: str
   if (called > 0) ctx.log(player, source, `called ${called} hero${called > 1 ? 'es' : ''} to their side`);
 }
 
-export function maxCompanions(ctx: Ctx, p: PlayerState): number {
+/**
+ * How many companions `p` may keep: the house limit (or the hero's, Ysolde), plus one for every bonus pair
+ * (Varg and Moss, Goldie and Gimlet) with both members in the party. `incoming` is a card about to join,
+ * counted as if it were already in play (so the second of a pair may be played above the limit).
+ */
+export function maxCompanions(ctx: Ctx, p: PlayerState, incoming?: CardId): number {
   const heroMax = p.hero ? activeAbility(ctx, p.hero)?.maxCompanions : undefined;
-  return Math.max(ctx.s.rules.maxCompanions, heroMax ?? 0);
+  const base = Math.max(ctx.s.rules.maxCompanions, heroMax ?? 0);
+  const inPlay = new Set([...p.companions, ...p.inactiveCompanions, ...p.resting].map((c) => ctx.defId(c)));
+  if (incoming) inPlay.add(ctx.defId(incoming));
+  let pairs = 0;
+  for (const id of inPlay) {
+    const partner = abilityOf(id)?.pair;
+    if (partner && id < partner && inPlay.has(partner)) pairs++;
+  }
+  return base + pairs;
 }
 
 /** Companions counting toward the limit (including face-down and resting ones). */
@@ -277,7 +331,10 @@ export function companionEnters(ctx: Ctx, p: PlayerState, card: CardId, replaced
     ctx.s.turn.openingEntrants.push({ player: p.id, card });
     return;
   }
+  if (replaced) fire(ctx, 'companionLeft', { card: replaced, player: p.id });
   enterPlayEffects(ctx, p, card);
+  // Replacing half of a bonus pair breaks it: drop back to the limit.
+  if (replaced) enforceCompanionLimit(ctx, p, 'Bonus companion lost');
 }
 
 function enterPlayEffects(ctx: Ctx, p: PlayerState, card: CardId): void {
@@ -302,16 +359,21 @@ export function discardCompanion(ctx: Ctx, p: PlayerState, card: CardId, reason:
   ctx.removeFromPlayer(p, card);
   ctx.discard('companion', card);
   ctx.emit({ type: 'companionDiscarded', player: p.id, card: ctx.ref(card), reason });
+  fire(ctx, 'companionLeft', { card, player: p.id });
+  // Losing half of a bonus pair drops the limit: discard down to it at once.
+  enforceCompanionLimit(ctx, p, 'Bonus companion lost');
 }
 
 /** Queue discards until the player is within their companion limit. */
 export function enforceCompanionLimit(ctx: Ctx, p: PlayerState, reason: string): void {
-  const excess = companionCount(p) - maxCompanions(ctx, p);
+  // Discards already waiting in the queue count (each one resolves with a fresh check).
+  const queued = ctx.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardCompanion' && t.player === p.id && t.data?.['enforce']).length;
+  const excess = companionCount(p) - maxCompanions(ctx, p) - queued;
   for (let i = 0; i < excess; i++) {
     ctx.queueFirst({
       t: 'choose', purpose: 'discardCompanion', player: p.id, prompt: `${reason}: discard a companion`,
       options: [...p.companions, ...p.inactiveCompanions, ...p.resting].map((c) => cardOption(ctx, c)),
-      min: 1, max: 1, source: reason,
+      min: 1, max: 1, source: reason, data: { enforce: 1 },
     });
   }
 }
@@ -319,10 +381,18 @@ export function enforceCompanionLimit(ctx: Ctx, p: PlayerState, reason: string):
 // --- locations --------------------------------------------------------------
 
 export function locationEnters(ctx: Ctx, card: CardId, reason: string): void {
-  ctx.s.turn.location = card;
+  const t = ctx.s.turn;
+  // A location that arrives after the challenge was announced may change its type: "when a X challenge is faced" fires again.
+  const before = t.encounter ? challengeStat(ctx, null) : null;
+  t.location = card;
   ctx.emit({ type: 'locationRevealed', card: ctx.ref(card), reason });
   abilityOf(ctx.defId(card))?.onEnter?.(ctx, { card, owner: null, kind: 'location' });
   fire(ctx, 'locationEntered', { card });
+  const after = t.encounter ? challengeStat(ctx, null) : null;
+  if (before && after && before !== after) {
+    ctx.emit({ type: 'challengeSelected', stat: after, difficulty: difficultyFor(ctx, null)?.total ?? 0 });
+    fire(ctx, 'challengeFaced', { stat: after, player: ctx.active.id });
+  }
 }
 
 /** Swap the current location (Wayfinder's Die, Portal Rune, The Umbral Ring...). */
@@ -335,6 +405,7 @@ export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'd
     ctx.emit({ type: 'locationReplaced', from: ctx.ref(prev), to: ctx.ref(next), reason });
   }
   locationEnters(ctx, next, reason);
+  if (prev) fire(ctx, 'locationReplaced', { from: prev, to: next });
 }
 
 /** Undo lingering location effects (The Storybook Glade turns companions back up). */

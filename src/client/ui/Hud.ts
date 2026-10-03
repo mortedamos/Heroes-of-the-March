@@ -82,6 +82,7 @@ function effectTag(e: EffectView): string {
     case 'negateBid': return `${tgt} zero`;
     case 'disableAbilities': return `${tgt} disabled`;
     case 'autoWin': return 'Takes the location';
+    case 'grudge': return `Grudge -${e.amount ?? 3}`;
   }
 }
 
@@ -861,6 +862,7 @@ export class Hud {
     if (d.kind === 'hero' || d.kind === 'companion') {
       if (d.abilityName) text.push(h('p', {}, h('strong', {}, d.abilityName), d.abilityText ? ` ${d.abilityText}` : ''));
       if (d.kind === 'hero' && d.triggerText) text.push(h('p', { class: 'trigger' }, `⚡ ${d.triggerText}`));
+      if (d.kind === 'hero' && d.kinText) text.push(h('p', { class: 'trigger' }, `◆ ${d.kinText}`));
     } else if (d.conditionText) text.push(h('p', {}, d.conditionText));
     const img = cardThumb(show, 400, 'inspect-img', true);
     tiltOnPointer(img); // leans a few degrees toward the mouse

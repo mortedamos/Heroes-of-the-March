@@ -39,6 +39,7 @@ export function locateAll(s: GameState): Map<CardId, string[]> {
   for (const c of t.minions) put(c, 'minion');
   for (const c of t.companionMinions) put(c, 'companionMinion');
   for (const c of t.setAside) put(c, 'setAside');
+  if (t.chosenEncounter) put(t.chosenEncounter, 'chosenEncounter');
   if (s.pending?.kind === 'companion.place') put(s.pending.drawn, 'pendingDrawn');
   return where;
 }

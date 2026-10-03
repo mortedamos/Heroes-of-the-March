@@ -83,7 +83,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
     cards: Object.create(null) as Record<string, string>,
     turn: {
       number: 0, active: 0, step: 'turnStart', cursor: 0,
-      location: null, extraLocations: [], encounter: null, minions: [], companionMinions: [], setAside: [], openingEntrants: [],
+      location: null, extraLocations: [], encounter: null, minions: [], companionMinions: [], setAside: [], chosenEncounter: null, openingEntrants: [],
       bidder: 0, passesInARow: 0, revealCursor: 0,
       wandsDisabled: false, noFalls: false, failed: [], result: null, effects: [], effectSeq: 0, used: {},
     },
@@ -112,7 +112,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
       // No hero yet: heroes are drafted (or dealt) below.
       id: s.id, name: sanitizeName(s.name, `Player ${i + 1}`), hero: NO_HERO,
       companions: [], inactiveCompanions: [], resting: [], hand: [], claimed: [], renown: 0,
-      bids: [], councilHeroes: [], statOverride: null, used: {},
+      bids: [], councilHeroes: [], statOverride: null, used: {}, penalty: 0, penaltyNext: 0,
     });
   }
   ctx.emit({ type: 'gameStarted', players: state.players.map((p) => p.id) });

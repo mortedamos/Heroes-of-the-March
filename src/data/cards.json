@@ -19,7 +19,8 @@
    "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
    "kind": "hero",
    "triggerText": "When a Capital location enters play, draw a resource.",
-   "revision": "Worded as once per turn (was 'at any time'); Physical 10 → 9 (drifted to 38% once the others were fixed)."
+   "revision": "Worded as once per turn (was 'at any time'); Physical 10 → 9 (drifted to 38% once the others were fixed).",
+   "kinText": "Kin: your hero gets +1 to all stats for each Orc companion you control."
   },
   {
    "id": "thorgar-twice-buried",
@@ -38,8 +39,9 @@
    "abilityName": "Dug Out Twice",
    "abilityText": "You gain 1 to all stats. At the end of bidding, if you would not survive the encounter, you gain 5 instead.",
    "kind": "hero",
-   "triggerText": "If a location is won by a margin of 2 or less, draw a resource.",
-   "revision": "Now always helps a little (was a 24% win rate)."
+   "triggerText": "If a location is won by a margin of 3 or less, draw a resource.",
+   "revision": "Now always helps a little (was a 24% win rate).",
+   "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats."
   },
   {
    "id": "aelthir-moonveil",
@@ -58,8 +60,9 @@
    "abilityName": "I Held the Torch",
    "abilityText": "At the start of bidding on any turn, choose a companion of an opponent. That companion does not contribute any stats this turn.",
    "kind": "hero",
-   "triggerText": "When a Guile challenge is faced on another player's turn, draw a resource.",
-   "revision": "Now chosen once the challenge is known; Physical 3 → 5 (was a 22% win rate). Trigger now keys off the encounter's stat (no more die)."
+   "triggerText": "When a Guile challenge is faced, draw a resource.",
+   "revision": "Now chosen once the challenge is known; Physical 3 → 5 (was a 22% win rate). Trigger now keys off the encounter's stat (no more die).",
+   "kinText": "Kin: when a Elf companion enters play, draw a resource."
   },
   {
    "id": "lord-vaelis-nightbloom",
@@ -72,13 +75,15 @@
    "art": "portraits__vaelis_aloof",
    "stats": {
     "P": 4,
-    "M": 6,
-    "G": 10
+    "M": 7,
+    "G": 11
    },
    "abilityName": "Master of Shadowsteeds",
    "abilityText": "At the start of bidding you may draw the next card from the encounter stack and use its minion bonus this turn as a bonus to all of your stats.",
    "kind": "hero",
-   "triggerText": "When a hero falls, draw a resource."
+   "triggerText": "When a hero falls, draw 2 resources.",
+   "revision": "Mental 6 -> 7, Guile 10 -> 11, and the trigger draws 2 (was a 0.61 win rate).",
+   "kinText": "Kin: while an opponent controls a Elf companion, it gets -1 to all stats."
   },
   {
    "id": "pip-wanderfoot",
@@ -97,8 +102,9 @@
    "abilityName": "Pockets Full of Everything",
    "abilityText": "On any turn but your own you may claim a face-down resource card from another player as your own. If you have resource cards, a random one of yours takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
    "kind": "hero",
-   "triggerText": "When an Ironbound encounter enters play, draw a resource.",
-   "revision": "Now a swap rather than a pure steal (was a 47% win rate)."
+   "triggerText": "When a location is replaced, draw a resource.",
+   "revision": "Trigger is now a replaced location (nothing in the story ties him to Ironbound).",
+   "kinText": "Kin: your hero gets +1 to all stats for each Halfellow companion you control."
   },
   {
    "id": "kazra-emberdeep",
@@ -117,7 +123,9 @@
    "abilityName": "Point It at Something",
    "abilityText": "On any turn you can choose to ignore the bonuses granted to an encounter by minions.",
    "kind": "hero",
-   "triggerText": "When an Oathbreaker encounter or a Warden companion enters play, draw a resource."
+   "triggerText": "When an Ironbound encounter enters play, draw a resource.",
+   "revision": "Trigger now Ironbound encounters (her forge, her Titans).",
+   "kinText": "Kin: when a Dwarf companion enters play, draw a resource."
   },
   {
    "id": "ysolde-of-the-wellspring",
@@ -129,15 +137,16 @@
    "quote": "“The oaks at the eastern edge are angry. They would like to walk.”",
    "art": "portraits__ysolde_uncanny",
    "stats": {
-    "P": 6,
-    "M": 8,
-    "G": 4
+    "P": 5,
+    "M": 6,
+    "G": 3
    },
    "abilityName": "The Forest Walks With Me",
    "abilityText": "While this hero is in play as your hero, you may have a maximum of three companions instead of two.",
    "kind": "hero",
-   "triggerText": "When a Magic challenge is faced on another player's turn, draw a resource.",
-   "revision": "Trigger now keys off the encounter's stat (no more die)."
+   "triggerText": "When a Magic challenge is faced, draw a resource.",
+   "revision": "Stats 6/8/4 -> 5/6/3 to pay for the Kin bonus and a more frequent trigger.",
+   "kinText": "Kin: your hero gets +1 to all stats for each Elf companion you control."
   },
   {
    "id": "mayor-hobby-trickgrin",
@@ -156,7 +165,8 @@
    "abilityName": "A Little Plan",
    "abilityText": "You may bid all of your resource cards face down, revealing them at any time. Abilities of those resource cards take effect when revealed, not while face down.",
    "kind": "hero",
-   "triggerText": "When anyone is forced to use a different stat, draw a resource."
+   "triggerText": "The first time each turn anyone is forced to use a different stat, draw a resource.",
+   "kinText": "Kin: while an opponent controls a Halfellow companion, it gets -1 to all stats."
   },
   {
    "id": "lord-paladin-aldric-ashcroft",
@@ -176,7 +186,8 @@
    "abilityName": "Shield of the Dawn",
    "abilityText": "You may counter or disable one ability of another player's heroes or companions.",
    "kind": "hero",
-   "triggerText": "When a Marchguard location or companion enters play, draw a resource."
+   "triggerText": "When a Marchguard location enters play, or a Marchguard companion enters play under your control, draw a resource.",
+   "kinText": "Kin: your hero gets +1 to all stats for each Human companion you control."
   },
   {
    "id": "high-thane-brunna-stonefast",
@@ -190,34 +201,14 @@
    "stats": {
     "P": 8,
     "M": 6,
-    "G": 7
+    "G": 6
    },
    "abilityName": "Walls First",
    "abilityText": "You may ignore any opponent's ability that would force a hero or companion under your control to contribute a different stat, stop one of your companions contributing stats, or make one of your resource cards count as a negative.",
    "kind": "hero",
-   "triggerText": "When a Physical challenge is faced on another player's turn, draw a resource.",
-   "revision": "Also blocks silences and negations (was a 23% win rate). Trigger now keys off the encounter's stat (no more die)."
-  },
-  {
-   "id": "hesk-of-two-homes",
-   "name": "Hesk of Two Homes",
-   "groups": [
-    "Orc",
-    "Human",
-    "Warden"
-   ],
-   "quote": "“The bog raised me for ten years and Kingsford for ten more. Neither of them will admit it.”",
-   "art": "portraits__hesk_neutral",
-   "stats": {
-    "P": 8,
-    "M": 7,
-    "G": 8
-   },
-   "abilityName": "Raised by Both",
-   "abilityText": "Once per turn you may re-use a once-per-turn ability of a companion you control.",
-   "kind": "hero",
-   "triggerText": "When an Otherworld location enters play, draw a resource.",
-   "revision": "Mental 4 → 7 (was a 23% win rate)."
+   "triggerText": "When a Physical challenge is faced, draw a resource.",
+   "revision": "Guile 7 -> 6 to pay for the Kin bonus.",
+   "kinText": "Kin: your hero gets +1 to all stats for each Dwarf companion you control."
   },
   {
    "id": "queen-maren-ashcroft",
@@ -237,7 +228,8 @@
    "abilityText": "Before bidding on your turn, you may trade a resource card from your hand with a random card in another player's hand.",
    "kind": "hero",
    "triggerText": "When a Wardhouse location enters play, draw a resource.",
-   "revision": "Was usable on every turn (43% win rate)."
+   "revision": "Was usable on every turn (43% win rate).",
+   "kinText": "Kin: when a Human companion enters play, draw a resource."
   },
   {
    "id": "archmage-corvin-varro",
@@ -256,7 +248,8 @@
    "abilityText": "On your turn, any time you would draw a resource, you may draw an additional resource.",
    "kind": "hero",
    "triggerText": "When an Undead encounter enters play, draw a resource.",
-   "revision": "Was any turn. With steady draws it fired every turn (50% win rate)."
+   "revision": "Was any turn. With steady draws it fired every turn (50% win rate).",
+   "kinText": "Kin: when a Human companion enters play, draw a resource."
   },
   {
    "id": "professor-barnaby-pickwort",
@@ -276,7 +269,8 @@
    "abilityText": "On your turn you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
    "kind": "hero",
    "triggerText": "When an Accord location enters play, draw a resource.",
-   "revision": "Physical 2 → 4 (was a 25% win rate)."
+   "revision": "Physical 2 → 4 (was a 25% win rate).",
+   "kinText": "Kin: when a Halfellow companion enters play, draw a resource."
   },
   {
    "id": "urzha-half-tusk",
@@ -292,11 +286,33 @@
     "M": 7,
     "G": 8
    },
-   "abilityName": "Not This Fight",
-   "abilityText": "Once per turn, during bidding, you may discard the current encounter and any minions in play and draw a new encounter instead.",
+   "abilityName": "Pick Your Fight",
+   "abilityText": "Once per turn, before bidding, you may look at the next encounter in the encounter stack. You may replace the current encounter and its minions with it.",
    "kind": "hero",
-   "triggerText": "When an encounter is replaced, draw a resource.",
-   "revision": "No roll needed; Guile 5 → 8 (was a 24% win rate). Trigger is now about replacing encounters (no more die)."
+   "triggerText": "When a minion is drawn, draw a resource.",
+   "revision": "Not This Fight almost never got used; he now picks his fights, and draws when a minion is drawn.",
+   "kinText": "Kin: while an opponent controls a Orc companion, it gets -1 to all stats."
+  },
+  {
+   "id": "loremaster-oskar-grimgate",
+   "name": "Loremaster Oskar Grimgate",
+   "groups": [
+    "Dwarf",
+    "Warden"
+   ],
+   "quote": "“The Elves have 'looked at us funny.' I've underlined it.”",
+   "art": "portraits__oskar_grudging",
+   "stats": {
+    "P": 6,
+    "M": 8,
+    "G": 6
+   },
+   "abilityName": "Entered in the Grudge Book",
+   "abilityText": "At the start of bidding, choose an opponent. If that opponent wins this encounter, they have -3 during the next encounter.",
+   "kind": "hero",
+   "triggerText": "When an Oathbreaker encounter enters play, draw a resource.",
+   "revision": "Promoted from companion to hero; the old negate-a-bonus ability is gone (it won 1.41 of its fair share).",
+   "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats."
   }
  ],
  "companions": [
@@ -314,16 +330,16 @@
     "M": 4,
     "G": 5
    },
-   "abilityName": "Tricks of the Trade",
-   "abilityText": "Any Wand resource cards you play have their bonus increased by 2.",
-   "kind": "companion"
+   "abilityName": "Rumour Mill",
+   "abilityText": "Once per turn, look at a random face-down resource card that another player has bid. If Gimlet is already in play, you may play this card as a bonus companion above your companion limit.",
+   "kind": "companion",
+   "revision": "Was +2 to Wands (an innkeeper, not an enchanter)."
   },
   {
    "id": "tova-emberdeep-keeper-of-the-underway-door",
    "name": "Tova Emberdeep, Keeper of the Underway Door",
    "groups": [
-    "Dwarf",
-    "Underway"
+    "Dwarf"
    ],
    "quote": "“Someone has to mind the door. Sigrun certainly won't.”",
    "art": "units__foehammer_3",
@@ -341,8 +357,7 @@
    "id": "varg-ironjaw",
    "name": "Varg Ironjaw",
    "groups": [
-    "Orc",
-    "Healer"
+    "Orc"
    ],
    "quote": "“Moss knows the way. Moss always knows the way. That's the problem.”",
    "art": "portraits__varg_bashful",
@@ -351,9 +366,10 @@
     "M": 3,
     "G": 3
    },
-   "abilityName": "Moss Knows the Way",
-   "abilityText": "Draw a resource card for every Underway companion in play, and whenever an Underway companion enters play.",
-   "kind": "companion"
+   "abilityName": "Pack Runner",
+   "abilityText": "At the start of your turn, draw a resource card for each other Orc companion you control. Varg gains +1 to all stats while Sigrun is in your party. If Moss is already in play, you may play this card as a bonus companion above your companion limit.",
+   "kind": "companion",
+   "revision": "Was a draw for Underway companions."
   },
   {
    "id": "tansy-brambleby-barmaid-and-volunteer",
@@ -379,8 +395,7 @@
    "id": "fennick-puffcap-mycomancer",
    "name": "Fennick Puffcap, Mycomancer",
    "groups": [
-    "Halfellow",
-    "Healer"
+    "Halfellow"
    ],
    "quote": null,
    "art": "units__mycomancer_1",
@@ -389,9 +404,10 @@
     "M": 4,
     "G": 3
    },
-   "abilityName": "Mushrooms for Everyone",
-   "abilityText": "Draw a resource card for every Healer companion in play, and whenever a Healer companion enters play.",
-   "kind": "companion"
+   "abilityName": "Spore Cloud",
+   "abilityText": "The first time each turn anyone is forced to use a different stat, draw a resource card.",
+   "kind": "companion",
+   "revision": "Was a draw for Healer companions, which almost never added up."
   },
   {
    "id": "captain-rook-halloran-skyship-captain",
@@ -407,9 +423,10 @@
     "M": 2,
     "G": 5
    },
-   "abilityName": "Collegium Captain",
-   "abilityText": "Draw a resource card for every Collegium companion or location in play, and whenever a Collegium companion or location enters play.",
-   "kind": "companion"
+   "abilityName": "Skyship Manifest",
+   "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand and draw a resource card.",
+   "kind": "companion",
+   "revision": "Was a draw for Collegium companions or locations, which almost never added up."
   },
   {
    "id": "marshal-hedda-ironvow",
@@ -425,15 +442,17 @@
     "M": 2,
     "G": 4
    },
-   "abilityName": "Marchguard Commander",
-   "abilityText": "Draw a resource card for every Marchguard companion or location in play, and whenever a Marchguard companion or location enters play.",
-   "kind": "companion"
+   "abilityName": "Hold the Line",
+   "abilityText": "Once per turn, when an opponent's ability would affect one of your companions, cancel it.",
+   "kind": "companion",
+   "revision": "Was a draw for Marchguard companions or locations."
   },
   {
    "id": "pell-quillon-collegium-prodigy",
    "name": "Pell Quillon, Collegium Prodigy",
    "groups": [
-    "Human"
+    "Human",
+    "Collegium"
    ],
    "quote": "“I've checked it four times. The odds are terrible. I'm coming anyway.”",
    "art": "units__wizard_1",
@@ -470,7 +489,6 @@
    "name": "Sister Aurelie Dane, Physician",
    "groups": [
     "Human",
-    "Healer",
     "Collegium",
     "Marchguard"
    ],
@@ -506,8 +524,7 @@
    "id": "sigrun-stonefast-metal-singer",
    "name": "Sigrun Stonefast, Metal Singer",
    "groups": [
-    "Dwarf",
-    "Underway"
+    "Dwarf"
    ],
    "quote": "“Heavy Metal for the walls, Power Metal for the charge, and a very quiet ballad for later.”",
    "art": "portraits__sigrun_fierce",
@@ -517,7 +534,7 @@
     "G": 5
    },
    "abilityName": "Encore!",
-   "abilityText": "Once per turn, when you would draw a resource card, you may instead look at three random cards from the resource discard stack, take one and leave the rest.",
+   "abilityText": "Once per turn, when you would draw a resource card, you may instead look at three random cards from the resource discard stack, take one and leave the rest. Sigrun gains +1 to all stats while Varg is in your party.",
    "kind": "companion",
    "revision": "Was a random card from the discard pile; now a choice of one from three, once per turn."
   },
@@ -543,7 +560,8 @@
    "id": "thessaly-of-the-grove",
    "name": "Thessaly of the Grove",
    "groups": [
-    "Elf"
+    "Elf",
+    "Collegium"
    ],
    "quote": null,
    "art": "units__druid_2",
@@ -570,7 +588,7 @@
     "G": 4
    },
    "abilityName": "Call of the Hunt",
-   "abilityText": "You can force another player's companion to contribute their physical stat in place of another stat.",
+   "abilityText": "You can force another player's companion to contribute their physical stat in place of another stat. When a Beast encounter enters play, draw a resource card.",
    "kind": "companion"
   },
   {
@@ -591,12 +609,11 @@
    "kind": "companion"
   },
   {
-   "id": "sir-hugo-pellam-marchguard-surgeon",
-   "name": "Sir Hugo Pellam, Marchguard Surgeon",
+   "id": "hobart-thimblewick-moot-surgeon",
+   "name": "Hobart Thimblewick, Moot Surgeon",
    "groups": [
-    "Human",
-    "Marchguard",
-    "Healer"
+    "Halfellow",
+    "Marchguard"
    ],
    "quote": null,
    "art": "units__militia_1",
@@ -607,7 +624,8 @@
    },
    "abilityName": "Well-Meaning Blunder",
    "abilityText": "You may force another player to use their hero's guile stat in place of another stat.",
-   "kind": "companion"
+   "kind": "companion",
+   "revision": "Was Sir Hugo Pellam (Human); now a Halfellow."
   },
   {
    "id": "caelan-the-exile",
@@ -627,23 +645,23 @@
    "kind": "companion"
   },
   {
-   "id": "wren-nightingale-relic-hunter",
-   "name": "Wren Nightingale, Relic-Hunter",
+   "id": "elowen-leafwatch-treetop-warden",
+   "name": "Elowen Leafwatch, Treetop Warden",
    "groups": [
-    "Human",
-    "Warden",
-    "Underway"
+    "Elf",
+    "Warden"
    ],
-   "quote": "“Don't ask where I've been. You'll only want to go there.”",
+   "quote": "“The trees keep watch. I keep them company.”",
    "art": "units__wanderer_3",
    "stats": {
     "P": 4,
     "M": 3,
     "G": 6
    },
-   "abilityName": "I've Read Ahead",
+   "abilityName": "Eternal Vigilance",
    "abilityText": "You may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
-   "kind": "companion"
+   "kind": "companion",
+   "revision": "Was Wren Nightingale (Human); now an Elf."
   },
   {
    "id": "sir-osric-vane-marshal-of-the-old-guard",
@@ -665,10 +683,10 @@
    "revision": "Now also gains +1 when the swap is used (was a below-average card)."
   },
   {
-   "id": "posy-marchbank-marchguard-clerk",
-   "name": "Posy Marchbank, Marchguard Clerk",
+   "id": "rosalind-marchwell-marchguard-clerk",
+   "name": "Rosalind Marchwell, Marchguard Clerk",
    "groups": [
-    "Halfellow",
+    "Human",
     "Marchguard"
    ],
    "quote": null,
@@ -678,10 +696,10 @@
     "M": 3,
     "G": 4
    },
-   "abilityName": "Right-Hand Help",
-   "abilityText": "You may use your hero's mental stat in place of another stat. If you do, Posy gains +1 to mental for this encounter.",
+   "abilityName": "Cross-Reference",
+   "abilityText": "You may use your hero's mental stat in place of another stat. If you do, Rosalind gains +1 to mental for this encounter.",
    "kind": "companion",
-   "revision": "Now also gains +1 when the swap is used (was a below-average card)."
+   "revision": "Was Posy Marchbank (Halfellow); now a Human."
   },
   {
    "id": "brisa-blastcap-bombardier",
@@ -701,21 +719,22 @@
    "kind": "companion"
   },
   {
-   "id": "mira-coldwater-the-stonetouched",
-   "name": "Mira Coldwater, the Stonetouched",
+   "id": "dagny-coldhearth-the-grudge-bearer",
+   "name": "Dagny Coldhearth, the Grudge-Bearer",
    "groups": [
-    "Human"
+    "Dwarf"
    ],
-   "quote": "“I touched the stone the night it split. It hasn't let go of me since.”",
+   "quote": "“The mountain keeps a ledger. Tonight I settle it.”",
    "art": "portraits__stone",
    "stats": {
     "P": 3,
     "M": 3,
     "G": 4
    },
-   "abilityName": "Stonetouched",
+   "abilityName": "Grudge Paid in Full",
    "abilityText": "You win the current encounter and automatically take the location. However, you must discard all resources and your hero falls. You may use this ability only once per game.",
-   "kind": "companion"
+   "kind": "companion",
+   "revision": "Was Mira Coldwater (Human); now a Dwarf grudge-bearer."
   },
   {
    "id": "seraphine-moonveil-warden-scholar",
@@ -731,9 +750,10 @@
     "M": 6,
     "G": 3
    },
-   "abilityName": "Silverwood Brilliance",
-   "abilityText": "When this companion comes into play, draw two resource cards.",
-   "kind": "companion"
+   "abilityName": "Wellspring Renewal",
+   "abilityText": "When one of your companions is replaced or discarded, draw a resource card.",
+   "kind": "companion",
+   "revision": "Was draw 2 when she entered play."
   },
   {
    "id": "honk-the-goose-rout-veteran",
@@ -826,27 +846,9 @@
     "G": 3
    },
    "abilityName": "Ruling of the Conclave",
-   "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand. If you do, choose another player's companion: it must contribute its lowest stat this turn.",
+   "abilityText": "Once per turn, before bidding, choose another player's companion: it must contribute its lowest stat this turn.",
    "kind": "companion",
-   "revision": "New ability (the old one chose the die-roll challenge, which no longer exists)."
-  },
-  {
-   "id": "loremaster-oskar-grimgate",
-   "name": "Loremaster Oskar Grimgate",
-   "groups": [
-    "Dwarf"
-   ],
-   "quote": "“The Elves have 'looked at us funny.' I've underlined it.”",
-   "art": "portraits__oskar_grudging",
-   "stats": {
-    "P": 3,
-    "M": 5,
-    "G": 3
-   },
-   "abilityName": "The Book of Grudges",
-   "abilityText": "Once per turn, on any turn, when a face-down resource card is turned face up, you may have any numeric bonus it grants count as zero instead.",
-   "kind": "companion",
-   "revision": "Now once per turn (was every card revealed on your turn); ability renamed The Book of Grudges."
+   "revision": "The discard cost is gone."
   },
   {
    "id": "mogra-swiftfoot-goblin-runner",
@@ -861,10 +863,10 @@
     "M": 3,
     "G": 2
    },
-   "abilityName": "Against the Odds",
-   "abilityText": "On your turn, if an ability would require you to roll a die to determine the outcome, you may roll twice and choose one of the results. Whenever one of your abilities reveals cards from a stack to see whether it works, reveal one more and use either.",
+   "abilityName": "Smash and Grab",
+   "abilityText": "When you win a location, draw a resource card.",
    "kind": "companion",
-   "revision": "Made useful with the new goose, Tobin and Sigrun reveals (the die ability alone almost never mattered)."
+   "revision": "Was a die reroll and an extra reveal."
   },
   {
    "id": "tobin-quill-goose-keeper",
@@ -885,20 +887,94 @@
    "revision": "Was a draw when a Goose entered play, which almost never happened (effective on about 8% of triggers)."
   },
   {
-   "id": "clemence-fairbrook-temple-cook",
-   "name": "Clemence Fairbrook, Temple Cook",
+   "id": "grumma-ladlejaw-camp-cook",
+   "name": "Grumma Ladlejaw, Camp Cook",
    "groups": [
-    "Human"
+    "Orc"
    ],
-   "quote": "“Nobody rides out of my kitchen on an empty stomach. Not even the Lord-Paladin.”",
+   "quote": "“Nobody marches on an empty belly. Not even the Warchief.”",
    "art": "units__militia_3",
    "stats": {
     "P": 3,
     "M": 4,
     "G": 2
    },
-   "abilityName": "Hearty Breakfast",
+   "abilityName": "Camp Stew",
    "abilityText": "On your turn you may force another player to use their hero's physical stat in place of another stat.",
+   "kind": "companion",
+   "revision": "Was Clemence Fairbrook (Human); now an Orc."
+  },
+  {
+   "id": "hesk-of-two-homes",
+   "name": "Hesk of Two Homes",
+   "groups": [
+    "Orc",
+    "Human"
+   ],
+   "quote": "“The bog raised me for ten years and Kingsford for ten more. Neither of them will admit it.”",
+   "art": "portraits__hesk_neutral",
+   "stats": {
+    "P": 4,
+    "M": 3,
+    "G": 3
+   },
+   "abilityName": "Raised by Both",
+   "abilityText": "Once per turn you may re-use a once-per-turn ability of another companion you control.",
+   "kind": "companion",
+   "revision": "Demoted from hero to companion; counts as both an Orc and a Human."
+  },
+  {
+   "id": "moss-dire-wolf",
+   "name": "Moss, Dire Wolf",
+   "groups": [
+    "Orc",
+    "Beast"
+   ],
+   "quote": null,
+   "art": "units__dire_wolf",
+   "stats": {
+    "P": 4,
+    "M": 2,
+    "G": 3
+   },
+   "abilityName": "Varg's Shadow",
+   "abilityText": "If Varg is already in play, you may play this card as a bonus companion above your companion limit.",
+   "kind": "companion"
+  },
+  {
+   "id": "torvi-cinderkeg-master-gunner",
+   "name": "Torvi Cinderkeg, Master Gunner",
+   "groups": [
+    "Dwarf"
+   ],
+   "quote": "“Measure twice. Light once.”",
+   "art": "units__musketeer_2",
+   "stats": {
+    "P": 4,
+    "M": 3,
+    "G": 3
+   },
+   "abilityName": "Fire in the Hole",
+   "abilityText": "At the end of bidding, before the winner is declared, you may discard this companion. If you do, every opponent has -4 to their total this encounter, or -5 if Mhorgrim's Hunt is revealed under your control.",
+   "kind": "companion"
+  },
+  {
+   "id": "gimlet-a-very-good-dog",
+   "name": "Gimlet, a Very Good Dog",
+   "groups": [
+    "Halfellow",
+    "Goose & Kettle",
+    "Beast"
+   ],
+   "quote": "“Arf!”",
+   "art": null,
+   "stats": {
+    "P": 3,
+    "M": 2,
+    "G": 3
+   },
+   "abilityName": "Fetch",
+   "abilityText": "Once per turn, you may swap a resource card from your hand with the top card of the resource discard stack. Gimlet gains +1 to all stats while Destiny the Frog is part of the current encounter. If Goldie is already in play, you may play this card as a bonus companion above your companion limit.",
    "kind": "companion"
   }
  ],
@@ -908,8 +984,8 @@
    "id": "the-waystone-inn-rivermeet",
    "name": "The Waystone Inn, Rivermeet",
    "groups": [
-    "Realm",
-    "Capital"
+    "Capital",
+    "Human"
    ],
    "quote": "“Every road in the Marches starts at the Waystone. Most of them come back for a drink.”",
    "art": "cities__human_city_1",
@@ -921,8 +997,8 @@
    "id": "kingsford",
    "name": "Kingsford",
    "groups": [
-    "Realm",
-    "Capital"
+    "Capital",
+    "Human"
    ],
    "quote": null,
    "art": "buildings__palace",
@@ -933,17 +1009,22 @@
    "kind": "location",
    "id": "the-frostfells",
    "name": "The Frostfells",
-   "groups": [],
+   "groups": [
+    "Dwarf",
+    "Marchguard"
+   ],
    "quote": null,
    "art": "enhancements__cave_2",
    "renown": 3,
-   "conditionText": "The challenges and minion bonuses of Frostborn encounters are increased by 2."
+   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is Frostborn, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Frostborn encounters are increased by 2."
   },
   {
    "kind": "location",
    "id": "the-barrowlands",
    "name": "The Barrowlands",
-   "groups": [],
+   "groups": [
+    "Undead"
+   ],
    "quote": null,
    "art": "enhancements__ruin_1",
    "renown": 5,
@@ -967,7 +1048,8 @@
    "id": "the-well-of-oaths",
    "name": "The Well of Oaths",
    "groups": [
-    "Wardhouse"
+    "Wardhouse",
+    "Accord"
    ],
    "quote": null,
    "art": "buildings__wellspring_grove",
@@ -979,7 +1061,8 @@
    "id": "the-heart-of-the-marchstone",
    "name": "The Heart of the Marchstone",
    "groups": [
-    "Accord"
+    "Accord",
+    "Marchguard"
    ],
    "quote": null,
    "art": "buildings__ancestral_dolmen",
@@ -991,7 +1074,7 @@
    "id": "the-storybook-glade",
    "name": "The Storybook Glade",
    "groups": [
-    "Otherworld"
+    "Elf"
    ],
    "quote": null,
    "art": "cities__elf_city_2",
@@ -1003,7 +1086,8 @@
    "id": "the-endless-road",
    "name": "The Endless Road",
    "groups": [
-    "Wardhouse"
+    "Wardhouse",
+    "Halfellow"
    ],
    "quote": null,
    "art": "cities__halfellow_city_2",
@@ -1015,7 +1099,8 @@
    "id": "the-hollow-between",
    "name": "The Hollow Between",
    "groups": [
-    "Wardhouse"
+    "Wardhouse",
+    "Orc"
    ],
    "quote": null,
    "art": "enhancements__cave_3",
@@ -1027,8 +1112,7 @@
    "id": "the-mirror-marches",
    "name": "The Mirror Marches",
    "groups": [
-    "Realm",
-    "Otherworld"
+    "Elf"
    ],
    "quote": null,
    "art": "cities__elf_city_4",
@@ -1039,18 +1123,22 @@
    "kind": "location",
    "id": "wreck-of-the-skyship-gallant",
    "name": "Wreck of the Skyship Gallant",
-   "groups": [],
+   "groups": [
+    "Human",
+    "Marchguard"
+   ],
    "quote": null,
    "art": "enhancements__scorch_1",
    "renown": 3,
-   "conditionText": "The challenges and minion bonuses of Gargoyle encounters are increased by 2."
+   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is a Gargoyle, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Gargoyle encounters are increased by 2."
   },
   {
    "kind": "location",
    "id": "the-speaking-stones",
    "name": "The Speaking Stones",
    "groups": [
-    "Realm"
+    "Accord",
+    "Dwarf"
    ],
    "quote": null,
    "art": "buildings__runewall",
@@ -1061,7 +1149,10 @@
    "kind": "location",
    "id": "the-hearthlands-archive",
    "name": "The Hearthlands Archive",
-   "groups": [],
+   "groups": [
+    "Halfellow",
+    "Accord"
+   ],
    "quote": "“I have the original. You may look. Please don't breathe on it.” — Professor Barnaby Pickwort",
    "art": "buildings__historical_society",
    "renown": 5,
@@ -1072,7 +1163,8 @@
    "id": "the-endless-stair",
    "name": "The Endless Stair",
    "groups": [
-    "Otherworld"
+    "Dwarf",
+    "Wardhouse"
    ],
    "quote": null,
    "art": null,
@@ -1081,20 +1173,24 @@
   },
   {
    "kind": "location",
-   "id": "the-pirate-fens",
-   "name": "The Pirate Fens",
-   "groups": [],
+   "id": "gorewatch",
+   "name": "Gorewatch",
+   "groups": [
+    "Capital",
+    "Orc"
+   ],
    "quote": null,
-   "art": "enhancements__resource_fertile_1",
+   "art": "terrain__desert_2",
    "renown": 2,
-   "conditionText": "Draw a second location card and place it face down without revealing it to any player. The player who wins this location claims both."
+   "conditionText": "All players may immediately draw a resource card for every Orc companion they have in play."
   },
   {
    "kind": "location",
    "id": "the-crack-in-the-marchstone",
    "name": "The Crack in the Marchstone",
    "groups": [
-    "Wardhouse"
+    "Wardhouse",
+    "Accord"
    ],
    "quote": null,
    "art": "enhancements__scorch_2",
@@ -1105,7 +1201,10 @@
    "kind": "location",
    "id": "the-deep-forge-of-karrak",
    "name": "The Deep Forge of Karrak",
-   "groups": [],
+   "groups": [
+    "Dwarf",
+    "Wardhouse"
+   ],
    "quote": null,
    "art": "buildings__deep_forge",
    "renown": 4,
@@ -1115,7 +1214,10 @@
    "kind": "location",
    "id": "the-silverwood-hunt",
    "name": "The Silverwood Hunt",
-   "groups": [],
+   "groups": [
+    "Elf",
+    "Marchguard"
+   ],
    "quote": null,
    "art": "buildings__treetop_watch",
    "renown": 4,
@@ -1125,7 +1227,10 @@
    "kind": "location",
    "id": "the-wardens-hall",
    "name": "The Wardens' Hall",
-   "groups": [],
+   "groups": [
+    "Wardhouse",
+    "Marchguard"
+   ],
    "quote": null,
    "art": "buildings__great_hall",
    "renown": 6,
@@ -1133,23 +1238,23 @@
   },
   {
    "kind": "location",
-   "id": "the-siege-of-ashbrook",
-   "name": "The Siege of Ashbrook",
+   "id": "grimgate",
+   "name": "Grimgate",
    "groups": [
-    "Realm",
-    "Capital"
+    "Capital",
+    "Dwarf"
    ],
    "quote": null,
-   "art": "enhancements__scorch_3",
+   "art": "cities__dwarf_city_5",
    "renown": 4,
-   "conditionText": null
+   "conditionText": "All players may immediately draw a resource card for every Dwarf companion they have in play."
   },
   {
    "kind": "location",
    "id": "silverlake-at-midsummer",
    "name": "Silverlake at Midsummer",
    "groups": [
-    "Realm"
+    "Elf"
    ],
    "quote": null,
    "art": "cities__halfellow_city_4",
@@ -1161,7 +1266,8 @@
    "id": "parting-strand",
    "name": "Parting Strand",
    "groups": [
-    "Realm"
+    "Orc",
+    "Accord"
    ],
    "quote": null,
    "art": null,
@@ -1173,8 +1279,8 @@
    "id": "the-mage-college-vaults",
    "name": "The Mage College Vaults",
    "groups": [
-    "Realm",
-    "Collegium"
+    "Collegium",
+    "Human"
    ],
    "quote": null,
    "art": "buildings__mage_college",
@@ -1186,8 +1292,8 @@
    "id": "old-kingsford-docks",
    "name": "Old Kingsford Docks",
    "groups": [
-    "Realm",
-    "Capital"
+    "Capital",
+    "Human"
    ],
    "quote": null,
    "art": "cities__human_city_3",
@@ -1199,7 +1305,7 @@
    "id": "clover-hollow",
    "name": "Clover Hollow",
    "groups": [
-    "Realm"
+    "Halfellow"
    ],
    "quote": null,
    "art": "cities__halfellow_city_6",
@@ -1211,8 +1317,8 @@
    "id": "marchguard-keep",
    "name": "Marchguard Keep",
    "groups": [
-    "Realm",
-    "Marchguard"
+    "Marchguard",
+    "Human"
    ],
    "quote": "“Five banners on one wall. Somebody always complains about the order.” — Marshal Hedda Ironvow",
    "art": "buildings__war_camp",
@@ -1236,8 +1342,8 @@
    "id": "the-skyship-valour",
    "name": "The Skyship Valour",
    "groups": [
-    "Realm",
-    "Marchguard"
+    "Marchguard",
+    "Human"
    ],
    "quote": null,
    "art": "cities__dwarf_city_2",
@@ -1249,7 +1355,7 @@
    "id": "the-umbral-deep",
    "name": "The Umbral Deep",
    "groups": [
-    "Otherworld"
+    "Undead"
    ],
    "quote": null,
    "art": "enhancements__cave_1",
@@ -1262,7 +1368,8 @@
    "name": "The Field of Oaths",
    "groups": [
     "Accord",
-    "Wardhouse"
+    "Wardhouse",
+    "Marchguard"
    ],
    "quote": null,
    "art": "enhancements__ruin_3",
@@ -1275,7 +1382,7 @@
    "name": "The Memory of the Heartwood",
    "groups": [
     "Accord",
-    "Otherworld"
+    "Elf"
    ],
    "quote": null,
    "art": "cities__elf_city_6",
@@ -1287,7 +1394,7 @@
    "id": "the-hollow-hills",
    "name": "The Hollow Hills",
    "groups": [
-    "Otherworld"
+    "Orc"
    ],
    "quote": null,
    "art": "enhancements__resource_fertile_2",
@@ -1299,8 +1406,8 @@
    "id": "the-goose-and-kettle",
    "name": "The Goose & Kettle",
    "groups": [
-    "Realm",
-    "Capital"
+    "Capital",
+    "Halfellow"
    ],
    "quote": "“Pint for the rumour, Mayor?” — Goldie Trickgrin",
    "art": "buildings__neighborhood_pub",
@@ -1309,19 +1416,24 @@
   },
   {
    "kind": "location",
-   "id": "the-starfall-cascade",
-   "name": "The Starfall Cascade",
-   "groups": [],
-   "quote": "“The water falls silver there, and nobody who drinks it will tell you what they saw.”",
-   "art": "cities__human_city_5",
+   "id": "sylvaneth",
+   "name": "Sylvaneth",
+   "groups": [
+    "Capital",
+    "Elf"
+   ],
+   "quote": null,
+   "art": "cities__elf_city_6",
    "renown": 4,
-   "conditionText": null
+   "conditionText": "All players may immediately draw a resource card for every Elf companion they have in play."
   },
   {
    "kind": "location",
    "id": "the-last-field",
    "name": "The Last Field",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": "“Every war ends somewhere. The Marches have been saving this field a long time.”",
    "art": "cities__human_city_6",
    "renown": 4,
@@ -1329,11 +1441,11 @@
   },
   {
    "kind": "location",
-   "id": "the-dame-school-ashbrook",
-   "name": "The Dame School, Ashbrook",
+   "id": "the-moot-hall",
+   "name": "The Moot Hall",
    "groups": [
-    "Realm",
-    "Capital"
+    "Capital",
+    "Halfellow"
    ],
    "quote": null,
    "art": "cities__human_city_2",
@@ -1345,8 +1457,8 @@
    "id": "the-sealed-archive",
    "name": "The Sealed Archive",
    "groups": [
-    "Realm",
-    "Marchguard"
+    "Marchguard",
+    "Collegium"
    ],
    "quote": null,
    "art": null,
@@ -1355,31 +1467,37 @@
   },
   {
    "kind": "location",
-   "id": "the-floating-market-of-brightwater",
-   "name": "The Floating Market of Brightwater",
-   "groups": [],
+   "id": "hearthmeadow",
+   "name": "Hearthmeadow",
+   "groups": [
+    "Capital",
+    "Halfellow"
+   ],
    "quote": null,
-   "art": "cities__dwarf_city_5",
+   "art": "cities__halfellow_city_6",
    "renown": 3,
-   "conditionText": null
+   "conditionText": "All players may immediately draw a resource card for every Halfellow companion they have in play."
   },
   {
    "kind": "location",
-   "id": "the-dust-marches",
-   "name": "The Dust Marches",
-   "groups": [],
+   "id": "barrowdeep",
+   "name": "Barrowdeep",
+   "groups": [
+    "Capital",
+    "Undead"
+   ],
    "quote": null,
-   "art": null,
+   "art": "terrain__tundra_2",
    "renown": 2,
-   "conditionText": null
+   "conditionText": "If the encounter is Undead, it draws one extra Undead minion."
   },
   {
    "kind": "location",
    "id": "the-collegium-observatory",
    "name": "The Collegium Observatory",
    "groups": [
-    "Realm",
-    "Collegium"
+    "Collegium",
+    "Human"
    ],
    "quote": null,
    "art": null,
@@ -1503,7 +1621,8 @@
    "name": "Abbess Hollis of the Unremembered",
    "groups": [
     "Human",
-    "Unremembered"
+    "Unremembered",
+    "Undead"
    ],
    "quote": null,
    "art": null,
@@ -1521,7 +1640,8 @@
    "id": "magister-ilse-varro-the-unmaker",
    "name": "Magister Ilse Varro, the Unmaker",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Human"
    ],
    "quote": null,
    "art": null,
@@ -1539,7 +1659,8 @@
    "id": "an-unremembered-one",
    "name": "An Unremembered One",
    "groups": [
-    "Unremembered"
+    "Unremembered",
+    "Undead"
    ],
    "quote": null,
    "art": "units__wisp",
@@ -1557,7 +1678,8 @@
    "id": "warborn-brood-soldier",
    "name": "Warborn Brood-Soldier",
    "groups": [
-    "Warborn"
+    "Warborn",
+    "Orc"
    ],
    "quote": "“Hatched for war on Tuesday. Marching by Wednesday.”",
    "art": "units__raptor_1",
@@ -1666,7 +1788,9 @@
    "id": "skarra-crowned-she-says",
    "name": "Skarra Crowned (She Says)",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Skarra",
+    "Orc"
    ],
    "quote": "“Kneel, morsels! Warchief Skarra commands it! …Gnash, why is nobody kneeling?”",
    "art": "portraits__skarra_happy",
@@ -1702,7 +1826,8 @@
    "id": "the-harvest-crone",
    "name": "The Harvest Crone",
    "groups": [
-    "Wicker"
+    "Wicker",
+    "Undead"
    ],
    "quote": null,
    "art": "units__bog_witch_1",
@@ -1774,7 +1899,8 @@
    "id": "wardhouse-gargoyles",
    "name": "Wardhouse Gargoyles",
    "groups": [
-    "Gargoyle"
+    "Gargoyle",
+    "Ironbound"
    ],
    "quote": "“They guarded the wards for a thousand years. Now the wards are gone, and they are still guarding.”",
    "art": "units__highland_griffin_1",
@@ -1828,7 +1954,9 @@
    "id": "skarra-ironjaw-the-bog-mother",
    "name": "Skarra Ironjaw, the Bog-Mother",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Skarra",
+    "Orc"
    ],
    "quote": "“Another of yours, face-down in MY bog! The ancestors are laughing, morsel! So am I!”",
    "art": "portraits__skarra_gleeful",
@@ -1846,7 +1974,9 @@
    "id": "skarra-mistress-of-wisps",
    "name": "Skarra, Mistress of Wisps",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Skarra",
+    "Orc"
    ],
    "quote": "“Strike me down and be CURSED! Well, for five turns. But five TERRIBLE turns!”",
    "art": "portraits__skarra_neutral",
@@ -1864,7 +1994,8 @@
    "id": "mortedamos-the-necromancer",
    "name": "Mortedamos the Necromancer",
    "groups": [
-    "Necromancer"
+    "Necromancer",
+    "Undead"
    ],
    "quote": "“Every curse ever spoken, written in one book. I only needed to read it aloud.”",
    "art": "enhancements__item_mortedamos_1",
@@ -1898,7 +2029,9 @@
    "id": "skarra-speaker-at-the-stones",
    "name": "Skarra, Speaker at the Stones",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Skarra",
+    "Orc"
    ],
    "quote": "“Twenty years they passed me over. Twenty years I have been sharpening.”",
    "art": "portraits__skarra_angry",
@@ -1935,7 +2068,9 @@
    "name": "Skarra in a Stolen Face",
    "groups": [
     "Elf",
-    "Oathbreaker"
+    "Oathbreaker",
+    "Skarra",
+    "Orc"
    ],
    "quote": "“Such a lovely face. The elf won't be needing it.”",
    "art": null,
@@ -2005,7 +2140,9 @@
    "id": "wyrmkin-warband",
    "name": "Wyrmkin Warband",
    "groups": [
-    "Wyrmkin"
+    "Wyrmkin",
+    "Beast",
+    "Dwarf"
    ],
    "quote": null,
    "art": "units__marsh_adder_1",
@@ -2020,28 +2157,31 @@
   },
   {
    "kind": "encounter",
-   "id": "frost-golem",
-   "name": "Frost Golem",
+   "id": "runeforged-titan",
+   "name": "Runeforged Titan",
    "groups": [
-    "Construct"
+    "Construct",
+    "Ironbound",
+    "Dwarf"
    ],
    "quote": null,
-   "art": "units__trap_frost",
-   "minionValue": 3,
+   "art": "units__runeforged_titan",
+   "minionValue": 5,
    "minions": {
     "count": 0,
     "group": null
    },
-   "conditionText": null,
+   "conditionText": "If the challenge is changed to Mental or Guile, its difficulty is 10.",
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 18
   },
   {
    "kind": "encounter",
    "id": "gargoyle-whelps",
    "name": "Gargoyle Whelps",
    "groups": [
-    "Gargoyle"
+    "Gargoyle",
+    "Ironbound"
    ],
    "quote": null,
    "art": "units__frost_lynx_2",
@@ -2059,7 +2199,9 @@
    "id": "fen-wyrmkin",
    "name": "Fen Wyrmkin",
    "groups": [
-    "Wyrmkin"
+    "Wyrmkin",
+    "Beast",
+    "Dwarf"
    ],
    "quote": null,
    "art": "units__marsh_adder_2",
@@ -2077,7 +2219,8 @@
    "id": "the-hooded-penitents",
    "name": "The Hooded Penitents",
    "groups": [
-    "Unremembered"
+    "Unremembered",
+    "Undead"
    ],
    "quote": "“They walk in silence. They forgot how to do anything else.”",
    "art": null,
@@ -2095,7 +2238,9 @@
    "id": "scarecrows",
    "name": "Scarecrows",
    "groups": [
-    "Wicker"
+    "Wicker",
+    "Undead",
+    "Halfellow"
    ],
    "quote": null,
    "art": null,
@@ -2112,7 +2257,9 @@
    "kind": "encounter",
    "id": "basilisk",
    "name": "Basilisk",
-   "groups": [],
+   "groups": [
+    "Beast"
+   ],
    "quote": null,
    "art": "units__basilisk_1",
    "minionValue": 2,
@@ -2182,7 +2329,9 @@
    "kind": "encounter",
    "id": "bridge-trolls",
    "name": "Bridge Trolls",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": "“Toll. Toll. TOLL. No toll? SMASH. Then toll.”",
    "art": "units__ogre_1",
    "minionValue": 4,
@@ -2199,7 +2348,8 @@
    "id": "dire-spider-brood",
    "name": "Dire Spider Brood",
    "groups": [
-    "Spider"
+    "Spider",
+    "Beast"
    ],
    "quote": "“Count the shadows. If there's one more than there should be, run.”",
    "art": "units__dire_spider_1",
@@ -2217,7 +2367,8 @@
    "id": "changelings",
    "name": "Changelings",
    "groups": [
-    "Changeling"
+    "Changeling",
+    "Halfellow"
    ],
    "quote": null,
    "art": "units__dire_wolf",
@@ -2288,7 +2439,9 @@
    "kind": "encounter",
    "id": "the-grave-hunger",
    "name": "The Grave-Hunger",
-   "groups": [],
+   "groups": [
+    "Undead"
+   ],
    "quote": "“You cannot starve a hunger that eats death itself.”",
    "art": null,
    "minionValue": 2,
@@ -2337,7 +2490,8 @@
    "id": "mayor-pickering-not-really",
    "name": "Mayor Pickering (Not Really)",
    "groups": [
-    "Changeling"
+    "Changeling",
+    "Halfellow"
    ],
    "quote": "“A fine morning, fellow halfellows! Tell me, where do you keep the, ah, treasury?”",
    "art": null,
@@ -2356,7 +2510,8 @@
    "name": "The Dream-Warden",
    "groups": [
     "Phantom",
-    "Oathbreaker"
+    "Oathbreaker",
+    "Undead"
    ],
    "quote": "“You fell asleep on watch. Now you watch for me.”",
    "art": null,
@@ -2374,7 +2529,8 @@
    "id": "the-brood-queen-of-the-webwood",
    "name": "The Brood-Queen of the Webwood",
    "groups": [
-    "Spider"
+    "Spider",
+    "Beast"
    ],
    "quote": "“My children are hungry, and the Marches are so very full.”",
    "art": "units__dire_spider_2",
@@ -2392,7 +2548,8 @@
    "id": "the-hollow-kin",
    "name": "The Hollow Kin",
    "groups": [
-    "Phantom"
+    "Phantom",
+    "Undead"
    ],
    "quote": "“Mother, Father, Sister, Son. We only want a body each.”",
    "art": null,
@@ -2404,6 +2561,43 @@
    "conditionText": null,
    "stat": "M",
    "difficulty": 14
+  },
+  {
+   "kind": "encounter",
+   "id": "destiny-the-frog",
+   "name": "Destiny the Frog",
+   "groups": [
+    "Orc",
+    "Beast"
+   ],
+   "quote": "“Frog say ribbit.”",
+   "art": null,
+   "minionValue": 1,
+   "minions": {
+    "count": 0,
+    "group": null
+   },
+   "stat": "G",
+   "difficulty": 11,
+   "conditionText": "As a minion of a Skarra encounter, her minion bonus is 3. When she is a minion, she is shuffled back into the encounter stack afterwards."
+  },
+  {
+   "kind": "encounter",
+   "id": "the-treasure-trow",
+   "name": "The Treasure Trow",
+   "groups": [
+    "Fey Court"
+   ],
+   "quote": null,
+   "art": null,
+   "minionValue": 0,
+   "minions": {
+    "count": 0,
+    "group": null
+   },
+   "stat": "G",
+   "difficulty": 12,
+   "conditionText": "When this card comes into play, all players draw a resource card. When it is defeated, each player who survived may draw a resource card."
   }
  ],
  "resources": [
@@ -2411,7 +2605,9 @@
    "kind": "resource",
    "id": "an-apple-for-the-road",
    "name": "An Apple for the Road",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": "“Horses, trolls and customs officers. All of them can be bought with an apple.” — Hobby Trickgrin",
    "art": null,
    "value": 0,
@@ -2423,7 +2619,9 @@
    "kind": "resource",
    "id": "call-the-five-crowns",
    "name": "Call the Five Crowns",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": "“Five crowns in one room, and not one of them on fire. Write it down.” — Queen Maren",
    "art": null,
    "value": 0,
@@ -2435,7 +2633,9 @@
    "kind": "resource",
    "id": "three-banners-raised",
    "name": "Three Banners Raised",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": "“Three of them. Heaven help the enemy. Heaven help the catering.” — Goldie Trickgrin",
    "art": null,
    "value": 0,
@@ -2447,7 +2647,9 @@
    "kind": "resource",
    "id": "shoulder-to-shoulder",
    "name": "Shoulder to Shoulder",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": null,
    "art": null,
    "value": 0,
@@ -2459,7 +2661,9 @@
    "kind": "resource",
    "id": "crossed-paths",
    "name": "Crossed Paths",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": null,
    "art": null,
    "value": 0,
@@ -2471,7 +2675,9 @@
    "kind": "resource",
    "id": "the-hall-of-rest",
    "name": "The Hall of Rest",
-   "groups": [],
+   "groups": [
+    "Undead"
+   ],
    "quote": "“Lie still. Whoever gets up from that cot, they'll be ready.”",
    "art": null,
    "value": 0,
@@ -2483,7 +2689,9 @@
    "kind": "resource",
    "id": "the-gathering-of-heroes",
    "name": "The Gathering of Heroes",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": null,
    "art": null,
    "value": 0,
@@ -2495,7 +2703,9 @@
    "kind": "resource",
    "id": "honey-biscuit",
    "name": "Honey Biscuit",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": null,
    "art": null,
    "value": 1,
@@ -2519,7 +2729,9 @@
    "kind": "resource",
    "id": "torch-and-tinder",
    "name": "Torch and Tinder",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": null,
    "art": null,
    "value": 2,
@@ -2531,7 +2743,9 @@
    "kind": "resource",
    "id": "gold-filings",
    "name": "Gold Filings",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": "“Gold in the joints and they seize like a rusted gate.” — Kazra Emberdeep",
    "art": "enhancements__resource_gold_1",
    "value": 2,
@@ -2543,7 +2757,9 @@
    "kind": "resource",
    "id": "feathered-cap",
    "name": "Feathered Cap",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": "“A goose feather. Every Mayor needs one.” — Hobby Trickgrin",
    "art": "enhancements__item_feather_1",
    "value": 2,
@@ -2567,7 +2783,9 @@
    "kind": "resource",
    "id": "sprig-of-heather",
    "name": "Sprig of Heather",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": "“If the heather wilts, there's a hex in the room.”",
    "art": null,
    "value": 2,
@@ -2579,7 +2797,9 @@
    "kind": "resource",
    "id": "jesters-cap",
    "name": "Jester's Cap",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": "“The bells are for morale. Mostly the enemy's.”",
    "art": null,
    "value": 2,
@@ -2591,7 +2811,9 @@
    "kind": "resource",
    "id": "pickled-eggs-and-treacle",
    "name": "Pickled Eggs and Treacle",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": "“Don't knock it. It got us through the Goose Rout.”",
    "art": null,
    "value": 2,
@@ -2603,7 +2825,9 @@
    "kind": "resource",
    "id": "bag-of-toffees",
    "name": "Bag of Toffees",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": "“Toffee? No? More for me.” — Pip Wanderfoot",
    "art": null,
    "value": 2,
@@ -2615,7 +2839,9 @@
    "kind": "resource",
    "id": "patchwork-coat",
    "name": "Patchwork Coat",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": null,
    "art": null,
    "value": 2,
@@ -2639,7 +2865,9 @@
    "kind": "resource",
    "id": "wide-brimmed-hat",
    "name": "Wide-Brimmed Hat",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": null,
    "art": null,
    "value": 2,
@@ -2651,7 +2879,9 @@
    "kind": "resource",
    "id": "shepherds-crook",
    "name": "Shepherd's Crook",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": null,
    "art": null,
    "value": 2,
@@ -2663,7 +2893,9 @@
    "kind": "resource",
    "id": "cold-iron-barrier",
    "name": "Cold Iron Barrier",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": "“Cold iron. Every hedge-witch's worst day.”",
    "art": null,
    "value": 2,
@@ -2675,7 +2907,9 @@
    "kind": "resource",
    "id": "tin-whistle",
    "name": "Tin Whistle",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": "“Three notes and every goose in the Hearthlands comes running.”",
    "art": null,
    "value": 2,
@@ -2687,7 +2921,9 @@
    "kind": "resource",
    "id": "scrying-lenses",
    "name": "Scrying Lenses",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": "“The left lens sees tomorrow. The right one needs cleaning.” — Archmage Corvin",
    "art": null,
    "value": 3,
@@ -2699,7 +2935,9 @@
    "kind": "resource",
    "id": "hundred-year-journal",
    "name": "Hundred-Year Journal",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": "“Day one hundred and four: the geese have unionised.”",
    "art": null,
    "value": 3,
@@ -2723,7 +2961,9 @@
    "kind": "resource",
    "id": "the-dawn-temple-bell",
    "name": "The Dawn Temple Bell",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": "The morning the stone split, the bells rang on their own.",
    "art": null,
    "value": 3,
@@ -2735,7 +2975,9 @@
    "kind": "resource",
    "id": "null-rune-seal",
    "name": "Null-Rune Seal",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2747,7 +2989,9 @@
    "kind": "resource",
    "id": "rune-of-unmaking",
    "name": "Rune of Unmaking",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2759,7 +3003,9 @@
    "kind": "resource",
    "id": "glamour-rouge",
    "name": "Glamour Rouge",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2771,7 +3017,10 @@
    "kind": "resource",
    "id": "the-amulet-of-aesia",
    "name": "The Amulet of Aesia",
-   "groups": [],
+   "groups": [
+    "Human",
+    "Elf"
+   ],
    "quote": null,
    "art": "enhancements__item_amulet_of_aesia_1",
    "value": 3,
@@ -2783,7 +3032,9 @@
    "kind": "resource",
    "id": "warding-nail",
    "name": "Warding Nail",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2807,7 +3058,9 @@
    "kind": "resource",
    "id": "wayfinders-die",
    "name": "Wayfinder's Die",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2831,7 +3084,9 @@
    "kind": "resource",
    "id": "draught-of-forgetting",
    "name": "Draught of Forgetting",
-   "groups": [],
+   "groups": [
+    "Undead"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2843,7 +3098,9 @@
    "kind": "resource",
    "id": "willow-wand",
    "name": "Willow Wand",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2855,7 +3112,9 @@
    "kind": "resource",
    "id": "hazel-wand",
    "name": "Hazel Wand",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2891,7 +3150,9 @@
    "kind": "resource",
    "id": "dowsing-rod",
    "name": "Dowsing Rod",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": "“It twitches when there's something. It's twitching now.”",
    "art": null,
    "value": 3,
@@ -2903,7 +3164,9 @@
    "kind": "resource",
    "id": "portal-rune",
    "name": "Portal Rune",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2915,7 +3178,9 @@
    "kind": "resource",
    "id": "battle-scarred-wand",
    "name": "Battle-Scarred Wand",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -2927,7 +3192,9 @@
    "kind": "resource",
    "id": "the-axe-of-doom",
    "name": "The Axe of Doom",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": "“Heavy Metal and Power Metal at once. It's REAL.” — Sigrun Stonefast",
    "art": "enhancements__item_axe_of_doom_1",
    "value": 4,
@@ -2951,7 +3218,10 @@
    "kind": "resource",
    "id": "arangils-vision-glass",
    "name": "Arangil's Vision Glass",
-   "groups": [],
+   "groups": [
+    "Human",
+    "Elf"
+   ],
    "quote": null,
    "art": "enhancements__item_arangil_1",
    "value": 4,
@@ -2963,7 +3233,10 @@
    "kind": "resource",
    "id": "the-riddle-of-steel",
    "name": "The Riddle of Steel",
-   "groups": [],
+   "groups": [
+    "Dwarf",
+    "Halfellow"
+   ],
    "quote": null,
    "art": "enhancements__item_riddle_of_steel_1",
    "value": 4,
@@ -2975,7 +3248,9 @@
    "kind": "resource",
    "id": "much-room-mushroom",
    "name": "Much Room Mushroom",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": null,
    "art": "enhancements__item_much_room_mushroom_1",
    "value": 4,
@@ -3059,7 +3334,9 @@
    "kind": "resource",
    "id": "the-rosepearl",
    "name": "The Rosepearl",
-   "groups": [],
+   "groups": [
+    "Human"
+   ],
    "quote": null,
    "art": "enhancements__item_rosepearl_1",
    "value": 4,
@@ -3071,7 +3348,9 @@
    "kind": "resource",
    "id": "blasting-powder",
    "name": "Blasting Powder",
-   "groups": [],
+   "groups": [
+    "Dwarf"
+   ],
    "quote": null,
    "art": "units__trap_fire",
    "value": 4,
@@ -3143,7 +3422,10 @@
    "kind": "resource",
    "id": "mhorgrims-hunt",
    "name": "Mhorgrim's Hunt",
-   "groups": [],
+   "groups": [
+    "Dwarf",
+    "Beast"
+   ],
    "quote": "“A musket that calls a wolf. The orcs say the wolf was always theirs.”",
    "art": "enhancements__item_mhorgrim_1",
    "value": 4,
@@ -3167,7 +3449,9 @@
    "kind": "resource",
    "id": "skarras-hexwand",
    "name": "Skarra's Hexwand",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": "“Wands are for dabblers, morsel. THIS is a hexwand.” — Skarra Ironjaw",
    "art": null,
    "value": 5,
@@ -3179,7 +3463,9 @@
    "kind": "resource",
    "id": "wrens-silver-wand",
    "name": "Wren's Silver Wand",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": null,
    "art": null,
    "value": 5,
@@ -3191,7 +3477,9 @@
    "kind": "resource",
    "id": "blackthorn-wand",
    "name": "Blackthorn Wand",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": null,
    "art": null,
    "value": 5,
@@ -3215,7 +3503,10 @@
    "kind": "resource",
    "id": "eyrhilds-fury",
    "name": "Eyrhild's Fury",
-   "groups": [],
+   "groups": [
+    "Elf",
+    "Dwarf"
+   ],
    "quote": "“My ancestor's blade. I am merely waiting for the lesser peoples to return it.” — Lord Vaelis",
    "art": "enhancements__item_eyrhild_1",
    "value": 5,
@@ -3227,7 +3518,10 @@
    "kind": "resource",
    "id": "kurganos-crown-of-elements",
    "name": "Kurganos, Crown of Elements",
-   "groups": [],
+   "groups": [
+    "Dwarf",
+    "Orc"
+   ],
    "quote": null,
    "art": "enhancements__item_kurganos_1",
    "value": 6,
@@ -3239,7 +3533,9 @@
    "kind": "resource",
    "id": "the-umbral-ring",
    "name": "The Umbral Ring",
-   "groups": [],
+   "groups": [
+    "Undead"
+   ],
    "quote": null,
    "art": "enhancements__item_umbral_ring_1",
    "value": 5,
@@ -3251,7 +3547,9 @@
    "kind": "resource",
    "id": "shield-of-xorthalos",
    "name": "Shield of Xorthalos",
-   "groups": [],
+   "groups": [
+    "Orc"
+   ],
    "quote": null,
    "art": "enhancements__item_xorthalos_1",
    "value": 6,
@@ -3263,7 +3561,9 @@
    "kind": "resource",
    "id": "starwood-wand",
    "name": "Starwood Wand",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": "“Cut from a tree struck by a falling star. Allegedly.” — Captain Rook Halloran",
    "art": null,
    "value": 6,
@@ -3275,7 +3575,9 @@
    "kind": "resource",
    "id": "moonwood-wand",
    "name": "Moonwood Wand",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": null,
    "art": null,
    "value": 6,
@@ -3299,13 +3601,30 @@
    "kind": "resource",
    "id": "the-golden-egg",
    "name": "The Golden Egg",
-   "groups": [],
+   "groups": [
+    "Halfellow",
+    "Goose"
+   ],
    "quote": null,
    "art": null,
    "value": 1,
    "wand": false,
    "council": false,
    "conditionText": "Any goose companions get an additional +2 for this encounter."
+  },
+  {
+   "kind": "resource",
+   "id": "the-book-of-grudges",
+   "name": "The Book of Grudges",
+   "groups": [
+    "Dwarf"
+   ],
+   "quote": "“The Elves have 'looked at us funny.' I've underlined it.”",
+   "art": null,
+   "value": 3,
+   "wand": false,
+   "council": false,
+   "conditionText": "When this card is revealed or played face up, if you lose the current encounter (your hero falls), the winner has -3 during the next encounter. It has +1 if your hero is Oskar."
   }
  ]
 }

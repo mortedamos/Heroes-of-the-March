@@ -54,6 +54,10 @@ export interface PlayerState {
   statOverride: Stat | null;
   /** Persistent markers: once-per-game usage, pending card effects (e.g. "hallOfRest"). */
   used: Record<string, number>;
+  /** Penalty to this player's total in the current encounter (the Grudge Book, The Book of Grudges). */
+  penalty: number;
+  /** Penalty that starts with the next encounter. */
+  penaltyNext: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -66,7 +70,8 @@ export type EffectKind =
   | 'forceHeroStat'      // target player's hero contributes `stat` instead (Hugo, Caelan, Brisa, Clemence)
   | 'statBonus'          // target player gains `amount` to `stat` ('all' = every stat) (Vaelis, geese)
   | 'heroMultiplier'     // target player's hero stats x `amount` (Mags)
-  | 'negateBid'          // target bid's value counts as zero (Oskar)
+  | 'negateBid'          // target bid's value counts as zero (no card uses it now)
+  | 'grudge'             // target player: if they win this encounter they have -`amount` in the next (Oskar)
   | 'disableAbilities'   // target hero/companion's abilities are off this turn (Aldric)
   | 'autoWin';           // target player wins this encounter (Mira)
 
@@ -135,6 +140,8 @@ export interface TurnState {
   companionMinions: CardId[];
   /** Cards set aside by effects this turn, discarded at the end (Vaelis's encounter card). */
   setAside: CardId[];
+  /** An encounter found by a location's search (The Frostfells, Wreck of the Skyship Gallant): it is this turn's encounter. */
+  chosenEncounter: CardId | null;
   /** Companions recruited during the opening (turn 1) companion phase; their enter-play effects wait for its end. */
   openingEntrants: { player: PlayerId; card: CardId }[];
   /** Seat index whose bidding decision is next. */
@@ -216,7 +223,7 @@ export type ChoosePurpose =
   | 'silenceCompanion' | 'forceCompanion' | 'rulingCompanion' | 'forceHero' | 'disableAbility'
   | 'marenTarget' | 'marenGive' | 'pipClaim'
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
-  | 'counterAbility' | 'oskarNegate' | 'appleSwap'
+  | 'counterAbility' | 'oskarGrudge' | 'rumourMill' | 'fetch' | 'pickFight' | 'appleSwap'
   | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'companionMinion'
   | 'heroDraft' | 'heroKeep' | 'companionDraft';
 
@@ -238,7 +245,9 @@ export type Task =
   | { t: 'replaceLocation'; mode: 'shuffleBack' | 'discard'; source: string }
   | { t: 'setLocation'; defId: string; source: string }
   /** A hero falls (run one at a time, so each new hero is drawn after the previous faller has chosen). */
-  | { t: 'heroFalls'; player: PlayerId };
+  | { t: 'heroFalls'; player: PlayerId }
+  /** Draw resources (queued so it can follow a choice, e.g. Skyship Manifest). */
+  | { t: 'draw'; player: PlayerId; n: number; source: string };
 
 // ---------------------------------------------------------------------------
 

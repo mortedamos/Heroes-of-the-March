@@ -27,10 +27,10 @@ const FORCE: Record<string, { stat: Stat; on: 'companion' | 'hero' }> = {
   'liriel-nightbloom': { stat: 'G', on: 'companion' },
   'thessaly-of-the-grove': { stat: 'M', on: 'companion' },
   'kesh-the-bog-huntress': { stat: 'P', on: 'companion' },
-  'sir-hugo-pellam-marchguard-surgeon': { stat: 'G', on: 'hero' },
+  'hobart-thimblewick-moot-surgeon': { stat: 'G', on: 'hero' },
   'caelan-the-exile': { stat: 'M', on: 'hero' },
   'brisa-blastcap-bombardier': { stat: 'P', on: 'hero' },
-  'clemence-fairbrook-temple-cook': { stat: 'P', on: 'hero' },
+  'grumma-ladlejaw-camp-cook': { stat: 'P', on: 'hero' },
 };
 
 /** A hero worth protecting (stats + ability above the table average). */
@@ -83,8 +83,20 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     // Before bidding the bots hold back until the situation calls for it.
     case 'torch': return torchWorthIt(t, level);
     case 'mineNow': case 'maps': return locationWorthChecking(t, level);
-    // Costs a card: only worth it with a spare one, against a real threat.
-    case 'ruling': return level !== 'easy' && t.view.hand.length >= 4 && Boolean(t.biggestThreat());
+    // Free, but only worth aiming at a real threat.
+    case 'ruling': return level !== 'easy' && Boolean(t.biggestThreat());
+    // Oskar: always worth naming someone.
+    case 'grudge': return true;
+    // Urzha: look for an easier fight when this one is a stretch.
+    case 'pickFight': return level !== 'easy' && t.difficultyFor(t.me) - t.myEstimate() > 2;
+    // Rook: swap the worst card in hand for a fresh one.
+    case 'manifest': return level !== 'easy' && t.view.hand.length > 0 && Math.min(...t.view.hand.map((h) => t.handValue(h.card.id))) <= 2;
+    // Gimlet: only when the top of the discard is better than the worst card in hand.
+    case 'fetch': return fetchWorthIt(t);
+    // Torvi, at the end of bidding when the numbers are exact.
+    case 'fire': return fireWorthIt(t, a, level);
+    // Goldie's rumours are information a bot can't use.
+    case 'rumour': return false;
     // Pure information: worth a look now and then, always for a hard bot.
     case 'readAhead': return level === 'hard' || (level === 'normal' && rand() < 0.4);
     case 'shadowsteeds': {
@@ -107,15 +119,40 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     case 'force': return bestForce(t, a.source.def, level).gain >= (level === 'hard' ? 1.5 : 2);
     case 'pockets': return t.others.some((p) => p.bids.some((b) => b.hidden));
     case 'shield': return harmfulEffectsOnMe(t).length > 0;
-    case 'notThisFight': {
-      const mine = t.myEstimate();
-      const handSum = t.view.hand.reduce((s, h) => s + t.handValue(h.card.id), 0);
-      const doomed = mine + handSum < t.difficultyFor(t.me);
-      const hopeless = mine + handSum < t.bestRivalEstimate() - 4;
-      return doomed || (level === 'hard' && hopeless && t.prize >= 4);
-    }
     default: return false;
   }
+}
+
+function topDiscardValue(t: Table): number {
+  const top = t.view.discards.resource.top;
+  if (!top) return 0;
+  const d = getDef(top.def);
+  return d.kind === 'resource' ? SPECIAL_VALUE[d.id] ?? d.value : 0;
+}
+
+function fetchWorthIt(t: Table): boolean {
+  if (!t.view.hand.length) return false;
+  return topDiscardValue(t) >= Math.min(...t.view.hand.map((h) => t.handValue(h.card.id))) + 2;
+}
+
+/**
+ * Torvi's Fire in the Hole: discard him to take 4 off every opponent. Worth it when it turns a loss into a win
+ * (or saves our hero) even without Torvi's own stat, or sinks a rival who would otherwise take the location.
+ */
+function fireWorthIt(t: Table, a: AbilityOptionView, level: BotLevel): boolean {
+  const proj = t.me.projection;
+  if (!proj || level === 'easy') return false;
+  const torvi = proj.contributions.find((c) => c.card === a.source.id)?.value ?? 0;
+  const hunt = t.me.bids.some((b) => !b.hidden && b.card.def === 'mhorgrims-hunt');
+  const cut = hunt ? 5 : 4;
+  const mine = proj.total - torvi;
+  const diff = proj.difficulty;
+  const rivals = t.others.filter((p) => p.projection);
+  const rivalBest = Math.max(-Infinity, ...rivals.filter((p) => p.projection!.total - cut >= p.projection!.difficulty).map((p) => p.projection!.total - cut));
+  const winningNow = proj.total >= diff && proj.total > Math.max(-Infinity, ...rivals.filter((p) => p.projection!.total >= p.projection!.difficulty).map((p) => p.projection!.total));
+  if (winningNow) return false;
+  if (mine < diff) return false; // without Torvi we would fall anyway
+  return mine > rivalBest && t.prize >= 2;
 }
 
 /**
@@ -525,12 +562,24 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       if (mineNext) return [renown <= 3 ? 'bottom' : 'keep'];
       return [active && t.threat(active) > 8 && renown >= 4 ? 'bottom' : 'keep'];
     }
-    case 'oskarNegate': {
-      const cardId = optionCard('negate')?.id;
-      const owner = cardId ? t.owner(cardId) : null;
-      if (!owner || owner.id === t.me.id) return ['keep'];
-      const rival = t.estimate(owner) >= t.myEstimate() - 5 || t.threat(owner) > 10;
-      return [rival ? 'negate' : 'keep'];
+    case 'oskarGrudge':
+      // Name whoever is most likely to win this encounter (and so carry the penalty into the next).
+      return [pickMax((v) => { const p = t.view.players.find((x) => x.id === v); return p ? t.estimate(p) + p.renown * 0.3 : -99; })];
+    case 'rumourMill':
+      return one(values[0]);
+    case 'fetch': {
+      const worst = pickMin((v) => (v === 'skip' ? 99 : t.handValue(v)));
+      return [worst !== 'skip' && topDiscardValue(t) >= t.handValue(worst) + 2 ? worst : 'skip'];
+    }
+    case 'pickFight': {
+      const next = optionCard('replace');
+      const cur = t.view.turn.encounter;
+      if (!next || !cur) return ['keep'];
+      const nd = getDef(next.def) as { stat: Stat; difficulty: number; minionValue: number };
+      // Compare how far each fight is from our reach: our strength in the stat against its difficulty.
+      const nextGap = nd.difficulty + nd.minionValue - t.base(t.me, nd.stat);
+      const curGap = t.difficultyFor(t.me) - (t.stat ? t.base(t.me, t.stat) : 0);
+      return [nextGap < curGap - 1 ? 'replace' : 'keep'];
     }
     case 'hallOfRest':
       return [pickMax((v) => heroValue(v))];

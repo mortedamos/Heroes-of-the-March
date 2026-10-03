@@ -10,7 +10,7 @@ import { abilityOf } from './abilities';
 import { getDef } from './cards';
 import type { Challenge, CompanionDef, HeroDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
-import { activeAbility, activeEffects, bidsBeingRevealed, hasGroup } from './effects';
+import { activeAbility, activeEffects, bidsBeingRevealed, hasGroup, kinCount, sharesKingdom } from './effects';
 import type { Bid, CardId, PlayerId, PlayerState } from './types';
 
 export type Visible = (owner: PlayerState, bid: Bid) => boolean;
@@ -49,10 +49,15 @@ export function difficultyFor(ctx: Ctx, p: PlayerState | null): DifficultyBreakd
   if (!ch || !t.encounter) return null;
   const boost = locationBoost(ctx, t.encounter);
   const perMinion = (ctx.location ? abilityOf(ctx.location.id)?.minionBonus : 0) ?? 0;
+  const main = ctx.def(t.encounter);
   let minions = 0;
   for (const m of t.minions) {
     const d = ctx.def(m);
-    if (d.kind === 'encounter') minions += d.minionValue + locationBoost(ctx, m) + perMinion;
+    if (d.kind !== 'encounter') continue;
+    // Destiny the Frog: worth more as a minion of a Skarra encounter.
+    const special = abilityOf(d.id)?.minionValueWith;
+    const value = special && hasGroup(main, special.group) ? special.value : d.minionValue;
+    minions += value + locationBoost(ctx, m) + perMinion;
   }
   // Companions pressed into service as minions (Iron Mites) add their stat for the challenge.
   const chStat = challengeStat(ctx, null) ?? ch.stat;
@@ -65,7 +70,10 @@ export function difficultyFor(ctx: Ctx, p: PlayerState | null): DifficultyBreakd
     minions = 0;
     ignoredMinions = true;
   }
-  return { base: ch.difficulty, boost, minions, ignoredMinions, total: ch.difficulty + boost + minions };
+  // The Runeforged Titan is far easier if the challenge is not Physical.
+  const stat = challengeStat(ctx, p) ?? ch.stat;
+  const base = abilityOf(main.id)?.difficultyByStat?.[stat] ?? ch.difficulty;
+  return { base, boost, minions, ignoredMinions, total: base + boost + minions };
 }
 
 // --- player totals ---------------------------------------------------------
@@ -104,6 +112,8 @@ function heroValue(ctx: Ctx, p: PlayerState, stat: Stat): number {
   }
   const forced = activeEffects(ctx, 'forceHeroStat').filter((e) => e.target === p.id).at(-1);
   v = applyForced(ctx, p, v, forced ? hero.stats[forced.stat as Stat] : null);
+  // Kin A: +1 to every stat for each companion of the hero's kingdom.
+  if (activeAbility(ctx, p.hero)?.kin === 'A') v += kinCount(ctx, p);
   for (const e of activeEffects(ctx, 'heroMultiplier')) if (e.target === p.id) v *= e.amount ?? 1;
   return v;
 }
@@ -135,7 +145,21 @@ function companionValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat): num
   const sub = activeAbility(ctx, card)?.selfStatSub;
   if (sub) v = Math.max(v, d.stats[sub]);
   const forced = activeEffects(ctx, 'forceCompanionStat').filter((e) => e.target === card).at(-1);
-  return applyForced(ctx, p, v, forced ? d.stats[forced.stat as Stat] : null);
+  v = applyForced(ctx, p, v, forced ? d.stats[forced.stat as Stat] : null);
+  const a = activeAbility(ctx, card);
+  // Varg and Sigrun: +1 while the other is in the party.
+  if (a?.partnerBonus && p.companions.some((c) => ctx.defId(c) === a.partnerBonus!.with)) v += a.partnerBonus.amount;
+  // Gimlet: +1 while Destiny the Frog is part of the encounter.
+  if (a?.encounterBonus) {
+    const t = ctx.s.turn;
+    if ([t.encounter, ...t.minions].some((e) => e && ctx.defId(e) === a.encounterBonus!.def)) v += a.encounterBonus.amount;
+  }
+  // Kin C: an opposing hero shaves 1 off each companion of its kingdom.
+  for (const o of ctx.s.players) {
+    if (o.id === p.id || !o.hero) continue;
+    if (activeAbility(ctx, o.hero)?.kin === 'C' && sharesKingdom(ctx.def(o.hero), d) && hostileApplies(ctx, p, o.id)) v -= 1;
+  }
+  return Math.max(0, v);
 }
 
 /** Value of one resource for its owner in the current context. */
@@ -144,7 +168,6 @@ export function resourceValue(ctx: Ctx, owner: PlayerState, card: CardId): numbe
   let v = abilityOf(d.id)?.resourceValue?.(ctx, owner, d.value) ?? d.value;
   if (d.wand) {
     if (ctx.s.turn.wandsDisabled) return 0;
-    for (const c of owner.companions) v += activeAbility(ctx, c)?.wandBonus ?? 0;
   }
   // Oskar: "any numeric bonus it grants counts as zero instead".
   if (v > 0 && activeEffects(ctx, 'negateBid').some((e) => e.target === card && hostileApplies(ctx, owner, e.owner))) v = 0;
@@ -173,6 +196,8 @@ export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverrid
     if (e.target === p.id && (e.stat === 'all' || e.stat === stat)) bonus += e.amount ?? 0;
   }
   bonus += activeAbility(ctx, p.hero)?.flatBonus ?? 0;
+  // The Grudge Book / The Book of Grudges: -3 in this encounter.
+  bonus -= p.penalty;
   const sum = (xs: Contribution[]) => xs.reduce((a, x) => a + x.value, 0);
   return {
     stat, hero, companions, council, resources, bonus,

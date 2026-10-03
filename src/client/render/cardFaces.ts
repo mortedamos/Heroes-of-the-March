@@ -412,6 +412,7 @@ function drawFace(g: CanvasRenderingContext2D, def: CardDef, art: HTMLImageEleme
     if (def.abilityName) blocks.push({ text: def.abilityName, weight: 'bold', color: KIND_COLORS[def.kind].dark });
     if (def.abilityText) blocks.push({ text: def.abilityText, gapBefore: 2, glow: true, ...(emphasis ? { weight: 'bold' } : {}) });
     if (def.kind === 'hero' && def.triggerText) blocks.push({ text: `⚡ ${def.triggerText}`, style: 'italic', color: '#5a3d0c', gapBefore: 10 });
+    if (def.kind === 'hero' && def.kinText) blocks.push({ text: `◆ ${def.kinText}`, style: 'italic', color: '#2f5d3a', gapBefore: 6 });
   } else if (def.conditionText) {
     blocks.push({ text: def.conditionText, glow: true, ...(emphasis ? { weight: 'bold' } : {}) });
   }

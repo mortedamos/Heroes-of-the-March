@@ -111,8 +111,8 @@ export function availableActivations(ctx: Ctx, p: PlayerState, window: AbilityWi
         if ((p.used[key] ?? 0) > 0) continue;
       } else {
         const n = t.used[key] ?? 0;
-        // Hesk of Two Homes: once per turn, re-use a companion's once-per-turn ability.
-        const heskReuse = n === 1 && src.kind === 'companion' && activeAbility(ctx, p.hero)?.reuseCompanionAbility && !t.used[`hesk:${p.id}`];
+        // Hesk of Two Homes: once per turn, re-use another companion's once-per-turn ability.
+        const heskReuse = n === 1 && src.kind === 'companion' && !t.used[`hesk:${p.id}`] && playerHas(ctx, p, (a) => a.reuseCompanionAbility) !== src.card && playerHas(ctx, p, (a) => a.reuseCompanionAbility) !== null;
         if (n > 0 && !heskReuse) continue;
       }
       const self: OwnedSource = { card: src.card, owner: p.id, kind: src.kind };
@@ -191,22 +191,72 @@ function runWindow(ctx: Ctx, window: AbilityWindow, next: Step): void {
 /** Reveal the top encounter and its minions. Returns false if the stack is exhausted. */
 export function revealEncounter(ctx: Ctx): boolean {
   const t = ctx.s.turn;
-  const card = ctx.take('encounter');
+  // An encounter found by a location's search (The Frostfells) is this turn's encounter.
+  const found = t.chosenEncounter;
+  t.chosenEncounter = null;
+  const card = found ?? ctx.take('encounter');
   if (!card) return false;
   t.encounter = card;
   ctx.emit({ type: 'encounterRevealed', card: ctx.ref(card) });
   fire(ctx, 'encounterEntered', { card, asMinion: false });
   // Minions (which never draw minions of their own).
   const def = ctx.def(card) as EncounterDef;
-  for (let i = 0; i < def.minions.count; i++) {
-    const group = def.minions.group;
-    const m = group ? ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), group)) : ctx.take('encounter');
-    if (!m) break;
+  const addMinion = (m: CardId) => {
     t.minions.push(m);
     ctx.emit({ type: 'minionDrawn', card: ctx.ref(m) });
     fire(ctx, 'encounterEntered', { card: m, asMinion: true });
+    fire(ctx, 'minionDrawn', { card: m });
+  };
+  for (let i = 0; i < def.minions.count; i++) {
+    const group = def.minions.group;
+    if (hasGroup(def, 'Skarra') && !group) {
+      const m = skarraMinion(ctx);
+      if (!m) break;
+      addMinion(m);
+      continue;
+    }
+    const m = group ? ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), group)) : ctx.take('encounter');
+    if (!m) break;
+    addMinion(m);
+  }
+  // Barrowdeep: an Undead encounter draws one extra Undead minion.
+  const extra = ctx.location ? abilityOf(ctx.location.id)?.extraMinion : undefined;
+  if (extra && hasGroup(def, extra)) {
+    const m = ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), extra));
+    if (m) addMinion(m);
   }
   return true;
+}
+
+/**
+ * Skarra's minion: look at the top 5 encounter cards. If one is Destiny the Frog she joins as the minion
+ * (the rest stay on top); if not, they are discarded and a minion is drawn normally.
+ */
+function skarraMinion(ctx: Ctx): CardId | null {
+  const top = peekTop(ctx, 'encounter', 5);
+  for (const c of top) ctx.emit({ type: 'cardShown', player: null, card: ctx.ref(c), reason: 'Skarra looks for Destiny' });
+  const pile = ctx.s.decks.encounter;
+  const hit = top.find((c) => ctx.defId(c) === 'destiny-the-frog');
+  if (hit) {
+    pile.splice(pile.indexOf(hit), 1);
+    return hit;
+  }
+  for (const c of top) {
+    pile.splice(pile.indexOf(c), 1);
+    ctx.discard('encounter', c);
+  }
+  return ctx.take('encounter');
+}
+
+/** End of an encounter: the main card and minions are discarded (Destiny, as a minion, goes back into the stack). */
+function discardEncounterCards(ctx: Ctx, main: CardId | null, minions: CardId[]): void {
+  if (main) ctx.discard('encounter', main);
+  const back: CardId[] = [];
+  for (const m of minions) {
+    if (abilityOf(ctx.defId(m))?.shuffleBackAsMinion) back.push(m);
+    else ctx.discard('encounter', m);
+  }
+  ctx.returnToDeck('encounter', back);
 }
 
 function announceChallenge(ctx: Ctx): void {
@@ -216,14 +266,13 @@ function announceChallenge(ctx: Ctx): void {
   fire(ctx, 'challengeFaced', { stat, player: ctx.active.id });
 }
 
-/** Urzha: discard the encounter and minions, draw a new one and announce its challenge. */
+/** Pick Your Fight: discard the encounter and minions, draw a new one and announce its challenge. */
 export function replaceEncounter(ctx: Ctx, reason: string): void {
   const t = ctx.s.turn;
   if (t.encounter) {
     ctx.emit({ type: 'encounterReplaced', from: ctx.ref(t.encounter), reason });
-    ctx.discard('encounter', t.encounter);
   }
-  for (const m of t.minions) ctx.discard('encounter', m);
+  discardEncounterCards(ctx, t.encounter, t.minions);
   for (const c of t.companionMinions) ctx.discard('companion', c);
   t.encounter = null;
   t.minions = [];
@@ -371,17 +420,6 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       if (bid) {
         bid.visible = true;
         ctx.emit({ type: 'revealed', player: p.id, card: ctx.ref(bid.card) });
-        // Loremaster Oskar Grimgate: once per turn, on any turn, a card being turned face up may count as zero.
-        const holder = ctx.clockwise().map((x) => ({ x, card: playerHas(ctx, x, (a) => a.negateReveals) })).find((h) => h.card && !t.used[usageKey(h.card, 'negate')]);
-        const oskar = holder?.card ?? null;
-        if (holder && oskar && resourceValue(ctx, p, bid.card) > 0) {
-          ctx.queue({
-            t: 'choose', purpose: 'oskarNegate', player: holder.x.id, source: ctx.def(oskar).name,
-            prompt: `The Book of Grudges: make ${p.name}'s ${ctx.def(bid.card).name} count as zero?`,
-            options: [{ value: 'negate', label: 'Count it as zero', card: { def: ctx.defId(bid.card), id: bid.card } }, { value: 'keep', label: 'Leave it' }],
-            min: 1, max: 1, data: { card: bid.card, source: oskar },
-          });
-        }
         resolveBid(ctx, p, bid);
         noteMultiBid(ctx, p);
         t.revealCursor = (seat + 1) % n;
@@ -436,6 +474,29 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     const result: TurnResult = { stat: challengeStat(ctx, null) ?? 'P', rows, winner, margin, locations, ...(tied.length ? { tied } : {}), ...(byEffect ? { byEffect } : {}) };
     t.result = result;
     ctx.emit({ type: 'outcome', result });
+
+    // Cards that reward the survivors (The Treasure Trow).
+    const survivorIds = rows.filter((r) => r.survived).map((r) => r.player);
+    if (survivorIds.length) {
+      for (const e of [t.encounter, ...t.minions]) {
+        if (e) abilityOf(ctx.defId(e))?.onDefeated?.(ctx, { card: e, owner: null, kind: 'encounter' }, survivorIds);
+      }
+    }
+    // Grudges: the winner carries a penalty into the next encounter (Oskar's Grudge Book, The Book of Grudges).
+    if (winner) {
+      const wp = ctx.player(winner);
+      let penalty = 0;
+      for (const e of activeEffects(ctx, 'grudge')) if (e.target === winner) { penalty += e.amount ?? 3; ctx.log(winner, ctx.def(e.source).name, `${wp.name} won, and has -${e.amount ?? 3} in the next encounter`); }
+      for (const r of rows) {
+        if (r.survived || r.player === winner) continue;
+        const loser = ctx.player(r.player);
+        if (loser.bids.some((b) => b.visible && ctx.defId(b.card) === 'the-book-of-grudges')) {
+          penalty += 3;
+          ctx.log(loser.id, 'The Book of Grudges', `${wp.name} won, and has -3 in the next encounter`);
+        }
+      }
+      wp.penaltyNext += penalty;
+    }
 
     if (winner && t.location) {
       const wp = ctx.player(winner);
@@ -494,8 +555,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
 
   turnEnd(ctx) {
     const t = ctx.s.turn;
-    if (t.encounter) ctx.discard('encounter', t.encounter);
-    for (const m of t.minions) ctx.discard('encounter', m);
+    discardEncounterCards(ctx, t.encounter, t.minions);
     for (const c of t.setAside) ctx.discard('encounter', c);
     for (const c of t.companionMinions) ctx.discard('companion', c);
     t.encounter = null;
@@ -528,6 +588,9 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       borrowed.push(...p.councilHeroes);
       p.councilHeroes = [];
       p.statOverride = null;
+      // This encounter's penalty ends; a winner's grudge starts with the next one.
+      p.penalty = p.penaltyNext;
+      p.penaltyNext = 0;
     }
     ctx.returnToDeck('hero', borrowed);
     // One after another: each faller's choices (companion, new hero) finish before the next hero is drawn.
@@ -687,6 +750,7 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
     case 'discardResource':
     case 'discardForCouncil':
     case 'marenGive': return keep(inHand);
+    case 'fetch': return keep((v) => v === 'skip' || inHand(v));
     case 'silenceCompanion':
     case 'forceCompanion':
     case 'rulingCompanion': return keep(opposingCompanion);
@@ -721,6 +785,9 @@ function runTask(ctx: Ctx, task: Task): void {
     }
     case 'heroFalls':
       heroFalls(ctx, ctx.player(task.player));
+      return;
+    case 'draw':
+      drawResources(ctx, task.player, task.n, task.source);
       return;
     case 'setLocation': {
       const card = ctx.takeMatching('location', (c) => ctx.defId(c) === task.defId);
@@ -766,19 +833,19 @@ export function applyChoice(
         break;
       case 'forceCompanion': {
         const stat = data['stat'] as Stat;
-        addEffect(ctx, { kind: 'forceCompanionStat', source: String(data['source']), owner: p.id, target: pick, stat });
+        const added = addEffect(ctx, { kind: 'forceCompanionStat', source: String(data['source']), owner: p.id, target: pick, stat });
         const victim = ownerOf(ctx, pick);
-        if (victim) fire(ctx, 'statForced', { player: victim, target: pick });
+        if (added && victim) fire(ctx, 'statForced', { player: victim, target: pick });
         break;
       }
       case 'rulingCompanion': {
         // Ruling of the Conclave: the companion must use whichever of its stats is lowest.
         const d = ctx.def(pick) as CompanionDef;
         const stat = (['P', 'M', 'G'] as Stat[]).reduce((lo, s) => (d.stats[s] < d.stats[lo] ? s : lo));
-        addEffect(ctx, { kind: 'forceCompanionStat', source: String(data['source']), owner: p.id, target: pick, stat });
-        ctx.log(p.id, 'Ruling of the Conclave', `${d.name} must use ${statName(stat)}`);
+        const added = addEffect(ctx, { kind: 'forceCompanionStat', source: String(data['source']), owner: p.id, target: pick, stat });
+        if (added) ctx.log(p.id, 'Ruling of the Conclave', `${d.name} must use ${statName(stat)}`);
         const victim = ownerOf(ctx, pick);
-        if (victim) fire(ctx, 'statForced', { player: victim, target: pick });
+        if (added && victim) fire(ctx, 'statForced', { player: victim, target: pick });
         break;
       }
       case 'forceHero': {
@@ -795,15 +862,17 @@ export function applyChoice(
           t.used[usageKey(shield, 'shield')] = 1; // shares Shield of the Dawn's once per turn
           ctx.emit({ type: 'abilityCountered', player: p.id, source: ctx.ref(source), by: ctx.ref(shield) });
           const cancelled = activeEffects(ctx).filter((e) => e.source === source);
-          addEffect(ctx, { kind: 'disableAbilities', source: shield, owner: p.id, target: source });
-          for (const e of cancelled) ctx.emit({ type: 'effectCancelled', effectId: e.id });
+          if (addEffect(ctx, { kind: 'disableAbilities', source: shield, owner: p.id, target: source })) {
+            for (const e of cancelled) ctx.emit({ type: 'effectCancelled', effectId: e.id });
+          }
         } else runActivation(ctx, user, source, String(data['ability']));
         break;
       }
       case 'disableAbility': {
         const cancelled = activeEffects(ctx).filter((e) => e.source === pick);
-        addEffect(ctx, { kind: 'disableAbilities', source: String(data['source']), owner: p.id, target: pick });
-        for (const e of cancelled) ctx.emit({ type: 'effectCancelled', effectId: e.id });
+        if (addEffect(ctx, { kind: 'disableAbilities', source: String(data['source']), owner: p.id, target: pick })) {
+          for (const e of cancelled) ctx.emit({ type: 'effectCancelled', effectId: e.id });
+        }
         break;
       }
       case 'marenTarget':
@@ -879,14 +948,30 @@ export function applyChoice(
         }
         break;
       }
-      case 'oskarNegate':
-        if (pick === 'negate') {
-          const source = String(data['source']);
-          ctx.s.turn.used[usageKey(source, 'negate')] = 1; // once per turn
-          ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(source), ability: 'negate', label: 'Make a revealed card count as zero' });
-          addEffect(ctx, { kind: 'negateBid', source, owner: p.id, target: String(data['card']) });
-        }
+      case 'oskarGrudge':
+        // Entered in the Grudge Book: if `pick` wins this encounter they have -3 in the next (applied in resolve).
+        addEffect(ctx, { kind: 'grudge', source: String(data['source']), owner: p.id, target: pick, amount: 3 });
         break;
+      case 'rumourMill':
+        break; // the card was shown; nothing else happens
+      case 'fetch': {
+        // Gimlet: swap the chosen hand card with the top of the resource discard stack.
+        const pile = ctx.s.discards.resource;
+        if (pick === 'skip' || !p.hand.includes(pick) || !pile.length) break;
+        const got = pile.pop()!;
+        p.hand = p.hand.filter((c) => c !== pick);
+        ctx.discard('resource', pick);
+        p.hand.push(got);
+        ctx.emit({ type: 'resourceDiscarded', player: p.id, card: ctx.ref(pick), reason: 'Fetch' });
+        ctx.emit({ type: 'drew', player: p.id, deck: 'resource', cards: [ctx.ref(got)], reason: 'Fetch' });
+        break;
+      }
+      case 'pickFight': {
+        // Urzha: swap this encounter for the next one, or shuffle the stack so nothing is remembered.
+        if (pick === 'replace' && ctx.s.decks.encounter[ctx.s.decks.encounter.length - 1] === data['card']) replaceEncounter(ctx, 'Pick Your Fight');
+        else ctx.shuffle('encounter');
+        break;
+      }
       case 'appleSwap': {
         const apple = String(data['apple']);
         const aOwner = ctx.s.players.find((o) => o.bids.some((b) => b.card === apple));

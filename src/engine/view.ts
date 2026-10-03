@@ -13,7 +13,7 @@
 import { cardStatus } from './abilities';
 import type { Stat } from './cardTypes';
 import { Ctx } from './context';
-import { isIgnored, maxCompanions } from './effects';
+import { isIgnored, maxCompanions, PLAYER_TARGET_KINDS } from './effects';
 import { challengeStat, currentChallenge, difficultyFor, resourceValue, totalFor, visibleTo, type DifficultyBreakdown } from './totals';
 import {
   DECKS, type AbilityWindow, type CardId, type CardRef, type ChoiceOption, type ChoosePurpose, type DeckName, type EffectKind,
@@ -38,6 +38,9 @@ export interface PlayerPublicView {
   bids: BidView[];
   councilHeroes: CardRef[];
   statOverride: Stat | null;
+  /** Penalty to this player's total in the current encounter, and the one that starts with the next. */
+  penalty: number;
+  penaltyNext: number;
   /** Total computed only from what the viewer can see. */
   projection: {
     stat: Stat; total: number; difficulty: number; hiddenBids: number;
@@ -152,6 +155,8 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       bids: p.bids.map((b): BidView => (vis(p, b) ? { hidden: false, card: ref(b.card), faceUp: b.visible } : { hidden: true })),
       councilHeroes: p.councilHeroes.map(ref),
       statOverride: p.statOverride,
+      penalty: p.penalty,
+      penaltyNext: p.penaltyNext,
       projection: tb && diff ? {
         stat: tb.stat, total: tb.total, difficulty: diff.total, hiddenBids: tb.hiddenBids,
         contributions: [{ card: p.hero, value: tb.hero }, ...tb.companions, ...tb.council].map((c) => ({ card: 'card' in c ? c.card : c.source, value: c.value })),
@@ -161,7 +166,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
 
   const disabled = new Set(t.effects.filter((e) => e.kind === 'disableAbilities').map((e) => e.target));
   const effects: EffectView[] = t.effects.map((e) => {
-    const cardTarget = e.kind === 'forceHeroStat' || e.kind === 'statBonus' || e.kind === 'heroMultiplier' || e.kind === 'autoWin' ? null : e.target;
+    const cardTarget = PLAYER_TARGET_KINDS.includes(e.kind) ? null : e.target;
     return {
       id: e.id, kind: e.kind, source: ref(e.source), owner: e.owner,
       targetPlayer: cardTarget ? ownerOfCard(state, cardTarget) : e.target,

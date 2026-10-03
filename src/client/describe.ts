@@ -89,5 +89,6 @@ function describeEffect(e: Extract<ClientEvent, { type: 'effect' }>, view: GameV
     case 'negateBid': return `${src}: ${target} now counts as zero!`;
     case 'disableAbilities': return `${src}: ${target}'s ability is disabled for the rest of the turn.`;
     case 'autoWin': return `${src}: ${who(e.targetPlayer)} will take the location, whatever the totals!`;
+    case 'grudge': return `${src}: if ${who(e.targetPlayer)} win${e.targetPlayer === view.you ? '' : 's'} this encounter, ${e.targetPlayer === view.you ? 'you have' : 'they have'} -${ef.amount ?? 3} in the next.`;
   }
 }

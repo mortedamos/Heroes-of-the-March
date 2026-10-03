@@ -145,7 +145,7 @@ function handle(ctx: Ctx, seat: PlayerId, cmd: Command): void {
       const card = ctx.take('companion');
       if (!card) { s.turn.cursor += 1; return; }
       ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(card)], reason: 'Companion phase' });
-      ctx.decide({ kind: 'companion.place', player: p.id, drawn: card, mustReplace: companionCount(p) >= maxCompanions(ctx, p) });
+      ctx.decide({ kind: 'companion.place', player: p.id, drawn: card, mustReplace: companionCount(p) >= maxCompanions(ctx, p, card) });
       return;
     }
     case 'companion.skip':
