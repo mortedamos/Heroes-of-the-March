@@ -108,6 +108,9 @@ export function cardThumb(def: string, width: number, cls = 'thumb', cssSized = 
 export class Hud {
   private readonly top = h('header', { class: 'topbar' });
   private readonly plates = h('div', { class: 'plates' });
+  /** Stat chips on the table's hero and companion cards (what each adds to the challenge now). */
+  private readonly chips = h('div', { class: 'card-chips' });
+  private readonly chipEls = new Map<string, HTMLElement>();
   private readonly challenge = h('div', { class: 'challenge hidden' });
   private readonly dock = h('section', { class: 'dock', aria: { label: 'Your actions' } });
   private readonly prompt = h('div', { class: 'prompt', role: 'status', aria: { live: 'polite' } });
@@ -160,7 +163,7 @@ export class Hud {
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
     this.setLogOpen(false); // the log starts hidden; the Log button in the top bar opens it
     append(this.dock, this.prompt, this.hand);
-    append(root, this.top, this.plates, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal);
+    append(root, this.top, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { this.unpin(); this.closeModal(); }
     });
@@ -206,15 +209,46 @@ export class Hud {
     this.layout = layout;
     this.renderTop(view);
     this.renderPlates(view);
+    this.renderChips(view);
     this.renderChallenge(view);
     this.renderDock(view);
     if (view.winner && !this.modal.dataset['gameover']) this.showGameOver(view);
+  }
+
+  /** A number in the upper right of every hero and companion on the table: what it adds in the challenge's stat right now. */
+  private renderChips(v: GameView): void {
+    const keep = new Set<string>();
+    for (const p of v.players) {
+      if (!p.projection) continue;
+      for (const { card, value } of p.projection.contributions) {
+        keep.add(card);
+        let el = this.chipEls.get(card);
+        if (!el) {
+          el = h('span', {});
+          this.chips.appendChild(el);
+          this.chipEls.set(card, el);
+        }
+        el.className = `value-chip table-chip${value < 0 ? ' neg' : value === 0 ? ' zero' : ''}`;
+        el.title = `${STAT_NAMES[p.projection.stat]} ${value}`;
+        el.textContent = String(value);
+      }
+    }
+    for (const [id, el] of this.chipEls) if (!keep.has(id)) { el.remove(); this.chipEls.delete(id); }
   }
 
   /** Called every frame: keep plates glued to their 3D anchors, and on screen. */
   reposition(): void {
     if (!this.layout) return;
     const vw = window.innerWidth;
+    if (this.chipEls.size) {
+      for (const c of this.layout.cards) {
+        const el = this.chipEls.get(c.key);
+        if (!el) continue;
+        // The card's upper right corner (cards are 1 x 1.4 units, the top edge toward -z).
+        const p = this.deps.project(c.x + 0.5 * c.scale, 0, c.z - 0.7 * c.scale);
+        el.style.transform = `translate(${Math.round(p.x - 14)}px, ${Math.round(p.y - 14)}px)`;
+      }
+    }
     for (const seat of this.layout.seats) {
       const el = this.plateEls.get(seat.player);
       if (!el) continue;
@@ -737,6 +771,7 @@ export class Hud {
           council ? '★' : value > 0 ? `+${value}` : `${value}`));
       }
       const t = n > 1 ? (i - (n - 1) / 2) / ((n - 1) / 2) : 0;
+      b.style.setProperty('--z', String(n - i));
       b.classList.add('fan');
       b.style.setProperty('--fan', `${(t * maxTilt).toFixed(2)}deg`);
       b.style.setProperty('--fan-y', `${(t * t * maxTilt * 0.5).toFixed(1)}px`);
@@ -1349,14 +1384,14 @@ export class Hud {
   showResult(r: TurnResult, v: GameView): void {
     const rows = [...r.rows].sort((a, b) => b.total - a.total);
     replace(this.resultPanel,
-      h('h3', {}, r.winner ? `${nameOf(v, r.winner)} ${r.winner === v.you ? 'win' : 'wins'} the location!` : 'Nobody survived: the location is lost.'),
+      h('h3', {}, r.winner ? `${nameOf(v, r.winner)} ${r.winner === v.you ? 'win' : 'wins'} the location!` : r.tied ? `A tie: the location is lost, and ${r.tied.map((p) => nameOf(v, p)).join(' and ')} each draw a new one.` : 'Nobody survived: the location is lost.'),
       h('table', {},
         h('thead', {}, h('tr', {}, h('th', {}, 'Hero'), h('th', {}, STAT_NAMES[r.stat]), h('th', {}, 'Needed'), h('th', {}, ''))),
-        h('tbody', {}, ...rows.map((row) => h('tr', { class: row.player === r.winner ? 'win' : row.survived ? '' : 'fail' },
+        h('tbody', {}, ...rows.map((row) => h('tr', { class: row.player === r.winner || r.tied?.includes(row.player) ? 'win' : row.survived ? '' : 'fail' },
           h('td', {}, nameOf(v, row.player)),
           h('td', {}, String(row.total)),
           h('td', {}, String(row.difficulty)),
-          h('td', {}, row.player === r.winner ? '👑' : row.survived ? 'survived' : 'falls'))))),
+          h('td', {}, row.player === r.winner ? '👑' : r.tied?.includes(row.player) ? 'tied' : row.survived ? 'survived' : 'falls'))))),
     );
     this.resultPanel.classList.remove('hidden');
     setTimeout(() => this.resultPanel.classList.add('hidden'), 3000);

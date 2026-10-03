@@ -113,6 +113,8 @@ export interface TurnResult {
   winner: PlayerId | null;
   margin: number | null;
   locations: CardId[];
+  /** Survivors level on the highest total: the location is discarded and each draws a new one at random. */
+  tied?: PlayerId[];
   /** The winner took the location by a card effect (Mira) rather than by total. */
   byEffect?: string;
 }

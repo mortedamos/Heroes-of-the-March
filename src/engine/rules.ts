@@ -89,7 +89,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'no-survivors', topic: 'No survivors',
     ruling: 'If nobody survives, nobody claims the location and it is discarded.' },
   { id: 'ties', topic: 'Ties',
-    ruling: 'Tied winners each roll a die; the highest roll wins and ties re-roll. Tiebreak rolls never fire "when a N is rolled" triggers.' },
+    ruling: 'If survivors are level on the highest total, nobody takes the current location: it is discarded. Each tied player instead draws a location at random and claims it, scoring its Renown only. The abilities and conditions of that card do not trigger, and win triggers (such as Thorgar) do not fire. If the stack is empty, a tied player gets nothing.' },
   { id: 'fall-cost', topic: 'Falling',
     ruling: 'Falling costs no Renown. The new hero is drawn before the fallen one is shuffled back, so you never redraw the same hero.' },
   { id: 'fall-timing', topic: 'Fall timing',

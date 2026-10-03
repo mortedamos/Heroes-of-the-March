@@ -39,7 +39,11 @@ export interface PlayerPublicView {
   councilHeroes: CardRef[];
   statOverride: Stat | null;
   /** Total computed only from what the viewer can see. */
-  projection: { stat: Stat; total: number; difficulty: number; hiddenBids: number } | null;
+  projection: {
+    stat: Stat; total: number; difficulty: number; hiddenBids: number;
+    /** What each hero, companion and council hero adds in that stat right now. */
+    contributions: { card: CardId; value: number }[];
+  } | null;
 }
 
 export interface EffectView {
@@ -148,7 +152,10 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       bids: p.bids.map((b): BidView => (vis(p, b) ? { hidden: false, card: ref(b.card), faceUp: b.visible } : { hidden: true })),
       councilHeroes: p.councilHeroes.map(ref),
       statOverride: p.statOverride,
-      projection: tb && diff ? { stat: tb.stat, total: tb.total, difficulty: diff.total, hiddenBids: tb.hiddenBids } : null,
+      projection: tb && diff ? {
+        stat: tb.stat, total: tb.total, difficulty: diff.total, hiddenBids: tb.hiddenBids,
+        contributions: [{ card: p.hero, value: tb.hero }, ...tb.companions, ...tb.council].map((c) => ({ card: 'card' in c ? c.card : c.source, value: c.value })),
+      } : null,
     };
   });
 

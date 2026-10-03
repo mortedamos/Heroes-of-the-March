@@ -13,7 +13,7 @@ several are one-line toggles in `DEFAULT_RULES`.
 | 4 | Face-up bids | Playing a card face up counts as revealing it, so "when revealed" effects happen immediately. | |
 | 5 | Who faces the encounter | **Every** player is measured against the challenge, bid or not, so non-bidders can fall (the rules total "each player"). | `allPlayersFaceEncounter` |
 | 6 | No survivors | Nobody claims the location; it's discarded. | |
-| 7 | Ties | Tied winners roll off; ties re-roll. Tiebreak rolls never fire "when a N is rolled" triggers. | |
+| 7 | Ties | If survivors are level on the highest total, the location is discarded. Each tied player draws a location at random and claims it for its Renown only; its abilities and conditions do not trigger. | |
 | 8 | Falling | Costs no Renown. The new hero is drawn *before* the fallen one is shuffled back, so you never redraw the same hero. | |
 | 9 | Fall timing | Everyone who fails the encounter falls at the end of that turn, whoever's turn it is. Several players falling at once choose their replacements one after another. | |
 | 10 | Companion phase | Starting with the current player, each player may draw one companion, then keep it (replacing one at the limit) or discard it. | `companionPhase: 'everyone' \| 'activeOnly'` |

@@ -360,6 +360,27 @@ describe('silence, steal, negate, swap', () => {
     for (let i = 1; i < order.length; i++) expect(order[i]).not.toBe(order[i - 1]); // never the same player twice in a row
   });
 
+  it('a tie discards the location; each tied player draws and claims a new one with no effects', () => {
+    const g = newGame();
+    standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: [] });
+    onTop(g.s, 'encounter', ['iron-beetles']);
+    restart(g);
+    finishTurn(g);
+    const outcome = g.events.find((e) => e.type === 'outcome');
+    const res = outcome?.type === 'outcome' ? outcome.result : undefined;
+    expect(res?.winner).toBeNull();
+    expect(res?.tied).toHaveLength(2);
+    expect(g.s.discards.location).toContain(card(g, 'the-silverwood-hunt'));
+    // Each tied player holds one of the next locations (not the discarded one) and its Renown.
+    const a = player(g, g.A), b = player(g, g.B);
+    expect(a.claimed).toHaveLength(1);
+    expect(b.claimed).toHaveLength(1);
+    expect(a.claimed[0]).not.toBe(b.claimed[0]);
+    expect(a.renown).toBeGreaterThan(0);
+    expect(b.renown).toBeGreaterThan(0);
+    expect(g.events.some((e) => e.type === 'dieRolled' && e.reason === 'tiebreak')).toBe(false);
+  });
+
   it('An Apple for the Road swaps with another bid', () => {
     const g = newGame();
     standard(g, { hand: ['honey-biscuit', 'an-apple-for-the-road'] }, { hand: ['the-axe-of-doom'] });

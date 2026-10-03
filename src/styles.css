@@ -133,7 +133,9 @@ body.shape-tall .btn.ability, body.shape-short .btn.ability { white-space: norma
 .hand > :first-child { margin-left: auto; }
 .hand > :last-child { margin-right: auto; }
 /* The hand fans out from a point below the cards, so the ends tilt most and sink a little. */
-.hand > .card-btn:hover, .hand > .card-btn:focus-visible { z-index: 6; }
+/* Overlapping cards: the one on the left is on top of its right-hand neighbour (--z falls from left to right); hovering lifts a card clear. */
+.hand > .card-btn { z-index: var(--z, auto); }
+.hand > .card-btn:hover, .hand > .card-btn:focus-visible { z-index: 100; }
 .card-btn.fan { transform-origin: 50% 160%; transform: translateY(var(--fan-y, 0)) rotate(var(--fan, 0deg)); }
 body.shape-short .card-btn.fan { transform: none; }
 /* First companion phase: a big panel over the table, under the hover preview. */
@@ -194,6 +196,9 @@ body.shape-short .card-btn.fan { transform: none; }
   line-height: 1; border-radius: 50%; background: var(--gold); color: #1b1206; border: 2px solid #fff3cf;
   font-weight: bold; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
+/* The same chip on the table's hero and companion cards: placed by Hud.reposition. */
+.card-chips { position: fixed; inset: 0; z-index: 3; pointer-events: none; }
+.value-chip.table-chip { top: 0; left: 0; right: auto; width: 26px; height: 26px; font-size: 13px; will-change: transform; }
 .value-chip.zero { background: #6b6254; color: #e7dcc4; border-color: #b7aa8f; }
 .value-chip.neg { background: #b3372f; color: #fff; border-color: #ffd2c8; }
 .value-chip.council { background: #7a4fa0; color: #fff; border-color: #dcc5f2; }

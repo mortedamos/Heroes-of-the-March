@@ -44,7 +44,7 @@ export function describe(e: ClientEvent, view: GameView): string | null {
     case 'outcome': {
       const r = e.result;
       const parts = r.rows.map((row) => `${who(row.player)} ${row.total}${row.survived ? '' : ' ✗'}`);
-      return `Totals (${STAT_NAMES[r.stat]}): ${parts.join(', ')}. ${r.winner ? `${who(r.winner)} ${r.winner === view.you ? 'win' : 'wins'}!` : 'Nobody survives.'}`;
+      return `Totals (${STAT_NAMES[r.stat]}): ${parts.join(', ')}. ${r.winner ? `${who(r.winner)} ${r.winner === view.you ? 'win' : 'wins'}!` : r.tied ? `A tie between ${r.tied.map((p) => who(p)).join(' and ')}: the location is discarded and each draws a new one.` : 'Nobody survives.'}`;
     }
     case 'renownGained': return `${who(e.player)} ${e.player === view.you ? 'claim' : 'claims'} ${e.locations.map((l) => card(l.def)).join(' and ')} (+${e.amount} Renown, ${e.total} total).`;
     case 'fallPrevented': return `${e.source} saves ${e.player === view.you ? 'your' : `${who(e.player)}'s`} hero from falling.`;

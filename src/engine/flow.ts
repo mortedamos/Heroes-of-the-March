@@ -413,6 +413,8 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     const auto = activeEffects(ctx, 'autoWin').at(-1);
     let winner: string | null = null;
     let margin: number | null = null;
+    /** Survivors level on the highest total: nobody takes the location (see below). */
+    let tied: string[] = [];
     let byEffect: string | undefined;
     const survivors = rows.filter((r) => r.survived).sort((a, b) => b.total - a.total);
     if (auto) {
@@ -420,20 +422,18 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       byEffect = ctx.def(auto.source).name;
     } else if (survivors.length) {
       const best = survivors[0]!.total;
-      let tied = survivors.filter((r) => r.total === best).map((r) => r.player);
-      while (tied.length > 1) {
-        const rolls = tied.map((pid) => ({ pid, v: ctx.roll(pid, 'tiebreak') }));
-        const top = Math.max(...rolls.map((r) => r.v));
-        tied = rolls.filter((r) => r.v === top).map((r) => r.pid);
+      const top = survivors.filter((r) => r.total === best).map((r) => r.player);
+      if (top.length > 1) tied = top;
+      else {
+        winner = top[0]!;
+        const runnerUp = survivors.find((r) => r.player !== winner);
+        const w = survivors.find((r) => r.player === winner)!;
+        margin = runnerUp ? w.total - runnerUp.total : w.total - w.difficulty;
       }
-      winner = tied[0]!;
-      const runnerUp = survivors.find((r) => r.player !== winner);
-      const w = survivors.find((r) => r.player === winner)!;
-      margin = runnerUp ? w.total - runnerUp.total : w.total - w.difficulty;
     }
 
     const locations = t.location ? [t.location, ...(winner ? t.extraLocations : [])] : [];
-    const result: TurnResult = { stat: challengeStat(ctx, null) ?? 'P', rows, winner, margin, locations, ...(byEffect ? { byEffect } : {}) };
+    const result: TurnResult = { stat: challengeStat(ctx, null) ?? 'P', rows, winner, margin, locations, ...(tied.length ? { tied } : {}), ...(byEffect ? { byEffect } : {}) };
     t.result = result;
     ctx.emit({ type: 'outcome', result });
 
@@ -447,6 +447,21 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       t.location = null;
       t.extraLocations = [];
       ctx.emit({ type: 'renownGained', player: winner, amount: renown, total: wp.renown, locations: locations.map((c) => ctx.ref(c)) });
+    }
+
+    // A tie: the current location is discarded (turnEnd does it) and each tied player instead draws a location
+    // at random and claims it. Only the card's Renown counts: its abilities and conditions never trigger.
+    if (tied.length && t.location) {
+      for (const pid of tied) {
+        const prize = ctx.take('location');
+        if (!prize) continue;
+        const d = ctx.def(prize);
+        const renown = d.kind === 'location' ? d.renown : 0;
+        const tp = ctx.player(pid);
+        tp.claimed.push(prize);
+        tp.renown += renown;
+        ctx.emit({ type: 'renownGained', player: pid, amount: renown, total: tp.renown, locations: [ctx.ref(prize)] });
+      }
     }
 
     // Who would fall: everyone who failed, plus Mira's player (the price of her ability).
