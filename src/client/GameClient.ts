@@ -325,6 +325,10 @@ export class GameClient {
       this.soundFor(e, view);
       if (announced) continue;
       switch (e.type) {
+        case 'locationRevealed':
+          // A new round: the music moves on to the next track (the first round keeps the one it opened with).
+          if (e.reason === 'Turn' && view.turn.number > 1) music.nextRound();
+          break;
         case 'turnStarted':
           this.die.hide();
           // Other players' turns show in the top bar and on their plate; yours gets a banner.

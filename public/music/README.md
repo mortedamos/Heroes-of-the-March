@@ -6,5 +6,6 @@ will be public once the game is on GitHub Pages.
 - `title.mp3` loops on the title screen.
 - `hero_selection.mp3` loops on the hero draft and the opening companion draft.
 - When the normal rounds begin, the game starts on a random track from
-  `TRACKS` in `src/client/audio/Music.ts` and plays that list in order,
-  looping. Add a new playlist file's name to that list.
+  `TRACKS` in `src/client/audio/Music.ts`. A track loops until the next round
+  (the next location is revealed); then the next track in the list plays.
+  Add a new playlist file's name to that list.

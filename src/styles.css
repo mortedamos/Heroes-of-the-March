@@ -453,6 +453,13 @@ body.shape-short .notices { left: calc((100vw - var(--dock-w)) / 2); width: min(
   .setup { padding-bottom: 34px; } /* room for the build stamp under the form */
   .setup .setup-card { margin: auto auto 0; }
 }
+/* An illuminated-manuscript border: gold scrollwork on a dark margin (ui/titleFrame.ts), above the picture and its fog. */
+.setup::before {
+  content: ''; position: fixed; inset: 6px; z-index: 2; pointer-events: none;
+  border: clamp(34px, 6vmin, 62px) solid transparent;
+  border-image: var(--title-frame) 64 / clamp(34px, 6vmin, 62px) round;
+  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.7));
+}
 .setup-card {
   margin: auto; width: min(440px, 100%); padding: 28px 30px; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px;
   box-shadow: 0 24px 70px rgba(0,0,0,0.75); display: flex; flex-direction: column; gap: 14px;

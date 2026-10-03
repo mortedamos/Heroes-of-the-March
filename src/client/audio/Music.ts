@@ -1,5 +1,6 @@
 import { inFocus, onFocusChange } from './focus';
-// Background music: a random track first, then the playlist in order, looping.
+// Background music: a random track first; each new round (a new location) moves to the next track in the playlist,
+// and a track loops until then.
 // Browsers only allow audio after a user gesture, so playback starts on the
 // first click, tap or key press. Volume and mute are remembered per browser.
 
@@ -10,7 +11,7 @@ const TITLE_TRACK = 'title.mp3';
 /** Plays on the hero draft and the opening companion draft. */
 const OPENING_TRACK = 'hero_selection.mp3';
 
-/** 'title' and 'opening' loop their own track; 'rounds' plays the playlist. */
+/** 'title' and 'opening' loop their own track; 'rounds' loops one playlist track per round. */
 export type MusicMode = 'title' | 'opening' | 'rounds';
 const FIXED_TRACK: Record<'title' | 'opening', string> = { title: TITLE_TRACK, opening: OPENING_TRACK };
 /** How long the hero-selection music takes to fade out, and the next track to fade in (ms). */
@@ -52,7 +53,7 @@ class MusicPlayer {
     this.volume = p.volume;
     this.muted = p.muted;
     this.audio.preload = 'auto';
-    this.audio.loop = true; // the title and opening tracks loop; the playlist turns this off
+    this.audio.loop = true; // every track loops until the game moves on (a new round for the playlist)
     this.applyVolume();
     this.audio.addEventListener('ended', () => this.next(1, true));
     this.audio.addEventListener('play', () => this.set({ playing: true }));
@@ -85,7 +86,20 @@ class MusicPlayer {
     const change = (): void => {
       this.mode = mode;
       if (mode === 'rounds') this.index = Math.floor(Math.random() * TRACKS.length);
-      this.audio.loop = mode !== 'rounds';
+      this.audio.loop = true;
+      this.load();
+      if (this.started) this.play();
+      this.emit();
+    };
+    if (!this.started || this.audio.paused) { this.changeId++; this.fadeLevel = 1; this.applyVolume(); change(); return; }
+    void this.fadeChange(change);
+  }
+
+  /** A new round has begun (a new location): the playlist moves on to its next track, with a fade. */
+  nextRound(): void {
+    if (this.mode !== 'rounds') return;
+    const change = (): void => {
+      this.index = (this.index + 1) % TRACKS.length;
       this.load();
       if (this.started) this.play();
       this.emit();
@@ -148,7 +162,7 @@ class MusicPlayer {
 
   next(step = 1, gentle = false): void {
     this.changeId++;
-    if (this.mode !== 'rounds') { this.mode = 'rounds'; this.audio.loop = false; }
+    if (this.mode !== 'rounds') this.mode = 'rounds';
     this.index = (this.index + step + TRACKS.length) % TRACKS.length;
     this.load();
     if (gentle) { this.fadeLevel = 0; this.applyVolume(); }

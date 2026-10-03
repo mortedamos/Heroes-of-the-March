@@ -29,7 +29,7 @@
     "Warden"
    ],
    "quote": "“The mountain's had two goes at me. It can wait its turn like everyone else.”",
-   "art": "units__foehammer_1",
+   "art": "portraits__thorgar_neutral",
    "stats": {
     "P": 6,
     "M": 6,
@@ -88,7 +88,7 @@
     "Warden"
    ],
    "quote": "“I never take anything. Things just find their way to me.”",
-   "art": "units__wanderer_2",
+   "art": "portraits__pip_neutral",
    "stats": {
     "P": 5,
     "M": 8,
@@ -207,7 +207,7 @@
     "Warden"
    ],
    "quote": "“The bog raised me for ten years and Kingsford for ten more. Neither of them will admit it.”",
-   "art": "units__wolf_rider_2",
+   "art": "portraits__hesk_neutral",
    "stats": {
     "P": 8,
     "M": 7,
