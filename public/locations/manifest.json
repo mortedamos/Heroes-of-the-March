@@ -1,1 +1,42 @@
-{}
+{
+  "tavern": {
+    "sky": "tavern_sky.webp",
+    "fog": "#372724"
+  },
+  "harbor": {
+    "sky": "harbor_sky.webp",
+    "fog": "#52626c"
+  },
+  "snow": {
+    "sky": "snow_sky.webp",
+    "fog": "#4b6582"
+  },
+  "crypt": {
+    "sky": "crypt_sky.webp",
+    "fog": "#24332f"
+  },
+  "forge": {
+    "sky": "forge_sky.webp",
+    "fog": "#60291e"
+  },
+  "forest": {
+    "sky": "forest_sky.webp",
+    "fog": "#2a342f"
+  },
+  "fortress": {
+    "sky": "fortress_sky.webp",
+    "fog": "#53565c"
+  },
+  "archive": {
+    "sky": "archive_sky.webp",
+    "fog": "#352532"
+  },
+  "plains": {
+    "sky": "plains_sky.webp",
+    "fog": "#594532"
+  },
+  "sky": {
+    "sky": "sky_sky.webp",
+    "fog": "#9a9fb2"
+  }
+}
