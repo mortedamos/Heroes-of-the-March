@@ -34,6 +34,8 @@ export class TableScene {
   private readonly view = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
   private readonly want = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
   private lastFrame = 0;
+  /** The fitted play camera of the compact (phone) layouts, kept so the establishing shot can lift from it. */
+  private fitPose: { pos: THREE.Vector3; target: THREE.Vector3; fov: number; dist: number; ox: number; oy: number; w: number; h: number } | null = null;
   private readonly shotOwner = {};
 
   constructor(private readonly container: HTMLElement) {
@@ -212,7 +214,7 @@ export class TableScene {
    * place (towers, flags, sky) and stays there until `swingBack`. Skipped for reduced motion and the portrait layout.
    */
   async swingOut(): Promise<void> {
-    if (this.shape !== 'wide' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     document.body.classList.add('establishing');
     const s0 = this.shot;
     await this.tweens.add(1500, (k) => this.setShot(s0 + (1 - s0) * k), { owner: this.shotOwner });
@@ -228,8 +230,8 @@ export class TableScene {
 
   private setShot(k: number): void {
     this.shot = k;
-    if (this.shape !== 'wide' || !this.frame) return;
-    this.environment.setCameraDistance(this.poseWide());
+    if (!this.frame) return;
+    this.environment.setCameraDistance(this.shape === 'wide' ? this.poseWide() : this.poseFit());
   }
 
   /**
@@ -269,8 +271,28 @@ export class TableScene {
       else lo = mid;
     }
     const b = place(hi);
-    cam.setViewOffset(w, h, (b.left + b.right) / 2 - w / 2, (b.top + b.bottom) / 2 - h / 2, w, h);
-    return hi;
+    const ox = (b.left + b.right) / 2 - w / 2;
+    const oy = (b.top + b.bottom) / 2 - h / 2;
+    cam.setViewOffset(w, h, ox, oy, w, h);
+    this.fitPose = { pos: cam.position.clone(), target: new THREE.Vector3(cx, 0, cz), fov: cam.fov, dist: hi, ox, oy, w, h };
+    return this.shot > 0 ? this.poseFit() : hi;
+  }
+
+  /** The compact layouts' version of the establishing shot: from the fitted camera to a low look down the table. Returns the distance. */
+  private poseFit(): number {
+    const f = this.fitPose;
+    if (!f) return 21;
+    const e = this.shot * this.shot * (3 - 2 * this.shot);
+    const L = THREE.MathUtils.lerp;
+    const cam = this.camera;
+    const low = new THREE.Vector3(f.target.x, 2.6, f.target.z + f.dist * 0.55 + 3);
+    const aim = new THREE.Vector3(f.target.x, 3.4, f.target.z - 14);
+    cam.position.lerpVectors(f.pos, low, e);
+    cam.lookAt(new THREE.Vector3().lerpVectors(f.target, aim, e));
+    cam.fov = L(f.fov, 62, e);
+    cam.setViewOffset(f.w, f.h, f.ox * (1 - e), f.oy * (1 - e), f.w, f.h);
+    cam.updateProjectionMatrix();
+    return L(f.dist, f.dist * 0.55 + 8, e);
   }
 
   /** First intersected object among `objects` under a client-space point. */
