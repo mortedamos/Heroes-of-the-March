@@ -412,7 +412,7 @@ body.notice-open .dock { pointer-events: none; opacity: 0.55; }
 body.shape-short .notices { left: calc((100vw - var(--dock-w)) / 2); width: min(420px, calc(100vw - var(--dock-w) - 16px)); }
 
 .result {
-  position: fixed; left: 50%; top: 30%; transform: translateX(-50%); min-width: min(320px, calc(100vw - 24px)); padding: 14px 18px;
+  position: fixed; z-index: 5; left: 50%; top: 30%; transform: translateX(-50%); min-width: min(320px, calc(100vw - 24px)); padding: 14px 18px;
   background: rgba(20, 14, 8, 0.94); border: 1px solid var(--gold); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.7);
   animation: banner-in 0.3s ease-out;
 }
