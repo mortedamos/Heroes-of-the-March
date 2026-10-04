@@ -338,7 +338,7 @@ export class GameClient {
       switch (e.type) {
         case 'locationRevealed':
           // A new round: the music moves on to the next track (the first round keeps the one it opened with).
-          if (e.reason === 'Turn' && view.turn.number > 1) music.nextRound();
+          music.locationRevealed(e.card.def, e.reason === 'Turn' && view.turn.number > 1);
           break;
         case 'turnStarted':
           // Other players' turns show in the top bar and on their plate; yours gets a banner.

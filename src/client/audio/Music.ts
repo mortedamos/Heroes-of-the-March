@@ -1,6 +1,7 @@
 import { inFocus, onFocusChange } from './focus';
-// Background music: a random track first; each new round (a new location) moves to the next track in the playlist,
-// and a track loops until then.
+// Background music: a random neutral track first. When a location is revealed, its own track plays if there is one
+// (public/music/locations/<location-id>.mp3, listed in public/music/manifest.json); otherwise the next neutral track plays.
+// A track loops until the next location.
 // Browsers only allow audio after a user gesture, so playback starts on the
 // first click, tap or key press. Volume and mute are remembered per browser.
 
@@ -34,6 +35,11 @@ class MusicPlayer {
   private readonly audio = new Audio();
   private readonly listeners = new Set<Listener>();
   private index = Math.floor(Math.random() * TRACKS.length);
+  /** Location tracks that exist, by location id (from public/music/manifest.json). */
+  private locationFiles: Record<string, string> = {};
+  /** The location now on the table, and the file it is playing (null: a neutral track is playing). */
+  private location: string | null = null;
+  private locationFile: string | null = null;
   private started = false;
   /** What is playing: the title track, the hero-selection track, or the playlist of the normal rounds. */
   private mode: MusicMode = 'title';
@@ -56,6 +62,7 @@ class MusicPlayer {
     this.audio.loop = true; // every track loops until the game moves on (a new round for the playlist)
     this.applyVolume();
     this.audio.addEventListener('ended', () => this.next(1, true));
+    void this.loadManifest();
     this.audio.addEventListener('play', () => this.set({ playing: true }));
     this.audio.addEventListener('pause', () => this.set({ playing: false }));
     // Silence the music while the page is in the background, and pick it up again on return.
@@ -69,10 +76,20 @@ class MusicPlayer {
     });
   }
 
-  private get file(): string { return this.mode === 'rounds' ? TRACKS[this.index]! : FIXED_TRACK[this.mode]; }
-  get track(): string { return this.file.replace(/\.mp3$/, '').replace(/_/g, ' '); }
-  /** Position in the playlist, or null during the title and hero-selection tracks. */
-  get trackNumber(): [number, number] | null { return this.mode === 'rounds' ? [this.index + 1, TRACKS.length] : null; }
+  private async loadManifest(): Promise<void> {
+    try {
+      const res = await fetch(`${import.meta.env.BASE_URL}music/manifest.json`);
+      if (res.ok) this.locationFiles = ((await res.json()) as { locations?: Record<string, string> }).locations ?? {};
+    } catch { /* no manifest: neutral music only */ }
+  }
+
+  private get file(): string {
+    if (this.mode !== 'rounds') return FIXED_TRACK[this.mode];
+    return this.locationFile ?? TRACKS[this.index]!;
+  }
+  get track(): string { return this.file.replace(/^.*\//, '').replace(/\.[a-z0-9]+$/i, '').replace(/[_-]/g, ' '); }
+  /** Position in the neutral playlist, or null for the title, hero-selection and location tracks. */
+  get trackNumber(): [number, number] | null { return this.mode === 'rounds' && !this.locationFile ? [this.index + 1, TRACKS.length] : null; }
 
   /**
    * The title screen plays the title track; the hero draft and opening companion
@@ -85,7 +102,10 @@ class MusicPlayer {
     if (mode === this.mode) return;
     const change = (): void => {
       this.mode = mode;
-      if (mode === 'rounds') this.index = Math.floor(Math.random() * TRACKS.length);
+      if (mode === 'rounds') {
+        this.index = Math.floor(Math.random() * TRACKS.length);
+        this.locationFile = this.location ? this.locationFiles[this.location] ?? null : null;
+      }
       this.audio.loop = true;
       this.load();
       if (this.started) this.play();
@@ -95,11 +115,19 @@ class MusicPlayer {
     void this.fadeChange(change);
   }
 
-  /** A new round has begun (a new location): the playlist moves on to its next track, with a fade. */
-  nextRound(): void {
-    if (this.mode !== 'rounds') return;
+  /**
+   * A location was revealed. Its own track plays if it has one; otherwise a neutral track does
+   * (`advance`: move on to the next neutral track even if one is already playing, as each new round does).
+   */
+  locationRevealed(def: string, advance: boolean): void {
+    this.location = def;
+    if (this.mode !== 'rounds') return; // applied when the rounds begin
+    const own = this.locationFiles[def] ?? null;
+    if (own && own === this.locationFile) return;
+    if (!own && !this.locationFile && !advance) return;
     const change = (): void => {
-      this.index = (this.index + 1) % TRACKS.length;
+      this.locationFile = own;
+      if (!own) this.index = (this.index + 1) % TRACKS.length;
       this.load();
       if (this.started) this.play();
       this.emit();
@@ -148,7 +176,7 @@ class MusicPlayer {
   }
 
   private load(): void {
-    this.audio.src = `${import.meta.env.BASE_URL}music/${encodeURIComponent(this.file)}`;
+    this.audio.src = `${import.meta.env.BASE_URL}music/${this.file.split('/').map(encodeURIComponent).join('/')}`;
   }
 
   play(): void {
@@ -163,6 +191,7 @@ class MusicPlayer {
   next(step = 1, gentle = false): void {
     this.changeId++;
     if (this.mode !== 'rounds') this.mode = 'rounds';
+    this.locationFile = null; // skipping goes to the neutral playlist
     this.index = (this.index + step + TRACKS.length) % TRACKS.length;
     this.load();
     if (gentle) { this.fadeLevel = 0; this.applyVolume(); }

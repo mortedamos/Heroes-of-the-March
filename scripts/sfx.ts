@@ -1,8 +1,9 @@
-// Sound-effect tracker.
+// Sound-effect and location-music tracker.
 //   npm run sfx
 // Looks at public/sounds, compares it with data/sfx-catalog.json and writes:
 //   public/sounds/manifest.json   what the game may load (no entry = no request = no 404)
 //   docs/SFX-TRACKER.md           what you have and what you still need (markdown)
+//   public/music/manifest.json    which location tracks exist (no entry = neutral music plays, no request, no 404)
 //   tools/sfx-data.js             the same data for tools/sfx-tracker.html (open it in a browser to see and play your sounds)
 //
 // A sound is `name.mp3` or up to three variants `name_1.mp3`, `name_2.mp3`, `name_3.mp3`
@@ -11,11 +12,13 @@
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { themeFor } from '../src/client/render/env/themes.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 const DIR = join(root, 'public', 'sounds');
 const MAX_VARIANTS = 3;
+const MUSIC_DIR = join(root, 'public', 'music', 'locations');
 const EXT = /\.(mp3|ogg|wav|webm)$/i;
 
 interface Entry { name: string; group: string; length: string; priority: boolean; wired: boolean; plays: string; search: string }
@@ -46,13 +49,40 @@ for (const c of catalog) {
   const list = found.get(c.name);
   if (list) manifest[c.name] = list.sort((a, b) => a.n - b.n).slice(0, MAX_VARIANTS).map((x) => x.file);
 }
+
+// --- location music: public/music/locations/<location-id>.mp3 ----------------------
+const MOOD: Record<string, string> = {
+  felt: 'fantasy tavern-table ambience',
+  tavern: 'cosy medieval tavern, lute and fiddle, warm folk',
+  harbor: 'misty harbour, low strings, sea shanty undertone, melancholy',
+  snow: 'arctic winter, sparse piano and choir pads, cold wind',
+  crypt: 'dark ambient crypt, eerie choir, low drones, dread',
+  forge: 'dwarven forge, heavy percussion, anvil rhythm, brass',
+  forest: 'enchanted forest, flutes, harp, gentle mystery',
+  fortress: 'noble castle, stately brass and strings, heroic march',
+  archive: 'candlelit library, harpsichord and soft strings, scholarly mystery',
+  plains: 'pastoral road, acoustic guitar, whistle, golden-hour journey',
+  sky: 'airship voyage, soaring strings, adventurous wonder',
+};
+const locations = (JSON.parse(readFileSync(join(root, 'src', 'data', 'cards.json'), 'utf8')) as { locations: { id: string; name: string }[] }).locations;
+const locIds = new Set(locations.map((l) => l.id));
+const musicFiles = readdirSync(MUSIC_DIR, { withFileTypes: true }).filter((f) => f.isFile() && EXT.test(f.name)).map((f) => f.name).sort();
+const musicManifest: Record<string, string> = {};
+const musicUnknown: string[] = [];
+for (const f of musicFiles) {
+  const id = f.replace(EXT, '').replace(/_/g, '-').toLowerCase();
+  if (locIds.has(id)) musicManifest[id] ??= `locations/${f}`; else musicUnknown.push(f);
+}
+const music = locations.map((l) => ({ id: l.id, name: l.name, theme: themeFor(l.id), mood: MOOD[themeFor(l.id)] ?? '', have: Boolean(musicManifest[l.id]) }));
+writeFileSync(join(root, 'public', 'music', 'manifest.json'), `${JSON.stringify({ locations: musicManifest }, null, 2)}\n`);
+
 // tools/ and docs/ are not in the repository (they are git-ignored), so a fresh checkout, such as
 // the one the deploy workflow builds from, does not have them yet.
 mkdirSync(join(root, 'tools'), { recursive: true });
 mkdirSync(join(root, 'docs'), { recursive: true });
 writeFileSync(join(DIR, 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 // A plain script (not JSON) so tools/sfx-tracker.html also works when opened straight from disk.
-writeFileSync(join(root, 'tools', 'sfx-data.js'), `window.SFX = ${JSON.stringify({ maxVariants: MAX_VARIANTS, catalog, manifest, unknown, extra })};\n`);
+writeFileSync(join(root, 'tools', 'sfx-data.js'), `window.SFX = ${JSON.stringify({ maxVariants: MAX_VARIANTS, catalog, manifest, unknown, extra, music, musicUnknown })};\n`);
 
 // --- the tracker ---------------------------------------------------------------
 const have = catalog.filter((c) => manifest[c.name]);
@@ -79,8 +109,20 @@ md += missingPriority.length ? missingPriority.map((c) => `- \`${c.name}\`: ${c.
 md += '\n';
 if (unknown.length) md += `\n## Files not in the catalog\n\n${unknown.map((f) => `- \`${f}\` (rename it, or add it to \`data/sfx-catalog.json\`)`).join('\n')}\n`;
 if (extra.length) md += `\n## Ignored: more than ${MAX_VARIANTS} variants\n\n${extra.map((f) => `- \`${f}\``).join('\n')}\n`;
+
+md += '\n# Location music\n\n';
+md += `_Each location can have its own track: \`public/music/locations/<location-id>.mp3\`. It loops while that location is on the table. A location without a track plays the next neutral track instead (\`neutral_music_*.mp3\`). A missing file is never requested, so there is no error._\n\n`;
+md += `**${music.filter((m) => m.have).length} of ${music.length}** locations have their own track.\n\n`;
+for (const theme of [...new Set(music.map((m) => m.theme))]) {
+  md += `## ${theme}: ${MOOD[theme] ?? ''}\n\n| Location | File name | Status |\n|---|---|---|\n`;
+  for (const m of music.filter((x) => x.theme === theme)) md += `| ${m.name} | \`${m.id}.mp3\` | ${m.have ? '✅' : '❌ neutral'} |\n`;
+  md += '\n';
+}
+if (musicUnknown.length) md += `## Music files that match no location\n\n${musicUnknown.map((f) => `- \`${f}\` (rename it to a location id)`).join('\n')}\n`;
 writeFileSync(join(root, 'docs', 'SFX-TRACKER.md'), md);
 
+console.log(`music: ${music.filter((m) => m.have).length}/${music.length} locations have their own track`);
+if (musicUnknown.length) console.log(`  music files matching no location: ${musicUnknown.join(', ')}`);
 console.log(`sfx: ${have.length}/${catalog.length} present (${priority.filter((c) => manifest[c.name]).length}/${priority.length} priority). Wrote manifest.json, docs/SFX-TRACKER.md and tools/sfx-data.js`);
 if (unknown.length) console.log(`  not in the catalog: ${unknown.join(', ')}`);
 if (extra.length) console.log(`  ignored (over ${MAX_VARIANTS} variants): ${extra.join(', ')}`);
