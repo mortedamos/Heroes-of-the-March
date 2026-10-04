@@ -312,6 +312,8 @@ export class GameClient {
     this.afflictions = afflictionsOf(view);
     this.board.setAfflicted(new Set(this.afflictions.keys()));
     this.scene.setView(this.board.layout!.shape, this.board.layout!.frame);
+    // The table takes on the look of the place being contested.
+    this.scene.environment.setLocation(view.turn.location?.def);
     const opening = view.turn.number === 0 || (view.turn.number === 1 && (view.turn.step === 'turnStart' || view.turn.step === 'companions' || view.turn.step === 'draft'));
     if (opening !== this.openingMusic) {
       this.openingMusic = opening;

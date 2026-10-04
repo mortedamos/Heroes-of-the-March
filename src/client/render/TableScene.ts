@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import type { Frame, Shape } from './layout';
 import { Tweens } from './tween';
+import { Environment } from './env/Environment';
 
 /** The landscape table (world units). Portrait gets a narrower, deeper one. */
 const WIDE_TABLE = { w: 19, d: 12.6, cz: 0 };
@@ -18,12 +19,15 @@ export class TableScene {
   readonly maxAnisotropy: number;
   private readonly raycaster = new THREE.Raycaster();
   private readonly frameHooks = new Set<(now: number) => void>();
-  private readonly table = new THREE.Group();
-  private felt: THREE.CanvasTexture | null = null;
-  private tableKey = '';
+  /** The place the table sits in: surface, ground, scenery, weather and light for the current location. */
+  readonly environment: Environment;
   private shape: Shape = 'wide';
   private frame: Frame | null = null;
   private disposed = false;
+  /** 0 = the play camera, 1 = the establishing view toward the horizon. */
+  private shot = 0;
+  private shotId = 0;
+  private readonly shotOwner = {};
 
   constructor(private readonly container: HTMLElement) {
     // Phones and tablets: a smaller shadow map is cheaper on the GPU and battery.
@@ -39,16 +43,11 @@ export class TableScene {
     container.appendChild(this.renderer.domElement);
     this.renderer.domElement.classList.add('table-canvas');
 
-    this.scene.background = new THREE.Color('#15110d');
-    this.scene.fog = new THREE.Fog('#15110d', 24, 42);
-
-    this.buildLights(coarse ? 1024 : 2048);
-    this.scene.add(this.table);
-    this.buildTable(WIDE_TABLE);
-    const floor = new THREE.Mesh(new THREE.PlaneGeometry(120, 120), new THREE.MeshStandardMaterial({ color: '#0f0b08', roughness: 1 }));
-    floor.rotation.x = -Math.PI / 2;
-    floor.position.y = -3;
-    this.scene.add(floor);
+    const lights = this.buildLights(coarse ? 1024 : 2048);
+    this.environment = new Environment(this.scene, lights, this.renderer, this.maxAnisotropy, coarse);
+    this.environment.setTable(WIDE_TABLE.w, WIDE_TABLE.d, WIDE_TABLE.cz);
+    this.environment.onThemeChange = () => this.establish();
+    if (import.meta.env.DEV) (window as unknown as { __table: TableScene }).__table = this;
 
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(container);
@@ -58,6 +57,7 @@ export class TableScene {
       if (this.disposed) return;
       this.tweens.tick(now);
       this.driftLight(now);
+      this.environment.update(now);
       for (const f of this.frameHooks) f(now);
       this.renderer.render(this.scene, this.camera);
       requestAnimationFrame(loop);
@@ -77,8 +77,9 @@ export class TableScene {
     return () => this.frameHooks.delete(fn);
   }
 
-  private buildLights(shadowSize: number): void {
-    this.scene.add(new THREE.HemisphereLight('#fff4e0', '#2a1c10', 0.9));
+  private buildLights(shadowSize: number): { hemi: THREE.HemisphereLight; key: THREE.DirectionalLight; warm: THREE.PointLight } {
+    const hemi = new THREE.HemisphereLight('#fff4e0', '#2a1c10', 0.9);
+    this.scene.add(hemi);
     const key = this.keyLight;
     key.position.copy(this.keyBase);
     key.castShadow = true;
@@ -91,80 +92,7 @@ export class TableScene {
     const warm = new THREE.PointLight('#ffb466', 30, 30, 1.6);
     warm.position.set(0, 6, 1);
     this.scene.add(warm);
-  }
-
-  private feltTexture(): THREE.CanvasTexture {
-    if (this.felt) return this.felt;
-    // Felt surface: procedural noise so it isn't a flat colour.
-    const c = document.createElement('canvas');
-    c.width = c.height = 512;
-    const g = c.getContext('2d')!;
-    g.fillStyle = '#23483e';
-    g.fillRect(0, 0, 512, 512);
-    const img = g.getImageData(0, 0, 512, 512);
-    for (let i = 0; i < img.data.length; i += 4) {
-      const n = (Math.random() - 0.5) * 18;
-      img.data[i] = Math.max(0, img.data[i]! + n);
-      img.data[i + 1] = Math.max(0, img.data[i + 1]! + n);
-      img.data[i + 2] = Math.max(0, img.data[i + 2]! + n);
-    }
-    g.putImageData(img, 0, 0);
-    const felt = new THREE.CanvasTexture(c);
-    felt.colorSpace = THREE.SRGBColorSpace;
-    felt.wrapS = felt.wrapT = THREE.RepeatWrapping;
-    felt.repeat.set(6, 4);
-    felt.anisotropy = this.maxAnisotropy;
-    this.felt = felt;
-    return felt;
-  }
-
-  /** (Re)build the felt and rim at `w` x `d`, centred on z = `cz`. */
-  private buildTable({ w, d, cz }: { w: number; d: number; cz: number }): void {
-    const key = `${w.toFixed(2)}:${d.toFixed(2)}:${cz.toFixed(2)}`;
-    if (key === this.tableKey) return;
-    this.tableKey = key;
-    for (const o of [...this.table.children]) {
-      const m = o as THREE.Mesh;
-      m.geometry.dispose();
-      (m.material as THREE.Material).dispose();
-      this.table.remove(o);
-    }
-    this.table.position.z = cz;
-    const felt = this.feltTexture();
-
-    const r = 2.8;
-    const shape = new THREE.Shape();
-    shape.moveTo(-w / 2 + r, -d / 2);
-    shape.lineTo(w / 2 - r, -d / 2);
-    shape.quadraticCurveTo(w / 2, -d / 2, w / 2, -d / 2 + r);
-    shape.lineTo(w / 2, d / 2 - r);
-    shape.quadraticCurveTo(w / 2, d / 2, w / 2 - r, d / 2);
-    shape.lineTo(-w / 2 + r, d / 2);
-    shape.quadraticCurveTo(-w / 2, d / 2, -w / 2, d / 2 - r);
-    shape.lineTo(-w / 2, -d / 2 + r);
-    shape.quadraticCurveTo(-w / 2, -d / 2, -w / 2 + r, -d / 2);
-
-    const top = new THREE.Mesh(
-      new THREE.ShapeGeometry(shape, 24),
-      new THREE.MeshStandardMaterial({ map: felt, roughness: 0.95, metalness: 0 }),
-    );
-    top.rotation.x = -Math.PI / 2;
-    top.receiveShadow = true;
-    this.table.add(top);
-
-    // Wooden rim.
-    const rimShape = shape.clone();
-    const inner = new THREE.Path(shape.getPoints(48).map((p) => p.clone().multiplyScalar(0.965)).reverse());
-    rimShape.holes.push(inner);
-    const rim = new THREE.Mesh(
-      new THREE.ExtrudeGeometry(rimShape, { depth: 0.35, bevelEnabled: true, bevelSize: 0.08, bevelThickness: 0.08, bevelSegments: 3, curveSegments: 24 }),
-      new THREE.MeshStandardMaterial({ color: '#5b3a1f', roughness: 0.55, metalness: 0.05 }),
-    );
-    rim.rotation.x = -Math.PI / 2;
-    rim.position.y = -0.02;
-    rim.castShadow = true;
-    rim.receiveShadow = true;
-    this.table.add(rim);
+    return { hemi, key, warm };
   }
 
   /** Switch to a screen shape and the table area it should show. */
@@ -172,9 +100,10 @@ export class TableScene {
     if (shape === this.shape && JSON.stringify(frame) === JSON.stringify(this.frame)) return;
     this.shape = shape;
     this.frame = frame;
-    this.buildTable(shape === 'tall'
+    const t = shape === 'tall'
       ? { w: frame.maxX - frame.minX + 1.2, d: frame.maxZ - frame.minZ + 1.2, cz: (frame.minZ + frame.maxZ) / 2 }
-      : WIDE_TABLE);
+      : WIDE_TABLE;
+    this.environment.setTable(t.w, t.d, t.cz);
     this.resize();
   }
 
@@ -185,21 +114,51 @@ export class TableScene {
     this.camera.aspect = w / h;
     this.camera.clearViewOffset();
     let dist: number;
-    if (this.shape === 'wide' || !this.frame) {
-      // Frame the play area (about 16 x 11 units): back off on narrow screens.
-      dist = Math.max(12.8, 21.5 / Math.max(0.55, this.camera.aspect));
-      const angle = THREE.MathUtils.degToRad(56);
-      this.camera.position.set(0, Math.sin(angle) * dist, Math.cos(angle) * dist + 0.6);
-      // Aim low so the play area sits above the HTML dock at the bottom of the screen.
-      this.camera.lookAt(0, 0, 1.25);
-      this.camera.updateProjectionMatrix();
-    } else {
-      dist = this.fit(this.frame, w, h);
-    }
+    if (this.shape === 'wide' || !this.frame) dist = this.poseWide();
+    else dist = this.fit(this.frame, w, h);
     // Keep the fog behind the table however far back the camera sits.
-    const fog = this.scene.fog as THREE.Fog;
-    fog.near = dist + 11;
-    fog.far = dist + 29;
+    this.environment.setCameraDistance(dist);
+  }
+
+  /** The play camera, lifted by `shot` toward a low look across the table at its surroundings. Returns the camera distance. */
+  private poseWide(): number {
+    const e = this.shot * this.shot * (3 - 2 * this.shot);
+    const L = THREE.MathUtils.lerp;
+    // Frame the play area (about 16 x 11 units): back off on narrow screens.
+    const dist = Math.max(12.8, 21.5 / Math.max(0.55, this.camera.aspect));
+    const angle = THREE.MathUtils.degToRad(56);
+    this.camera.position.set(0, L(Math.sin(angle) * dist, 2.4, e), L(Math.cos(angle) * dist + 0.6, dist * 1.2 + 2, e));
+    // Aim low so the play area sits above the HTML dock at the bottom of the screen.
+    this.camera.lookAt(0, L(0, 3.4, e), L(1.25, -12, e));
+    this.camera.fov = L(40, 54, e);
+    this.camera.updateProjectionMatrix();
+    return L(dist, dist * 1.2 + 8, e);
+  }
+
+  /**
+   * An establishing shot: when the table moves to a new place the camera swings
+   * low to show the surroundings (towers, flags, sky), holds, and settles back.
+   */
+  establish(): void {
+    if (this.shape !== 'wide' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const id = ++this.shotId;
+    document.body.classList.add('establishing');
+    const s0 = this.shot;
+    const run = async () => {
+      await this.tweens.add(1500, (k) => this.setShot(s0 + (1 - s0) * k), { owner: this.shotOwner });
+      if (id !== this.shotId) return;
+      await this.tweens.add(1500, () => {}, { owner: this.shotOwner });
+      if (id !== this.shotId) return;
+      await this.tweens.add(1300, (k) => this.setShot(1 - k), { owner: this.shotOwner });
+      if (id === this.shotId) document.body.classList.remove('establishing');
+    };
+    void run();
+  }
+
+  private setShot(k: number): void {
+    this.shot = k;
+    if (this.shape !== 'wide' || !this.frame) return;
+    this.environment.setCameraDistance(this.poseWide());
   }
 
   /**
@@ -269,6 +228,8 @@ export class TableScene {
 
   dispose(): void {
     this.disposed = true;
+    document.body.classList.remove('establishing');
+    this.environment.dispose();
     this.scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh) return;

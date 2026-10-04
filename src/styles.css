@@ -675,3 +675,8 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 .rp-bonus { background: rgba(110, 200, 140, 0.18); }
 .rp-penalty { background: rgba(214, 83, 66, 0.28); }
 .result-hint { margin: 8px 0 0; text-align: center; font-size: 11px; color: var(--ink-dim); }
+
+/* While the camera swings out to show the place, the table furniture steps back. */
+.plate, .challenge, .card-chips, .dock { transition: opacity 0.5s ease; }
+body.establishing .plate, body.establishing .challenge, body.establishing .card-chips { opacity: 0; pointer-events: none; }
+body.establishing .dock { opacity: 0.25; pointer-events: none; }
