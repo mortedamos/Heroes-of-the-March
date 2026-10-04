@@ -263,7 +263,7 @@ body.shape-short .card-btn.fan { transform: none; }
 }
 
 /* Banners & results */
-.banners { position: fixed; left: 0; right: 0; top: 18%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.banners { position: fixed; z-index: 5; left: 0; right: 0; top: 18%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .banner {
   padding: 10px 26px; font-size: 24px; font-weight: bold; background: rgba(20, 14, 8, 0.88); border: 1px solid var(--line);
   border-radius: 12px; box-shadow: 0 8px 26px rgba(0,0,0,0.55); animation: banner-in 0.35s ease-out; transition: opacity 0.5s, transform 0.5s;
