@@ -1365,6 +1365,36 @@ export class Hud {
   }
 
   /** Resolves once no announcement is open (immediately if none is). */
+  /**
+   * A new location: its name fades in, then its ability under it, then a hint. Resolves when the player clicks
+   * (or presses Enter or Space), after the card has faded out.
+   */
+  showPlace(name: string, renown: number, ability: string | null, quote: string | null): Promise<void> {
+    return new Promise((resolve) => {
+      const hint = h('div', { class: 'place-hint' }, 'Click to continue');
+      const el = h('div', { class: 'place' },
+        h('div', { class: 'place-title' }, name),
+        h('div', { class: 'place-renown' }, `Renown ${renown}`),
+        ability ? h('div', { class: 'place-ability' }, ability) : quote ? h('div', { class: 'place-ability place-quote' }, quote) : null,
+        hint);
+      el.style.setProperty('--ability-delay', '1.3s');
+      el.style.setProperty('--hint-delay', ability || quote ? '2.4s' : '1.5s');
+      let done = false;
+      const finish = (): void => {
+        if (done) return;
+        done = true;
+        window.removeEventListener('keydown', key, true);
+        el.classList.add('out');
+        setTimeout(() => { el.remove(); resolve(); }, 600);
+      };
+      const key = (e: KeyboardEvent): void => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); finish(); } };
+      // Ignore the click that may still be in flight from the last action.
+      setTimeout(() => el.addEventListener('pointerdown', finish), 500);
+      window.addEventListener('keydown', key, true);
+      append(this.root, el);
+    });
+  }
+
   noticesClosed(): Promise<void> {
     if (!this.notices.querySelector('.notice')) return Promise.resolve();
     return new Promise((resolve) => this.noticeWaiters.push(resolve));

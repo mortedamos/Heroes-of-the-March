@@ -66,6 +66,7 @@ export function advance(ctx: Ctx): void {
 function holdAfter(ctx: Ctx, ran: Step, eventsBefore: number): HoldReason | null {
   if (ctx.s.pending || ctx.s.turn.step === 'gameOver') return null;
   switch (ran) {
+    case 'location': return 'location'; // the place is shown before anything happens in it
     case 'encounter': return 'encounter';
     case 'reveal': return ctx.events.slice(eventsBefore).some((e) => e.type === 'revealed') ? 'reveal' : null;
     case 'resolve': return 'resolve';

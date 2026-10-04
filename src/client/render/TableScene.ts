@@ -30,7 +30,6 @@ export class TableScene {
   private disposed = false;
   /** 0 = the play camera, 1 = the establishing view toward the horizon. */
   private shot = 0;
-  private shotId = 0;
   /** Look-around and zoom: where the camera is now, and where the wheel and mouse want it. */
   private readonly view = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
   private readonly want = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
@@ -54,7 +53,6 @@ export class TableScene {
     const lights = this.buildLights(coarse ? 1024 : 2048);
     this.environment = new Environment(this.scene, lights, this.renderer, this.maxAnisotropy, coarse);
     this.environment.setTable(WIDE_TABLE.w, WIDE_TABLE.d, WIDE_TABLE.cz);
-    this.environment.onThemeChange = () => this.establish();
     if (import.meta.env.DEV) (window as unknown as { __table: TableScene }).__table = this;
 
     this.bindLook();
@@ -210,23 +208,22 @@ export class TableScene {
   }
 
   /**
-   * An establishing shot: when the table moves to a new place the camera swings
-   * low to show the surroundings (towers, flags, sky), holds, and settles back.
+   * The establishing shot, in two halves so the game can wait in between: the camera swings low to show the
+   * place (towers, flags, sky) and stays there until `swingBack`. Skipped for reduced motion and the portrait layout.
    */
-  establish(): void {
+  async swingOut(): Promise<void> {
     if (this.shape !== 'wide' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
-    const id = ++this.shotId;
     document.body.classList.add('establishing');
     const s0 = this.shot;
-    const run = async () => {
-      await this.tweens.add(1500, (k) => this.setShot(s0 + (1 - s0) * k), { owner: this.shotOwner });
-      if (id !== this.shotId) return;
-      await this.tweens.add(1500, () => {}, { owner: this.shotOwner });
-      if (id !== this.shotId) return;
-      await this.tweens.add(1300, (k) => this.setShot(1 - k), { owner: this.shotOwner });
-      if (id === this.shotId) document.body.classList.remove('establishing');
-    };
-    void run();
+    await this.tweens.add(1500, (k) => this.setShot(s0 + (1 - s0) * k), { owner: this.shotOwner });
+  }
+
+  /** Settle back to the play camera. */
+  async swingBack(): Promise<void> {
+    const s0 = this.shot;
+    if (s0 > 0) await this.tweens.add(1300, (k) => this.setShot(s0 * (1 - k)), { owner: this.shotOwner });
+    this.shot = 0;
+    document.body.classList.remove('establishing');
   }
 
   private setShot(k: number): void {

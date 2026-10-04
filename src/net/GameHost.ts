@@ -33,6 +33,7 @@ export class RateLimiter {
 
 /** How long to linger at each presentation checkpoint before resuming (ms). */
 export const DEFAULT_PACING: Record<HoldReason, number> = {
+  location: 300,
   encounter: 1100,
   reveal: 1500,
   resolve: 3200,

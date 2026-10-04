@@ -683,3 +683,21 @@ body.establishing .dock { opacity: 0.25; pointer-events: none; }
 
 /* Looking around: the info plates fade back a little. */
 body.looking .plate, body.looking .challenge, body.looking .card-chips { opacity: 0.45; }
+
+/* A new location: name, then ability, then a hint, over the low view of the place. Click to go on. */
+.place {
+  position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 11vh 24px 0; text-align: center; cursor: pointer; transition: opacity 0.6s ease;
+  background: linear-gradient(to bottom, rgba(8, 5, 2, 0.5), rgba(8, 5, 2, 0) 55%);
+}
+.place.out { opacity: 0; }
+.place > * { opacity: 0; animation: place-in 1.1s ease forwards; }
+.place-title { font-family: var(--display); font-size: clamp(30px, 5vw, 64px); color: var(--gold); text-shadow: 0 3px 22px rgba(0,0,0,0.9); letter-spacing: 0.04em; }
+.place-renown { font-size: 17px; color: #e8d7a8; text-shadow: 0 2px 12px rgba(0,0,0,0.9); animation-delay: 0.7s; }
+.place-ability { max-width: min(640px, 92vw); font-size: clamp(15px, 1.6vw, 20px); line-height: 1.45; color: #f4ead0; padding: 10px 18px; border-radius: 10px;
+  background: rgba(14, 10, 6, 0.62); text-shadow: 0 2px 10px rgba(0,0,0,0.9); animation-delay: var(--ability-delay, 1.3s); }
+.place-quote { font-style: italic; color: #d9c9a0; }
+.place-hint { margin-top: 8px; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: #cdbb8d; animation: place-in 1s ease forwards, place-pulse 2.4s ease-in-out infinite; animation-delay: var(--hint-delay, 2.4s), calc(var(--hint-delay, 2.4s) + 1s); }
+@keyframes place-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes place-pulse { 50% { opacity: 0.45; } }
+@media (prefers-reduced-motion: reduce) { .place > * { animation-duration: 0.01s; } }

@@ -303,6 +303,24 @@ export class GameClient {
     }
   }
 
+  /**
+   * A new location: the camera swings out to the place while the table, light and music change to it, its name
+   * and ability fade in, and the game waits for a click. Then the camera returns and play carries on (the encounter
+   * is in a later batch, so it is not drawn until we are back at the table).
+   */
+  private async revealPlace(def: string, advance: boolean, boardDone: Promise<void>): Promise<void> {
+    await boardDone; // the card has landed
+    if (this.disposed) return;
+    const d = getDef(def) as { name: string; renown: number; conditionText: string | null; quote: string | null };
+    this.scene.environment.setLocation(def);
+    music.locationRevealed(def, advance);
+    const swing = this.scene.swingOut();
+    await Promise.all([swing, new Promise((r) => setTimeout(r, 700))]);
+    if (this.disposed) return;
+    await this.hud.showPlace(d.name, d.renown, d.conditionText, d.quote);
+    await this.scene.swingBack();
+  }
+
   private async present(view: GameView, events: ClientEvent[]): Promise<void> {
     const prev = this.view;
     this.view = view;
@@ -312,8 +330,9 @@ export class GameClient {
     this.afflictions = afflictionsOf(view);
     this.board.setAfflicted(new Set(this.afflictions.keys()));
     this.scene.setView(this.board.layout!.shape, this.board.layout!.frame);
-    // The table takes on the look of the place being contested.
-    this.scene.environment.setLocation(view.turn.location?.def);
+    // The table takes on the look of the place being contested. A newly revealed location does this as part of its
+    // reveal below (the camera swings out to it first).
+    if (!events.some((e) => e.type === 'locationRevealed')) this.scene.environment.setLocation(view.turn.location?.def);
     const opening = view.turn.number === 0 || (view.turn.number === 1 && (view.turn.step === 'turnStart' || view.turn.step === 'companions' || view.turn.step === 'draft'));
     if (opening !== this.openingMusic) {
       this.openingMusic = opening;
@@ -337,8 +356,7 @@ export class GameClient {
       if (announced) continue;
       switch (e.type) {
         case 'locationRevealed':
-          // A new round: the music moves on to the next track (the first round keeps the one it opened with).
-          music.locationRevealed(e.card.def, e.reason === 'Turn' && view.turn.number > 1);
+          await this.revealPlace(e.card.def, e.reason === 'Turn' && view.turn.number > 1, boardDone);
           break;
         case 'turnStarted':
           // Other players' turns show in the top bar and on their plate; yours gets a banner.

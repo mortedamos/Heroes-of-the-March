@@ -92,7 +92,7 @@ export interface TurnEffect {
 export type AbilityWindow = 'turnStart' | 'afterLocation' | 'beforeBidding' | 'bidding' | 'endOfBidding';
 
 /** Presentation checkpoints (see flow.ts). */
-export type HoldReason = 'encounter' | 'reveal' | 'resolve';
+export type HoldReason = 'location' | 'encounter' | 'reveal' | 'resolve';
 
 export type Step =
   | 'draft'

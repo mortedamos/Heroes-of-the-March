@@ -120,8 +120,6 @@ export class Environment {
   private tableKey = '';
   private dims = { w: 19, d: 12.6, cz: 0 };
   private theme: ThemeId = 'felt';
-  /** Called when the look changes to a new place (not for the first, instant, setup). */
-  onThemeChange: ((id: ThemeId) => void) | null = null;
 
   constructor(
     private readonly scene: THREE.Scene,
@@ -280,7 +278,6 @@ export class Environment {
     if (instant) this.shown.copy(this.to);
     this.ensureScene(id);
     if (instant) this.scenes.get(id)?.setFade(1);
-    else if (id !== 'felt') this.onThemeChange?.(id);
   }
 
   /** Point the sky dome's two slots at the old and new panoramas. */

@@ -79,7 +79,7 @@ describe('GameHost', () => {
     for (let i = 0; i < 4000 && !host.isOver; i++) await new Promise((r) => setTimeout(r, 0));
     expect(host.isOver).toBe(true);
     const holds = spectator.msgs.filter((m) => m.t === 'state' && m.view.hold).map((m) => m.t === 'state' && m.view.hold);
-    expect(new Set(holds)).toEqual(new Set(['encounter', 'reveal', 'resolve']));
+    expect(new Set(holds)).toEqual(new Set(['location', 'encounter', 'reveal', 'resolve']));
     bots.forEach((b) => b.close());
   });
 
