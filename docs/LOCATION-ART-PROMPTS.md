@@ -4,7 +4,46 @@ Every location already has a procedural 3D look (see `src/client/render/env/them
 scenery, light, fog and weather. You can replace the **table top** and **ground** textures of any theme with
 hand-made art. Nothing else changes; the props, lights and weather stay real 3D.
 
-## How to add art
+## Skyboxes (recommended first)
+
+Each theme can also have a **panorama for the sky dome**. It blends with the procedural look: the dome crossfades to it
+when the place changes, and the 3D props, flags, light shafts, mist and particles stay live in front of it.
+
+```json
+{
+  "fortress": { "sky": "fortress_sky.webp", "fog": "#9fb0c4" },
+  "archive":  { "sky": "archive_sky.webp", "fog": "#120e1c", "keepSkyline": false }
+}
+```
+
+- `sky`: an **equirectangular 2:1 panorama**, 4096 x 2048 (2048 x 1024 is fine for mobile), webp or jpg. The horizon runs through the
+  vertical middle. The camera only ever sees the part around and above the horizon, so put the interest there and keep the lower half plain.
+- `fog`: the colour of the horizon where it meets the ground. The ground fades into this colour, so match it to the panorama's horizon
+  band or you will see a seam. Sample it from the image.
+- `keepSkyline`: by default a panorama replaces the procedural skyline ring. Set true to keep the ring in front of it.
+- The left and right edges must wrap without a seam.
+- Keep it **darker and calmer than the card art**; no bright sun disc low on the horizon (the light shafts add the sun feel).
+- No ground or table, no people, no text. The game draws the table, ground and props.
+
+Skybox prompt prefix: *"Equirectangular 360 degree panorama, 2:1, seamless left and right edges, painterly stylised fantasy, no ground plane, no characters, no text,"*
+
+| Theme | Skybox prompt |
+|---|---|
+| tavern | the inside of a timber-framed tavern hall at night: dark rafters, hanging lanterns, shuttered windows, a glowing hearth far off, warm smoky air |
+| harbor | overcast dusk over a misty harbour, grey-blue clouds, distant ship masts and rooftop silhouettes at the horizon |
+| snow | pale arctic sky, soft aurora ribbon, layered snow-capped peaks at the horizon, drifting cloud |
+| crypt | black sky with a sickly green moon behind thin clouds, dead trees and ruined arches as faint silhouettes at the horizon |
+| forge | smoke-choked red sky, glowing volcanic ridges and chimney stacks on the horizon, drifting embers |
+| forest | dusk through a dense forest canopy, deep green mist, shafts of gold light, dark pine silhouettes ringing the horizon |
+| fortress | clear late-afternoon sky with high cloud, a distant ring of castle walls and towers on the horizon |
+| archive | the inside of a vast gothic library: ring of tall arched windows with violet moonlight, rows of shelves and a vaulted ceiling, candle glow |
+| plains | golden-hour sky over rolling farmland, a windmill and hills on the horizon, long clouds |
+| sky | open sky above a sea of clouds, brilliant blue to pale horizon, huge cumulus towers, no ground |
+
+Interiors (tavern, archive) work: the walls and ceiling are in the panorama, and the table, shelves, candles and light
+shafts are 3D in front of it.
+
+## How to add table and ground art
 
 1. Put the image files in `public/locations/` (webp or png, square, **1024 x 1024**, **seamlessly tileable**).
 2. List them in `public/locations/manifest.json`:

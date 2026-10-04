@@ -711,14 +711,14 @@ function grass(ts: ThemeScene, w: number, d: number, cz: number): void {
 
 // -- A whole theme --------------------------------------------------------------
 
-export function buildThemeScene(theme: Theme, ctx: SceneCtx, coarse: boolean, seed: number): ThemeScene {
+export function buildThemeScene(theme: Theme, ctx: SceneCtx, coarse: boolean, seed: number, skipSkyline = false): ThemeScene {
   const ts = new ThemeScene(ctx);
   ts.reseed(seed);
   SETS[theme.props](ts);
   if (theme.beams.n) addBeams(ts, theme.beams.color, coarse ? Math.ceil(theme.beams.n / 2) : theme.beams.n, theme.beams.strength);
   if (theme.mist) addMist(ts, theme.mist.color, coarse ? Math.ceil(theme.mist.n / 2) : theme.mist.n, theme.mist.strength);
   for (const fx of theme.fx) addParticles(ts, fx, coarse);
-  if (theme.skyline) {
+  if (theme.skyline && !skipSkyline) {
     const rings: [string, number, number, number][] = [[theme.skyline.far, 78, 40, 1], [theme.skyline.near, 52, 30, 2]];
     for (const [color, r, h, k] of rings) {
       const tex = new THREE.CanvasTexture(paintSkyline(theme.skyline.kind, color, k + seed));

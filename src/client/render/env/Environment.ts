@@ -63,7 +63,17 @@ class LookState {
 /** A surface that can crossfade: the settled mesh and a second one fading in above it. */
 interface Layer { base: THREE.Mesh; fade: THREE.Mesh; t: number; active: boolean }
 
-interface ArtEntry { top?: string; floor?: string; tile?: number }
+interface ArtEntry {
+  top?: string;
+  floor?: string;
+  tile?: number;
+  /** An equirectangular (2:1) panorama for the sky dome. */
+  sky?: string;
+  /** Horizon colour for the fog and ground, to match the panorama's horizon. */
+  fog?: string;
+  /** Keep the procedural skyline ring in front of the panorama (default: the panorama replaces it). */
+  keepSkyline?: boolean;
+}
 
 const smooth = (t: number): number => t * t * (3 - 2 * t);
 
@@ -80,7 +90,16 @@ export class Environment {
   private readonly fog: THREE.Fog;
   private readonly bg: THREE.Color;
   private readonly dome: THREE.Mesh;
-  private readonly domeUniforms = { top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() } };
+  private readonly blank = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
+  private readonly domeUniforms = {
+    top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() },
+    skyFrom: { value: this.blank as THREE.Texture }, skyTo: { value: this.blank as THREE.Texture },
+    wFrom: { value: 0 }, wTo: { value: 0 },
+  };
+  private readonly skies = new Map<ThemeId, THREE.Texture>();
+  private skyFrom: ThemeId | null = null;
+  private skyTo: ThemeId | null = null;
+  private artReady: Promise<void> = Promise.resolve();
   private readonly accents: THREE.PointLight[];
   private readonly rimMat = new THREE.MeshStandardMaterial();
   private readonly plinthMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
@@ -125,8 +144,8 @@ export class Environment {
       new THREE.SphereGeometry(100, 24, 12),
       new THREE.ShaderMaterial({
         uniforms: this.domeUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
-        vertexShader: 'varying vec3 vP; void main(){ vP = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-        fragmentShader: 'uniform vec3 top; uniform vec3 bottom; varying vec3 vP; void main(){ float h = pow(clamp(vP.y, 0.0, 1.0), 0.55); gl_FragColor = vec4(mix(bottom, top, h), 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+        vertexShader: 'varying vec3 vP; varying vec2 vUv; void main(){ vP = normalize(position); vUv = vec2(1.0 - uv.x, uv.y); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; varying vec3 vP; varying vec2 vUv;\nvoid main(){ float h = pow(clamp(vP.y, 0.0, 1.0), 0.55); vec3 c = mix(bottom, top, h);\nc = mix(c, texture2D(skyFrom, vUv).rgb, wFrom); c = mix(c, texture2D(skyTo, vUv).rgb, wTo); gl_FragColor = vec4(c, 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
       }),
     );
     this.dome.renderOrder = -2;
@@ -147,7 +166,8 @@ export class Environment {
     this.look = 1;
     this.apply(0);
     this.setTable(this.dims.w, this.dims.d, this.dims.cz);
-    void this.loadArt();
+    this.blank.needsUpdate = true;
+    this.artReady = this.loadArt();
   }
 
   private makeLayer(spec: SurfaceSpec, repeat: number, lift: number): Layer {
@@ -166,6 +186,24 @@ export class Environment {
       const res = await fetch(`${import.meta.env.BASE_URL}locations/manifest.json`);
       if (res.ok) this.art = (await res.json()) as Record<string, ArtEntry>;
     } catch { /* no art: the procedural look is the default */ }
+  }
+
+  /** Start loading a theme's panorama (once); the dome picks it up when it arrives. */
+  private loadSky(id: ThemeId): void {
+    const file = this.art[id]?.sky;
+    if (!file || this.skies.has(id)) return;
+    new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}locations/${file}`, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.anisotropy = this.aniso;
+      this.skies.set(id, tex);
+      this.bindSkies();
+    });
+  }
+
+  private bindSkies(): void {
+    const u = this.domeUniforms;
+    u.skyFrom.value = (this.skyFrom && this.skies.get(this.skyFrom)) || this.blank;
+    u.skyTo.value = (this.skyTo && this.skies.get(this.skyTo)) || this.blank;
   }
 
   private surface(theme: ThemeId, which: 'top' | 'floor'): THREE.MeshStandardMaterial {
@@ -198,12 +236,16 @@ export class Environment {
 
   setTheme(id: ThemeId, instant = false): void {
     if (id === this.theme && !instant) return;
+    // Wait for the art list before the first themed location, so a panorama is not missed.
+    void this.artReady.then(() => this.applySky(id, instant));
     this.theme = id;
     const th = THEMES[id];
     this.begin(this.topLayer, this.surface(id, 'top'), instant);
     this.begin(this.floorLayer, this.surface(id, 'floor'), instant);
     this.from.copy(this.shown);
     this.to.set(th.look);
+    const fog = this.art[id]?.fog;
+    if (fog) this.to.sky.set(fog);
     this.look = instant ? 1 : 0;
     if (instant) this.shown.copy(this.to);
     this.ensureScene(id);
@@ -211,12 +253,21 @@ export class Environment {
     else if (id !== 'felt') this.onThemeChange?.(id);
   }
 
+  /** Point the sky dome's two slots at the old and new panoramas. */
+  private applySky(id: ThemeId, instant: boolean): void {
+    this.skyFrom = instant ? null : this.skyTo;
+    this.skyTo = id;
+    this.loadSky(id);
+    this.bindSkies();
+  }
+
   private ensureScene(id: ThemeId): ThemeScene | undefined {
     let ts = this.scenes.get(id);
     if (ts) return ts;
     const th = THEMES[id];
     if (th.props === 'none' && !th.fx.length && !th.skyline && !th.beams.n && !th.mist) return undefined;
-    ts = buildThemeScene(th, { key: this.lights.key }, this.coarse, Object.keys(THEMES).indexOf(id) + 1);
+    const art = this.art[id];
+    ts = buildThemeScene(th, { key: this.lights.key }, this.coarse, Object.keys(THEMES).indexOf(id) + 1, !!art?.sky && !art.keepSkyline);
     ts.layout(this.dims.w, this.dims.d, this.dims.cz);
     this.group.add(ts.group);
     this.scenes.set(id, ts);
@@ -337,6 +388,9 @@ export class Environment {
         this.scenes.delete(id);
       }
     }
+    const e = smooth(this.look);
+    this.domeUniforms.wTo.value = this.skyTo && this.skies.has(this.skyTo) ? e : 0;
+    this.domeUniforms.wFrom.value = this.skyFrom && this.skies.has(this.skyFrom) ? 1 - e : 0;
     this.pulseGlow();
     this.apply(this.time);
   }
@@ -388,6 +442,8 @@ export class Environment {
       disposeMaterial(layer.base.material as THREE.Material);
       disposeMaterial(layer.fade.material as THREE.Material);
     }
+    for (const t of this.skies.values()) t.dispose();
+    this.blank.dispose();
     this.rimMat.dispose();
     this.plinthMat.dispose();
   }
