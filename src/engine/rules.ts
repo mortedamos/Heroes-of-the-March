@@ -174,4 +174,6 @@ export const RULE_NOTES: RuleNote[] = [
     ruling: 'Used at the end of bidding, before the winner is declared. Torvi is discarded (so his own stat no longer counts) and every opponent has -4 to their total this encounter, or -5 if the player controls a revealed Mhorgrim\'s Hunt. Torvi\'s replacement is drawn in the normal companion phase.' },
   { id: 'treasure-trow', topic: 'The Treasure Trow',
     ruling: 'Every player draws a resource when it enters play (as the encounter or as a minion). When someone survives its challenge, each survivor draws a resource.' },
+  { id: 'fog-of-the-fey', topic: 'The Hollow Hills (Fog of the Fey)',
+    ruling: 'While it is the location, face-down resource cards stay hidden until the reveal step: Goldie\'s Rumour Mill cannot be used, and no ability can reveal or look at a face-down card early.' },
 ];

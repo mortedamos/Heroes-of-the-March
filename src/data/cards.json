@@ -1399,7 +1399,7 @@
    "quote": null,
    "art": "enhancements__resource_fertile_2",
    "renown": 4,
-   "conditionText": null
+   "conditionText": "Fog of the Fey. All face-down resource cards stay hidden until the reveal step. No ability can force them to be revealed beforehand."
   },
   {
    "kind": "location",

@@ -1550,6 +1550,22 @@ describe('Activated abilities of the redesign', () => {
     expect(viewFor(g.s, g.B).pending?.detail).toBeUndefined();
   });
 
+  it('Fog of the Fey (The Hollow Hills): Goldie cannot look at face-down cards', () => {
+    const g = newGame();
+    standard(g, { companions: ['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
+    onTop(g.s, 'location', ['the-hollow-hills']);
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.pass', decision: g.s.pending!.id });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') });
+    until(g, bidFor(g.A));
+    const d = g.s.pending!;
+    expect(d.kind === 'bid' && d.abilities.some((a) => a.ability === 'rumour')).toBe(false);
+  });
+
   it('Hedda cancels the first opposing ability that would affect one of her controller\'s companions each turn', () => {
     const g = newGame();
     standard(g, { companions: ['liriel-nightbloom', 'kesh-the-bog-huntress'] }, { companions: ['marshal-hedda-ironvow', 'sergeant-waddle'] });

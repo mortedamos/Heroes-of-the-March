@@ -125,6 +125,8 @@ export interface Ability {
   difficultyByStat?: Partial<Record<Stat, number>>;
   /** Encounter: when defeated (someone survived), with the survivors. */
   onDefeated?: (ctx: Ctx, self: Source, survivors: PlayerId[]) => void;
+  /** Location: face-down resource cards stay hidden until the reveal step; no ability may look at or reveal them (The Hollow Hills). */
+  hidesFaceDown?: boolean;
   /** Location: if the encounter is in this group it draws one extra minion of that group (Barrowdeep). */
   extraMinion?: string;
   /** Tova: when this resting companion returns, draw a resource. */
@@ -532,7 +534,7 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full', pair: 'gimlet-a-very-good-dog',
     activations: [{
       id: 'rumour', label: "Look at a random face-down card another player has bid", windows: ['bidding'], per: 'turn',
-      canUse: (ctx, self) => others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
+      canUse: (ctx, self) => !(ctx.location && abilityOf(ctx.location.id)?.hidesFaceDown) && others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
       use: (ctx, self) => {
         const hidden = others(ctx, self).flatMap((p) => p.bids.filter((b) => !b.visible).map((b) => ({ p, b })));
         if (!hidden.length) return;
@@ -791,7 +793,7 @@ export const ABILITIES: Record<string, Ability> = {
   'the-mage-college-vaults': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Collegium')).length),
   'marchguard-keep': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Marchguard')).length),
   'the-goose-and-kettle': drawPerOwn((ctx, p) => p.companions.filter((c) => ctx.defId(c) === 'goldie-trickgrin-keeper-of-the-goose-and-kettle').length),
-  'the-hollow-hills': { status: 'full' },
+  'the-hollow-hills': { status: 'full', hidesFaceDown: true }, // Fog of the Fey
   'parting-strand': {
     status: 'full',
     on: {
