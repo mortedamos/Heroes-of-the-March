@@ -31,12 +31,15 @@ export function startTitleEffects(host: HTMLElement): () => void {
   let W = 0, H = 0, dpr = 1;
   const resize = (): void => {
     dpr = Math.min(2, window.devicePixelRatio || 1);
-    W = window.innerWidth; H = window.innerHeight;
+    // The size of the screen's own box (inside its border); not known until the host is on the page.
+    W = host.clientWidth || window.innerWidth; H = host.clientHeight || window.innerHeight;
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
-    canvas.style.width = `${W}px`; canvas.style.height = `${H}px`;
+    canvas.style.width = '100%'; canvas.style.height = '100%';
   };
   resize();
   window.addEventListener('resize', resize);
+  const watch = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(resize);
+  watch?.observe(host);
 
   /** Where the stone's seam is on screen (the painting is drawn "cover", from the top centre). */
   const seamPoint = (): { x: number; y: number } => {
@@ -106,6 +109,7 @@ export function startTitleEffects(host: HTMLElement): () => void {
     stopped = true;
     cancelAnimationFrame(raf);
     window.removeEventListener('resize', resize);
+    watch?.disconnect();
     fog.remove();
     canvas.remove();
   };
