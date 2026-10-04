@@ -680,3 +680,6 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 .plate, .challenge, .card-chips, .dock { transition: opacity 0.5s ease; }
 body.establishing .plate, body.establishing .challenge, body.establishing .card-chips { opacity: 0; pointer-events: none; }
 body.establishing .dock { opacity: 0.25; pointer-events: none; }
+
+/* Looking around: the info plates fade back a little. */
+body.looking .plate, body.looking .challenge, body.looking .card-chips { opacity: 0.45; }

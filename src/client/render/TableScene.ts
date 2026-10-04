@@ -8,6 +8,10 @@ import { Environment } from './env/Environment';
 /** The landscape table (world units). Portrait gets a narrower, deeper one. */
 const WIDE_TABLE = { w: 19, d: 12.6, cz: 0 };
 
+/** How far the wheel can zoom the play camera (a smaller number is closer). */
+const ZOOM_MIN = 0.78;
+const ZOOM_MAX = 1.25;
+
 export class TableScene {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -27,6 +31,10 @@ export class TableScene {
   /** 0 = the play camera, 1 = the establishing view toward the horizon. */
   private shot = 0;
   private shotId = 0;
+  /** Look-around and zoom: where the camera is now, and where the wheel and mouse want it. */
+  private readonly view = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
+  private readonly want = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
+  private lastFrame = 0;
   private readonly shotOwner = {};
 
   constructor(private readonly container: HTMLElement) {
@@ -49,6 +57,7 @@ export class TableScene {
     this.environment.onThemeChange = () => this.establish();
     if (import.meta.env.DEV) (window as unknown as { __table: TableScene }).__table = this;
 
+    this.bindLook();
     const ro = new ResizeObserver(() => this.resize());
     ro.observe(container);
     this.resize();
@@ -57,6 +66,7 @@ export class TableScene {
       if (this.disposed) return;
       this.tweens.tick(now);
       this.driftLight(now);
+      this.stepLook(now);
       this.environment.update(now);
       for (const f of this.frameHooks) f(now);
       this.renderer.render(this.scene, this.camera);
@@ -120,19 +130,83 @@ export class TableScene {
     this.environment.setCameraDistance(dist);
   }
 
-  /** The play camera, lifted by `shot` toward a low look across the table at its surroundings. Returns the camera distance. */
+  /**
+   * Desktop look-around. Scrolling down lifts the camera toward the horizon (more with each scroll) and the mouse
+   * then turns the view; scrolling up snaps back to the play camera. Ctrl + scroll (or a trackpad pinch) zooms a little.
+   */
+  private bindLook(): void {
+    const el = this.renderer.domElement;
+    const fine = window.matchMedia('(pointer: fine)').matches;
+    if (!fine) return;
+    const wheel = (e: WheelEvent) => {
+      if (this.shape !== 'wide') return;
+      e.preventDefault();
+      if (e.ctrlKey) {
+        this.want.zoom = THREE.MathUtils.clamp(this.want.zoom * Math.exp(e.deltaY * 0.004), ZOOM_MIN, ZOOM_MAX);
+      } else if (e.deltaY > 0) {
+        this.want.amt = Math.min(1, this.want.amt + Math.min(0.5, e.deltaY / 400));
+      } else if (e.deltaY < 0) {
+        this.want.amt = 0;
+        this.want.yaw = 0;
+        this.want.pitch = 0;
+      }
+    };
+    const move = (e: PointerEvent) => {
+      if (this.want.amt <= 0.02) return;
+      const r = el.getBoundingClientRect();
+      const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
+      const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
+      this.want.yaw = THREE.MathUtils.degToRad(-nx * 55);
+      this.want.pitch = THREE.MathUtils.degToRad(-ny * 14);
+    };
+    el.addEventListener('wheel', wheel, { passive: false });
+    el.addEventListener('pointermove', move);
+    this.unbindLook = () => { el.removeEventListener('wheel', wheel); el.removeEventListener('pointermove', move); };
+  }
+
+  private unbindLook: () => void = () => {};
+
+  /** Ease the camera toward what the wheel and mouse asked for. */
+  private stepLook(now: number): void {
+    const dt = Math.min(0.1, Math.max(0, (now - this.lastFrame) / 1000));
+    this.lastFrame = now;
+    const v = this.view;
+    const w = this.want;
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    let moved = false;
+    for (const k of ['amt', 'yaw', 'pitch', 'zoom'] as const) {
+      if (v[k] === w[k]) continue;
+      // Snapping back is quick; looking out and zooming are smooth.
+      const rate = still ? 60 : k === 'amt' && w.amt < v.amt ? 16 : 7;
+      const next = v[k] + (w[k] - v[k]) * (1 - Math.exp(-dt * rate));
+      v[k] = Math.abs(next - w[k]) < 1e-4 ? w[k] : next;
+      moved = true;
+    }
+    if (!moved) return;
+    document.body.classList.toggle('looking', v.amt > 0.15);
+    if (this.shape === 'wide' && this.frame) this.environment.setCameraDistance(this.poseWide());
+  }
+
+  /** The play camera, lifted toward a low look across the table (by the establishing shot or the player), then turned and zoomed. Returns the camera distance. */
   private poseWide(): number {
-    const e = this.shot * this.shot * (3 - 2 * this.shot);
+    const smooth = (t: number) => t * t * (3 - 2 * t);
+    const e = Math.max(smooth(this.shot), smooth(this.view.amt) * 0.7);
     const L = THREE.MathUtils.lerp;
     // Frame the play area (about 16 x 11 units): back off on narrow screens.
     const dist = Math.max(12.8, 21.5 / Math.max(0.55, this.camera.aspect));
     const angle = THREE.MathUtils.degToRad(56);
+    const target = new THREE.Vector3(0, L(0, 3.4, e), L(1.25, -12, e));
     this.camera.position.set(0, L(Math.sin(angle) * dist, 2.4, e), L(Math.cos(angle) * dist + 0.6, dist * 1.2 + 2, e));
+    this.camera.position.sub(target).multiplyScalar(this.view.zoom).add(target);
     // Aim low so the play area sits above the HTML dock at the bottom of the screen.
-    this.camera.lookAt(0, L(0, 3.4, e), L(1.25, -12, e));
+    this.camera.lookAt(target);
+    if (this.view.yaw || this.view.pitch) {
+      this.camera.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), this.view.yaw * Math.min(1, this.view.amt * 2));
+      this.camera.rotateX(this.view.pitch * Math.min(1, this.view.amt * 2));
+    }
     this.camera.fov = L(40, 54, e);
     this.camera.updateProjectionMatrix();
-    return L(dist, dist * 1.2 + 8, e);
+    return L(dist, dist * 1.2 + 8, e) * this.view.zoom;
   }
 
   /**
@@ -228,7 +302,8 @@ export class TableScene {
 
   dispose(): void {
     this.disposed = true;
-    document.body.classList.remove('establishing');
+    document.body.classList.remove('establishing', 'looking');
+    this.unbindLook();
     this.environment.dispose();
     this.scene.traverse((o) => {
       const mesh = o as THREE.Mesh;
