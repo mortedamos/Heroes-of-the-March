@@ -22,7 +22,7 @@ import { ALL_VISIBLE, challengeStat, difficultyFor, resourceValue, totalFor } fr
 import {
   NO_HERO,
   type AbilityOption, type AbilityWindow, type Bid, type CardId, type ChooseTask, type ChoosePurpose, type DeckName,
-  type HoldReason, type PlayerId, type PlayerState, type Step, type Task, type TurnResult,
+  type HoldReason, type PlayerId, type PlayerState, type ResultPart, type Step, type Task, type TurnResult,
 } from './types';
 
 export function drawSize(ctx: Ctx): number {
@@ -444,7 +444,16 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
         total += save;
         ctx.log(p.id, ctx.def(p.hero).name, `gains ${save} to avoid defeat`);
       }
-      rows.push({ player: p.id, total, difficulty: diff, survived: total >= diff, stat: tb.stat });
+      const parts: ResultPart[] = [];
+      const nm = (c: CardId) => ctx.def(c).name.split(',')[0]!;
+      parts.push({ kind: 'hero', card: ctx.ref(p.hero), label: nm(p.hero), value: tb.hero - tb.kin });
+      if (tb.kin) parts.push({ kind: 'kin', card: ctx.ref(p.hero), label: 'Kin', value: tb.kin });
+      for (const c of tb.companions) parts.push({ kind: 'companion', card: ctx.ref(c.source), label: nm(c.source), value: c.value });
+      for (const c of tb.council) parts.push({ kind: 'council', card: null, label: nm(c.source), value: c.value });
+      for (const c of tb.resources) parts.push({ kind: 'resource', card: ctx.ref(c.source), label: nm(c.source), value: c.value });
+      for (const b of tb.bonuses) parts.push({ kind: b.amount < 0 ? 'penalty' : 'bonus', card: b.source && ctx.s.cards[b.source] ? ctx.ref(b.source) : null, label: b.label, value: b.amount });
+      if (total !== tb.total) parts.push({ kind: 'bonus', card: ctx.ref(p.hero), label: nm(p.hero), value: total - tb.total });
+      rows.push({ player: p.id, total, difficulty: diff, survived: total >= diff, stat: tb.stat, parts });
     }
 
     // Mira Coldwater: "You win the current encounter and automatically take the location."

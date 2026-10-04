@@ -16,7 +16,7 @@ type Attrs = {
   aria?: Record<string, string>;
   data?: Record<string, string>;
   on?: Partial<{ [K in keyof HTMLElementEventMap]: (e: HTMLElementEventMap[K]) => void }>;
-  style?: Partial<Record<'left' | 'top' | 'width' | 'height' | 'transform' | 'opacity' | 'display' | '--accent', string>>;
+  style?: Partial<Record<'left' | 'top' | 'width' | 'height' | 'transform' | 'opacity' | 'display' | '--accent' | 'animationDelay', string>>;
 };
 
 export function h<K extends keyof HTMLElementTagNameMap>(tag: K, attrs: Attrs = {}, ...children: Child[]): HTMLElementTagNameMap[K] {

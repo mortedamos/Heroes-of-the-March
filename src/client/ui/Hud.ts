@@ -51,6 +51,8 @@ const WINDOW_LABEL: Record<string, string> = {
 
 /** Smallest on-screen rules-text size (CSS px) we treat as readable without a text copy. */
 const READABLE_PX = 10;
+/** A revealed card takes this long to flip and land; its value then hits the plate's total. */
+export const IMPACT_DELAY_MS = 900;
 
 /** How many decisions a how-to hint is shown for before it goes quiet. */
 const HINT_SHOWS = 3;
@@ -138,7 +140,8 @@ export class Hud {
   private readonly stage = h('div', { class: 'comp-stage hidden' });
   /** Tooltip for the deck under the mouse. */
   private readonly deckTipEl = h('div', { class: 'deck-tip hidden', role: 'tooltip' });
-  private readonly resultPanel = h('div', { class: 'result hidden' });
+  private readonly resultPanel = h('div', { class: 'result hidden', on: { click: () => this.hideResult() } });
+  private resultTimer = 0;
   private view: GameView | null = null;
   private layout: Layout | null = null;
   private selected = new Set<string>();
@@ -159,6 +162,11 @@ export class Hud {
   /** Last pointer position, to place the preview away from it and to re-find the hovered card. */
   private pointer = { x: -1, y: -1, mouse: false };
   private plateEls = new Map<string, HTMLElement>();
+  /** The total each plate last showed for real, and the (older) one still shown while a revealed card lands. */
+  private plateTotal = new Map<string, number>();
+  private plateHeld = new Map<string, number>();
+  /** Players whose next change of total comes from a card being revealed (it lands with an impact). */
+  private impactFor = new Set<string>();
 
   constructor(private readonly root: HTMLElement, private readonly deps: HudDeps) {
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
@@ -315,10 +323,50 @@ export class Hud {
     return out;
   }
 
+  /** The next change of these players' totals is a revealed card: it lands with an impact after the flip. */
+  expectImpact(players: Iterable<string>): void {
+    for (const p of players) this.impactFor.add(p);
+  }
+
+  /** The number on a plate gets hit: it swells with the size of the change and tilts a few degrees either way. */
+  private hitTotal(id: string, delta: number): void {
+    const num = this.plateEls.get(id)?.querySelector<HTMLElement>('.tot-num');
+    if (!num) return;
+    const size = 1.3 + Math.min(1.6, Math.abs(delta) * 0.14);
+    const tilt = (Math.random() < 0.5 ? -1 : 1) * (2 + Math.random() * 3);
+    num.style.setProperty('--hit-s', size.toFixed(2));
+    num.style.setProperty('--hit-r', `${tilt.toFixed(1)}deg`);
+    num.classList.remove('hit', 'hit-up', 'hit-down');
+    void num.offsetWidth; // restart the animation
+    num.classList.add('hit', delta >= 0 ? 'hit-up' : 'hit-down');
+    this.plateEls.get(id)?.classList.add('jolt');
+    setTimeout(() => this.plateEls.get(id)?.classList.remove('jolt'), 500);
+    setTimeout(() => num.classList.remove('hit', 'hit-up', 'hit-down'), 1100);
+  }
+
+  /** A short number floating up from a card on the table ("+4", "-1"). */
+  floatNumber(x: number, y: number, text: string, kind: string, delay = 0): void {
+    const el = h('div', { class: `float-num ${kind}`, style: { left: `${x}px`, top: `${y}px`, animationDelay: `${delay}ms` } }, text);
+    this.root.appendChild(el);
+    setTimeout(() => el.remove(), delay + 1700);
+  }
+
   private renderPlates(v: GameView): void {
     const keep = new Set<string>();
     for (const p of v.players) {
       keep.add(p.id);
+      const now = p.projection?.total;
+      const before = this.plateTotal.get(p.id);
+      if (now !== undefined) {
+        if (before !== undefined && before !== now && this.impactFor.has(p.id)) {
+          // Keep the old number up until the card has landed, then hit it with the new one.
+          this.plateHeld.set(p.id, before);
+          const delta = now - before;
+          setTimeout(() => { this.plateHeld.delete(p.id); if (this.view) this.renderPlates(this.view); this.hitTotal(p.id, delta); }, IMPACT_DELAY_MS);
+        }
+        this.plateTotal.set(p.id, now);
+      } else this.plateTotal.delete(p.id);
+      this.impactFor.delete(p.id);
       let el = this.plateEls.get(p.id);
       if (!el) {
         el = h('div', { class: 'plate' });
@@ -341,7 +389,7 @@ export class Hud {
     const proj = p.projection;
     const total = proj ? h('span', { class: `plate-total ${proj.total >= proj.difficulty ? 'ok' : 'low'}`, title: 'Current total vs difficulty (hidden bids not counted)' },
       h('span', { class: 'stat-chip', style: { '--accent': STAT_COLORS[proj.stat] } }, proj.stat),
-      ` ${proj.total}${proj.hiddenBids ? `+${proj.hiddenBids}?` : ''}`,
+      ' ', h('span', { class: 'tot-num' }, String(this.plateHeld.get(p.id) ?? proj.total)), proj.hiddenBids ? `+${proj.hiddenBids}?` : '',
       h('span', { class: 'plate-vs' }, ` vs ${proj.difficulty}`)) : null;
     const effects = v.turn.effects.filter((e) => e.active && e.targetPlayer === p.id);
     const chips = effects.length
@@ -1383,21 +1431,27 @@ export class Hud {
     setTimeout(() => el.remove(), ms + 600);
   }
 
+  /** After the encounter: who won, and what every card added to every total (stays up until clicked, or a while). */
   showResult(r: TurnResult, v: GameView): void {
     const rows = [...r.rows].sort((a, b) => b.total - a.total);
+    const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
+    const part = (p: TurnResult['rows'][number]['parts'][number]) => h('span', { class: `rp rp-${p.kind}`, title: p.kind }, p.kind === 'kin' ? '◆ Kin ' : `${p.label} `, h('b', {}, sign(p.value)));
     replace(this.resultPanel,
       h('h3', {}, r.winner ? `${nameOf(v, r.winner)} ${r.winner === v.you ? 'win' : 'wins'} the location!` : r.tied ? `A tie: the location is lost, and ${r.tied.map((p) => nameOf(v, p)).join(' and ')} each draw a new one.` : 'Nobody survived: the location is lost.'),
-      h('table', {},
-        h('thead', {}, h('tr', {}, h('th', {}, 'Hero'), h('th', {}, STAT_NAMES[r.stat]), h('th', {}, 'Needed'), h('th', {}, ''))),
-        h('tbody', {}, ...rows.map((row) => h('tr', { class: row.player === r.winner || r.tied?.includes(row.player) ? 'win' : row.survived ? '' : 'fail' },
-          h('td', {}, nameOf(v, row.player)),
-          h('td', {}, String(row.total)),
-          h('td', {}, String(row.difficulty)),
-          h('td', {}, row.player === r.winner ? '👑' : r.tied?.includes(row.player) ? 'tied' : row.survived ? 'survived' : 'falls'))))),
+      h('div', { class: 'result-rows' }, ...rows.map((row) => h('div', { class: `result-row ${row.player === r.winner || r.tied?.includes(row.player) ? 'win' : row.survived ? '' : 'fail'}` },
+        h('div', { class: 'result-head' },
+          h('strong', {}, nameOf(v, row.player)),
+          h('span', { class: 'result-sum' }, `${row.total}`, h('small', {}, ` vs ${row.difficulty} (${STAT_NAMES[r.stat]})`)),
+          h('span', { class: 'result-badge' }, row.player === r.winner ? '👑 wins' : r.tied?.includes(row.player) ? 'tied' : row.survived ? 'survived' : '💀 falls')),
+        h('div', { class: 'result-parts' }, ...row.parts.filter((p) => p.value !== 0 || p.kind === 'hero').map(part))))),
+      h('p', { class: 'result-hint' }, 'Tap to close'),
     );
     this.resultPanel.classList.remove('hidden');
-    setTimeout(() => this.resultPanel.classList.add('hidden'), 3000);
+    clearTimeout(this.resultTimer);
+    this.resultTimer = window.setTimeout(() => this.resultPanel.classList.add('hidden'), 16000);
   }
+
+  hideResult(): void { clearTimeout(this.resultTimer); this.resultPanel.classList.add('hidden'); }
 
   // --- modals -----------------------------------------------------------------
 

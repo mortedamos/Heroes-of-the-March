@@ -2,7 +2,7 @@
 // them (board animation, dice, banners, log) one at a time, in order.
 // It only ever sees redacted views; it sends intents and lets the host decide.
 
-import { getDef, STAT_NAMES, type ClientEvent, type Command, type DeckName, type GameView, type PlayerId } from '../engine';
+import { getDef, STAT_NAMES, type ClientEvent, type Command, type DeckName, type GameView, type PlayerId, type TurnResult } from '../engine';
 import type { ClientTransport, ServerMessage } from '../net/protocol';
 import { Board } from './render/Board';
 import { TableScene } from './render/TableScene';
@@ -288,6 +288,21 @@ export class GameClient {
     this.signalReadyAbilities(view);
   }
 
+  /** What every card added to its player's total, floating up from the card on the table. */
+  private floatContributions(result: TurnResult): void {
+    let n = 0;
+    for (const row of result.rows) {
+      for (const part of row.parts) {
+        if (!part.card || part.value === 0) continue;
+        const at = this.board.screenPoint(part.card.id);
+        if (!at) continue;
+        const kin = part.kind === 'kin';
+        const text = kin ? `◆ +${part.value}` : part.value > 0 ? `+${part.value}` : `${part.value}`;
+        this.hud.floatNumber(at.x, at.y - (kin ? 22 : 0), text, kin ? 'kin' : part.value < 0 ? 'neg' : '', 60 * n++);
+      }
+    }
+  }
+
   private async present(view: GameView, events: ClientEvent[]): Promise<void> {
     const prev = this.view;
     this.view = view;
@@ -303,6 +318,8 @@ export class GameClient {
       music.setOpening(opening);
     }
     this.hud.holdCounter(true);
+    // A card turned face up (or played face up) lands on its owner's total with an impact.
+    this.hud.expectImpact(events.flatMap((e) => (e.type === 'revealed' || (e.type === 'bid' && e.faceUp) ? [e.player] : [])));
     this.hud.render(view, this.board.layout!);
     this.signalReadyAbilities(view);
     for (const e of events) {
@@ -332,6 +349,7 @@ export class GameClient {
           break;
         case 'outcome':
           this.hud.showResult(e.result, view);
+          this.floatContributions(e.result);
           break;
         case 'abilityCountered':
           this.hud.banner(`${getDef(e.source.def).name} countered by ${getDef(e.by.def).name}!`, 'warn', 2200);

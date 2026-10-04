@@ -84,6 +84,27 @@ body.touch .top-actions .btn { min-height: 36px; }
 .plate-sub { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 10px; align-items: center; margin-top: 3px; color: var(--ink-dim); }
 .plate:not(.you) { width: auto; min-width: 128px; max-width: 190px; padding: 5px 8px; }
 .plate-total { font-weight: bold; }
+.tot-num { display: inline-block; transform-origin: 50% 60%; }
+/* A revealed card lands on the total: the number is struck, swells with the size of the change and tilts a few degrees either way. */
+.tot-num.hit { animation: total-hit 1s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.tot-num.hit-up { --hit-color: #ffe08a; }
+.tot-num.hit-down { --hit-color: #ff8a7a; }
+@keyframes total-hit {
+  0% { transform: scale(0.5) rotate(0); filter: brightness(2.4); text-shadow: 0 0 0 transparent; }
+  22% { transform: scale(var(--hit-s, 1.6)) rotate(var(--hit-r, 4deg)); filter: brightness(1.8); color: var(--hit-color); text-shadow: 0 0 14px var(--hit-color), 0 0 30px var(--hit-color); }
+  45% { transform: scale(calc(var(--hit-s, 1.6) * 0.82)) rotate(calc(var(--hit-r, 4deg) * -0.45)); filter: brightness(1.3); }
+  68% { transform: scale(calc(var(--hit-s, 1.6) * 0.5 + 0.55)) rotate(calc(var(--hit-r, 4deg) * 0.25)); }
+  100% { transform: scale(1) rotate(0); filter: none; text-shadow: none; }
+}
+.plate.jolt { animation: plate-jolt 0.45s ease-out; }
+@keyframes plate-jolt { 0% { transform: translate(0, 0); } 15% { transform: translate(-3px, 2px); } 35% { transform: translate(3px, -2px); } 60% { transform: translate(-2px, 1px); } 100% { transform: translate(0, 0); } }
+@media (prefers-reduced-motion: reduce) { .tot-num.hit, .plate.jolt { animation: none; } }
+/* What each card added, floating up from the card when the encounter is settled. */
+.float-num { position: fixed; z-index: 6; pointer-events: none; transform: translate(-50%, 0); font-weight: bold; font-size: 22px; color: #ffe08a; opacity: 0;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.85), 0 0 10px rgba(0,0,0,0.7); animation: float-up 1.5s ease-out both; }
+.float-num.neg { color: #ff8a7a; }
+.float-num.kin { color: #8ee0a0; }
+@keyframes float-up { 0% { opacity: 0; transform: translate(-50%, 6px) scale(0.6); } 15% { opacity: 1; transform: translate(-50%, -4px) scale(1.15); } 70% { opacity: 1; } 100% { opacity: 0; transform: translate(-50%, -46px) scale(1); } }
 .plate-total.ok { color: var(--good); }
 .plate-total.low { color: var(--bad); }
 .stat-chip { display: inline-block; min-width: 18px; text-align: center; border-radius: 4px; padding: 0 4px; background: var(--accent); color: #fff; }
@@ -412,7 +433,7 @@ body.notice-open .dock { pointer-events: none; opacity: 0.55; }
 body.shape-short .notices { left: calc((100vw - var(--dock-w)) / 2); width: min(420px, calc(100vw - var(--dock-w) - 16px)); }
 
 .result {
-  position: fixed; z-index: 5; left: 50%; top: 30%; transform: translateX(-50%); min-width: min(320px, calc(100vw - 24px)); padding: 14px 18px;
+  position: fixed; z-index: 4; left: 50%; top: 14%; transform: translateX(-50%); width: min(600px, calc(100vw - 20px)); max-height: 66vh; overflow-y: auto; cursor: pointer; padding: 14px 18px;
   background: rgba(20, 14, 8, 0.94); border: 1px solid var(--gold); border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.7);
   animation: banner-in 0.3s ease-out;
 }
@@ -631,3 +652,26 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 @keyframes fog-drift-b { from { transform: translateX(-52%); } to { transform: translateX(0); } }
 @media (max-aspect-ratio: 5/4) { .title-fog { top: 28%; height: 32%; } }
 @media (prefers-reduced-motion: reduce) { .fog-bank, .title-fog { animation: none; } }
+
+/* Result breakdown */
+.result h3 { margin: 0 0 10px; text-align: center; color: var(--gold); }
+.result-rows { display: flex; flex-direction: column; gap: 9px; }
+.result-row { padding: 7px 10px 8px; border-radius: 10px; background: rgba(255,255,255,0.04); border: 1px solid transparent; }
+.result-row.win { border-color: var(--gold); background: rgba(229,185,90,0.1); }
+.result-row.fail { border-color: rgba(214, 83, 66, 0.55); }
+.result-head { display: flex; align-items: baseline; gap: 10px; }
+.result-head strong { flex: 1; }
+.result-sum { font-size: 20px; font-weight: bold; }
+.result-sum small { font-size: 12px; font-weight: normal; color: var(--ink-dim); }
+.result-badge { font-size: 12px; color: var(--ink-dim); min-width: 62px; text-align: right; }
+.result-parts { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 6px; }
+.rp { font-size: 12px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--ink); white-space: nowrap; }
+.rp b { margin-left: 2px; }
+.rp-hero { background: rgba(229,185,90,0.22); }
+.rp-kin { background: rgba(110, 200, 140, 0.25); }
+.rp-companion { background: rgba(110, 150, 220, 0.2); }
+.rp-council { background: rgba(160, 110, 210, 0.25); }
+.rp-resource { background: rgba(190, 150, 90, 0.2); }
+.rp-bonus { background: rgba(110, 200, 140, 0.18); }
+.rp-penalty { background: rgba(214, 83, 66, 0.28); }
+.result-hint { margin: 8px 0 0; text-align: center; font-size: 11px; color: var(--ink-dim); }

@@ -112,9 +112,18 @@ export type Step =
   | 'turnEnd'
   | 'gameOver';
 
+/** One line of a player's total at the end of an encounter: what each card added. */
+export interface ResultPart {
+  kind: 'hero' | 'kin' | 'companion' | 'council' | 'resource' | 'bonus' | 'penalty';
+  /** The card it came from (so it can be pointed at on the table), if there is one. */
+  card: CardRef | null;
+  label: string;
+  value: number;
+}
+
 export interface TurnResult {
   stat: Stat;
-  rows: { player: PlayerId; total: number; difficulty: number; survived: boolean; stat: Stat }[];
+  rows: { player: PlayerId; total: number; difficulty: number; survived: boolean; stat: Stat; parts: ResultPart[] }[];
   winner: PlayerId | null;
   margin: number | null;
   locations: CardId[];

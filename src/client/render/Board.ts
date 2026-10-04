@@ -13,12 +13,23 @@ import { PALETTE, type Theme } from '../ui/themes';
 const CARD_GEOM = new THREE.BoxGeometry(1, 0.012, 1.4);
 const EDGE_MAT = new THREE.MeshStandardMaterial({ color: '#d9ccb0', roughness: 0.8 });
 const MOVE_MS = 520;
+/** A revealed bid turns over this slowly (the plate's total is hit as it lands: Hud IMPACT_DELAY_MS). */
+const REVEAL_MS = 950;
+/** Every card on the table floats this far above it (world units); a hovered card rises another HOVER_LIFT. */
+const LIFT = 0.16;
+const HOVER_LIFT = 0.24;
+/** How far a shadow slides away from the light per unit of height (exaggerated, so the float reads). */
+const SHADOW_SLIDE = 2.4;
 /** An ability flash: the card glows gold and pulses twice. */
 const FLASH_MS = 1400;
 const FLASH_COLOR = new THREE.Color('#ffc451');
 
 interface CardObj {
   mesh: THREE.Mesh;
+  /** An invisible copy at the card's resting place: what the mouse picks, so a lifted card doesn't flicker out from under it. */
+  hit: THREE.Mesh;
+  /** The soft contact shadow on the table. */
+  shadow: THREE.Mesh;
   key: string;
   def: string | null;
   back: DeckName;
@@ -41,6 +52,23 @@ interface CardObj {
   removing: boolean;
 }
 
+const SHADOW_GEOM = new THREE.PlaneGeometry(1.34, 1.74).rotateX(-Math.PI / 2);
+let shadowTex: THREE.CanvasTexture | null = null;
+/** A blurred rounded rectangle, black in the middle fading to nothing: the card's shadow. */
+function shadowTexture(): THREE.CanvasTexture {
+  if (shadowTex) return shadowTex;
+  const c = document.createElement('canvas');
+  c.width = 134; c.height = 174;
+  const g = c.getContext('2d')!;
+  g.fillStyle = '#000';
+  g.filter = 'blur(9px)';
+  g.beginPath();
+  g.roundRect(27, 27, 80, 120, 8);
+  g.fill();
+  shadowTex = new THREE.CanvasTexture(c);
+  return shadowTex;
+}
+const HIT_MAT = new THREE.MeshBasicMaterial({ visible: false });
 const RING_GEOM = new THREE.RingGeometry(0.55, 0.68, 40).rotateX(-Math.PI / 2);
 let glowTex: THREE.CanvasTexture | null = null;
 /** A soft round spark, drawn once. */
@@ -223,8 +251,11 @@ export class Board {
     const mesh = new THREE.Mesh(CARD_GEOM);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    const hit = new THREE.Mesh(CARD_GEOM, HIT_MAT);
+    const shadow = new THREE.Mesh(SHADOW_GEOM, new THREE.MeshBasicMaterial({ map: shadowTexture(), transparent: true, depthWrite: false, opacity: 0.5, color: '#000' }));
+    shadow.renderOrder = -1;
     const obj: CardObj = {
-      mesh, key: p.key, def: p.def, back: p.back, faceUp: false,
+      mesh, hit, shadow, key: p.key, def: p.def, back: p.back, faceUp: false,
       base: { x: p.spawn.x, y: 0.3, z: p.spawn.z, rotZ: Math.PI, scale: 0.55 },
       yaw: randomYaw(),
       glow: null, attn: null, wiggle: 0,
@@ -232,9 +263,10 @@ export class Board {
       hover: 0, flashAt: null, flash: 0, removing: false,
     };
     mesh.userData['card'] = obj;
+    hit.userData['card'] = obj;
     this.setMaterials(obj);
     this.apply(obj);
-    this.t.scene.add(mesh);
+    this.t.scene.add(mesh, hit, shadow);
     this.cards.set(p.key, obj);
     return obj;
   }
@@ -247,13 +279,16 @@ export class Board {
     const flipping = Math.abs(to.rotZ - from.rotZ) > 0.01;
     if (dist < 0.001 && !flipping && Math.abs(to.scale - from.scale) < 0.001 && Math.abs(to.y - from.y) < 0.001) return Promise.resolve();
     const lift = Math.min(1.2, 0.25 + dist * 0.12) + (flipping ? 0.5 : 0);
-    return this.t.tweens.add(MOVE_MS + Math.min(300, dist * 30), (k) => {
+    // A card turned face up in place (a revealed bid) rises, turns over slowly and is dropped on the table.
+    const reveal = flipping && dist < 0.4 && to.rotZ === 0;
+    const duration = reveal ? REVEAL_MS : MOVE_MS + Math.min(300, dist * 30);
+    return this.t.tweens.add(duration, (k) => {
       obj.base.x = from.x + (to.x - from.x) * k;
       obj.base.z = from.z + (to.z - from.z) * k;
-      obj.base.y = from.y + (to.y - from.y) * k + Math.sin(Math.PI * k) * lift;
+      obj.base.y = from.y + (to.y - from.y) * k + Math.sin(Math.PI * k) * (reveal ? 1.6 : lift);
       obj.base.rotZ = from.rotZ + (to.rotZ - from.rotZ) * k;
-      obj.base.scale = from.scale + (to.scale - from.scale) * k;
-    }, { owner: obj, delay });
+      obj.base.scale = from.scale + (to.scale - from.scale) * k + (reveal ? Math.sin(Math.PI * k) * 0.45 * to.scale : 0);
+    }, { owner: obj, delay }).then(() => { if (reveal) obj.shake = Math.max(obj.shake, 0.07); });
   }
 
   private remove(obj: CardObj): Promise<void> {
@@ -269,7 +304,8 @@ export class Board {
       }
     }, { owner: obj, ease: easeOut }).then(() => {
       if (this.cards.get(obj.key) === obj) this.cards.delete(obj.key);
-      this.t.scene.remove(obj.mesh);
+      this.t.scene.remove(obj.mesh, obj.hit, obj.shadow);
+      (obj.shadow.material as THREE.Material).dispose();
       const front = (obj.mesh.material as THREE.Material[])[2];
       if (front && ![...this.backMaterials.values()].includes(front as THREE.MeshStandardMaterial)) front.dispose();
     });
@@ -315,10 +351,24 @@ export class Board {
     const b = obj.base;
     const jx = obj.shake > 0.001 ? (Math.random() - 0.5) * obj.shake : 0;
     const jz = obj.shake > 0.001 ? (Math.random() - 0.5) * obj.shake : 0;
-    obj.mesh.position.set(b.x + jx, b.y + obj.hover * 0.05 + obj.flash * 0.08, b.z + jz);
+    const y = b.y + LIFT * Math.min(1, b.scale * 1.6) + obj.hover * HOVER_LIFT + obj.flash * 0.08;
+    obj.mesh.position.set(b.x + jx, y, b.z + jz);
     obj.mesh.rotation.set(0, obj.yaw + jx * 0.6 + obj.wiggle, b.rotZ);
     const s = b.scale * (1 + obj.hover * 0.1 + obj.flash * 0.12);
     obj.mesh.scale.set(s, 1, s);
+    // The pick proxy stays where the card rests.
+    obj.hit.position.set(b.x, b.y, b.z);
+    obj.hit.rotation.set(0, obj.yaw, b.rotZ);
+    obj.hit.scale.set(b.scale * 1.1, 1, b.scale * 1.1);
+    // The shadow slides away from the light and softens as the card rises.
+    const l = this.t.keyLight.position;
+    const sx = -(l.x / l.y) * y * SHADOW_SLIDE, sz = -(l.z / l.y) * y * SHADOW_SLIDE;
+    const spread = 1 + y * 0.28;
+    obj.shadow.position.set(b.x + sx, 0.006, b.z + sz);
+    obj.shadow.rotation.set(0, obj.yaw, 0);
+    obj.shadow.scale.set(s * spread, 1, s * spread);
+    (obj.shadow.material as THREE.MeshBasicMaterial).opacity = Math.max(0.12, 0.55 / (1 + y * 1.1));
+    obj.shadow.visible = obj.mesh.visible && !obj.removing;
   }
 
   private frame(now: number): void {
@@ -501,7 +551,7 @@ export class Board {
   // --- picking -----------------------------------------------------------------
 
   meshes(): THREE.Object3D[] {
-    return [...this.cards.values()].filter((c) => !c.removing).map((c) => c.mesh);
+    return [...this.cards.values()].filter((c) => !c.removing).map((c) => c.hit);
   }
 
   /** Outline exactly these cards in a weak red glow (others lose theirs). */

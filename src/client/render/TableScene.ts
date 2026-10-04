@@ -12,6 +12,9 @@ export class TableScene {
   readonly scene = new THREE.Scene();
   readonly camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
   readonly tweens = new Tweens();
+  /** The key light: it drifts slowly, so every shadow on the table drifts with it. */
+  readonly keyLight = new THREE.DirectionalLight('#ffe7c2', 2.1);
+  private readonly keyBase = new THREE.Vector3(-5, 14, 7);
   readonly maxAnisotropy: number;
   private readonly raycaster = new THREE.Raycaster();
   private readonly frameHooks = new Set<(now: number) => void>();
@@ -54,11 +57,19 @@ export class TableScene {
     const loop = (now: number) => {
       if (this.disposed) return;
       this.tweens.tick(now);
+      this.driftLight(now);
       for (const f of this.frameHooks) f(now);
       this.renderer.render(this.scene, this.camera);
       requestAnimationFrame(loop);
     };
     requestAnimationFrame(loop);
+  }
+
+  /** A candle-lit sway: the key light wanders a little around its seat (still, if the player prefers less motion). */
+  private driftLight(now: number): void {
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    const t = still ? 0 : now / 1000;
+    this.keyLight.position.set(this.keyBase.x + Math.sin(t * 0.21) * 3.2, this.keyBase.y, this.keyBase.z + Math.cos(t * 0.17) * 1.8);
   }
 
   onFrame(fn: (now: number) => void): () => void {
@@ -68,8 +79,8 @@ export class TableScene {
 
   private buildLights(shadowSize: number): void {
     this.scene.add(new THREE.HemisphereLight('#fff4e0', '#2a1c10', 0.9));
-    const key = new THREE.DirectionalLight('#ffe7c2', 2.1);
-    key.position.set(-5, 14, 7);
+    const key = this.keyLight;
+    key.position.copy(this.keyBase);
     key.castShadow = true;
     key.shadow.mapSize.set(shadowSize, shadowSize);
     const sc = key.shadow.camera;

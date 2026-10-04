@@ -86,6 +86,10 @@ export interface TotalBreakdown {
   council: Contribution[];
   resources: Contribution[];
   bonus: number;
+  /** Where `bonus` came from (cards' bonuses, penalties), for the result breakdown. */
+  bonuses: { source: CardId | null; label: string; amount: number }[];
+  /** How much of `hero` is the Kin A bonus. */
+  kin: number;
   total: number;
   /** Bids not counted because the viewer can't see them. */
   hiddenBids: number;
@@ -188,19 +192,22 @@ export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverrid
   const counted = p.bids.filter((b) => visible(p, b));
   const resources = counted.map((b) => ({ source: b.card, value: resourceValue(ctx, p, b.card) }));
   let bonus = 0;
+  const bonuses: TotalBreakdown['bonuses'] = [];
+  const add = (source: CardId | null, label: string, amount: number) => { if (amount === 0) return; bonus += amount; bonuses.push({ source, label, amount }); };
   for (const c of p.companions) {
     const mb = activeAbility(ctx, c)?.multiBidBonus;
-    if (mb && bidsBeingRevealed(ctx) && counted.length >= mb.cards) bonus += mb.bonus * counted.length;
+    if (mb && bidsBeingRevealed(ctx) && counted.length >= mb.cards) add(c, ctx.def(c).name.split(',')[0]!, mb.bonus * counted.length);
   }
   for (const e of activeEffects(ctx, 'statBonus')) {
-    if (e.target === p.id && (e.stat === 'all' || e.stat === stat)) bonus += e.amount ?? 0;
+    if (e.target === p.id && (e.stat === 'all' || e.stat === stat)) add(e.source, ctx.def(e.source).name.split(',')[0]!, e.amount ?? 0);
   }
-  bonus += activeAbility(ctx, p.hero)?.flatBonus ?? 0;
+  add(p.hero, ctx.def(p.hero).name.split(',')[0]!, activeAbility(ctx, p.hero)?.flatBonus ?? 0);
   // The Grudge Book / The Book of Grudges: -3 in this encounter.
-  bonus -= p.penalty;
+  add(null, 'Grudge', -p.penalty);
   const sum = (xs: Contribution[]) => xs.reduce((a, x) => a + x.value, 0);
   return {
-    stat, hero, companions, council, resources, bonus,
+    stat, hero, companions, council, resources, bonus, bonuses,
+    kin: activeAbility(ctx, p.hero)?.kin === 'A' ? kinCount(ctx, p) : 0,
     total: hero + sum(companions) + sum(council) + sum(resources) + bonus,
     hiddenBids: p.bids.length - counted.length,
   };
