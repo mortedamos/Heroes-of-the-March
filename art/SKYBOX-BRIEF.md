@@ -47,7 +47,10 @@ For each: save as `public/locations/<theme>_sky.webp` (quality about 85; convert
 
 Generate 2 or 3 candidates per theme and keep the one that best satisfies the rules above, especially the seam and the calm lower half.
 
-## Fog colour (important)
+## Fog colour (automatic; this section is optional)
+
+The game now reads the horizon colour from each panorama when it loads and fades the ground into it, so `fog` in the manifest is only a fallback shown
+before the image loads. You can skip the step below, or still set a rough `fog` to avoid a flash.
 
 The ground fades into a "fog" colour at the distance. It must match the panorama's horizon band or a visible seam appears.
 For each image, compute the **average colour of the rows from 48% to 55% of the image height** (the band at the horizon), darkened about 10%, and use it as `fog` (hex).

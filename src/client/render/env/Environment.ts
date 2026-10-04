@@ -97,6 +97,8 @@ export class Environment {
     wFrom: { value: 0 }, wTo: { value: 0 },
   };
   private readonly skies = new Map<ThemeId, THREE.Texture>();
+  /** Horizon colour read from each loaded panorama, so the ground fades into the sky without a seam. */
+  private readonly autoFog = new Map<ThemeId, THREE.Color>();
   private skyFrom: ThemeId | null = null;
   private skyTo: ThemeId | null = null;
   private artReady: Promise<void> = Promise.resolve();
@@ -197,7 +199,33 @@ export class Environment {
       tex.anisotropy = this.aniso;
       this.skies.set(id, tex);
       this.bindSkies();
+      const fog = this.horizonColor(tex);
+      if (fog) {
+        this.autoFog.set(id, fog);
+        if (this.theme === id) {
+          this.to.sky.copy(fog);
+          if (this.look >= 1) this.shown.sky.copy(fog);
+        }
+      }
     });
+  }
+
+  /** The average colour of the band just around the panorama's horizon, a touch darker. */
+  private horizonColor(tex: THREE.Texture): THREE.Color | null {
+    try {
+      const img = tex.image as CanvasImageSource;
+      const c = document.createElement('canvas');
+      c.width = 64; c.height = 32;
+      const g = c.getContext('2d')!;
+      g.drawImage(img, 0, 0, 64, 32);
+      const d = g.getImageData(0, 15, 64, 3).data;
+      let r = 0, gr = 0, b = 0;
+      const n = d.length / 4;
+      for (let i = 0; i < d.length; i += 4) { r += d[i]!; gr += d[i + 1]!; b += d[i + 2]!; }
+      return new THREE.Color().setRGB((r / n / 255) * 0.92, (gr / n / 255) * 0.92, (b / n / 255) * 0.92, THREE.SRGBColorSpace);
+    } catch {
+      return null;
+    }
   }
 
   private bindSkies(): void {
@@ -244,8 +272,10 @@ export class Environment {
     this.begin(this.floorLayer, this.surface(id, 'floor'), instant);
     this.from.copy(this.shown);
     this.to.set(th.look);
+    const auto = this.autoFog.get(id);
     const fog = this.art[id]?.fog;
-    if (fog) this.to.sky.set(fog);
+    if (auto) this.to.sky.copy(auto);
+    else if (fog) this.to.sky.set(fog);
     this.look = instant ? 1 : 0;
     if (instant) this.shown.copy(this.to);
     this.ensureScene(id);
