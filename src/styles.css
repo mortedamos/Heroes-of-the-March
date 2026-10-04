@@ -458,34 +458,35 @@ body.shape-short .notices { left: calc((100vw - var(--dock-w)) / 2); width: min(
   .setup { padding-bottom: 34px; } /* room for the build stamp under the form */
   .setup .setup-card { margin: auto auto 0; }
 }
-/* An illuminated-manuscript border: gold scrollwork on a dark margin (ui/titleFrame.ts), above the picture and its fog. */
-.setup::before {
-  content: ''; position: fixed; inset: 6px; z-index: 2; pointer-events: none;
-  border: clamp(34px, 6vmin, 62px) solid transparent;
-  border-image: var(--title-frame) 64 / clamp(34px, 6vmin, 62px) round;
-  filter: drop-shadow(0 0 6px rgba(0, 0, 0, 0.7));
+/* An illuminated-manuscript border (ui/titleFrame.ts). It is the screen's own border, not a layer on top of it:
+   the form and the build stamp sit inside it. */
+.setup {
+  --frame-w: clamp(22px, 3.6vmin, 38px);
+  box-sizing: border-box; border: var(--frame-w) solid transparent;
+  border-image: var(--title-frame) 64 / var(--frame-w) round;
 }
 .setup-card {
-  margin: auto; width: min(440px, 100%); padding: 28px 30px; background: var(--panel-solid); border: 1px solid var(--line); border-radius: 16px;
-  box-shadow: 0 24px 70px rgba(0,0,0,0.75); display: flex; flex-direction: column; gap: 14px;
+  margin: auto; width: min(440px, 100%); padding: 24px 26px; background: rgba(29, 21, 13, 0.8); border: 1px solid var(--line); border-radius: 16px;
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  box-shadow: 0 24px 70px rgba(0,0,0,0.75); display: flex; flex-direction: column; gap: 12px; font-size: 13px;
 }
 .setup-card select { width: 100%; max-width: 100%; }
 .setup-card h1 { margin: 0; color: var(--gold); text-align: center; letter-spacing: 0.03em; }
-.setup-card .lede { margin: 0; text-align: center; color: var(--ink-dim); line-height: 1.4; }
-.setup-card label { display: flex; flex-direction: column; gap: 5px; font-size: 14px; color: var(--ink-dim); }
+.setup-card .lede { margin: 0; text-align: center; color: var(--ink-dim); line-height: 1.4; font-size: 13px; }
+.setup-card label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--ink-dim); }
 .setup-card input, .setup-card select {
-  font: inherit; font-size: 16px; color: var(--ink); background: #120c06; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
+  font: inherit; font-size: 14px; color: var(--ink); background: #120c06; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
 }
-.setup-card .fine { margin: 0; font-size: 12px; color: #8f7f5e; text-align: center; }
+.setup-card .fine { margin: 0; font-size: 11px; color: #8f7f5e; text-align: center; }
 /* House rules: folded under a toggle. min-width keeps the long <option> text from widening the card. */
 .setup-card .house-rules { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 0; min-width: 0; }
-.setup-card .house-rules summary { cursor: pointer; font-size: 14px; color: var(--ink-dim); }
+.setup-card .house-rules summary { cursor: pointer; font-size: 13px; color: var(--ink-dim); }
 .setup-card .house-rules[open] { display: flex; flex-direction: column; gap: 9px; padding-bottom: 10px; }
 .setup-card .house-rules[open] summary { margin-bottom: 2px; }
 .setup-card label.check { flex-direction: row; align-items: flex-start; gap: 10px; line-height: 1.35; cursor: pointer; }
 .setup-card label.check input { margin-top: 3px; width: 16px; height: 16px; accent-color: #b8862b; flex: none; }
 .setup-card label.check strong { color: var(--ink); }
-.setup-card label.stack select { font-size: 14px; }
+.setup-card label.stack select { font-size: 13px; }
 /* iOS zooms into inputs under 16px when they're focused. */
 body.touch .setup-card label.stack select { font-size: 16px; }
 
@@ -589,7 +590,7 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 .stage-panel.draft .stage-hint { text-align: center; margin: 0; }
 
 /* Date and build number in the corner of the title screen (written by the pre-commit hook). */
-.build-stamp { position: fixed; right: 14px; bottom: 10px; font-size: 11px; opacity: 0.7; text-shadow: 0 1px 3px rgba(0,0,0,0.7); pointer-events: none; }
+.build-stamp { position: fixed; right: calc(var(--frame-w, 0px) + 10px); bottom: calc(var(--frame-w, 0px) + 6px); font-size: 11px; opacity: 0.7; text-shadow: 0 1px 3px rgba(0,0,0,0.7); pointer-events: none; }
 
 /* Display font: the game's own headings, title and buttons (not the card faces). */
 :root { --display: "Cinzel Decorative", Georgia, "Palatino Linotype", serif; }
