@@ -203,32 +203,6 @@ export function fire<K extends TriggerName>(ctx: Ctx, name: K, payload: TriggerP
   }
 }
 
-// --- dice ----------------------------------------------------------------------
-
-/**
- * A die roll made by an ability. The Hollow Hills invert ability die ranges;
- * Mogra Swiftfoot lets her controller (on their own turn) roll twice and keep
- * the better result for them. Rolls fire "when a N is rolled" triggers.
- */
-export function abilityRoll(ctx: Ctx, player: PlayerId, prefer: 'high' | 'low'): number {
-  const hollow = ctx.location?.id === 'the-hollow-hills';
-  const effective = (raw: number) => (hollow ? 7 - raw : raw);
-  const first = ctx.roll(player, 'ability');
-  fire(ctx, 'die', { value: first, player });
-  let chosen = first;
-  const p = ctx.player(player);
-  const mogra = p === ctx.active ? playerHas(ctx, p, (a) => a.rerollAbilityDice) : null;
-  if (mogra) {
-    const second = ctx.roll(player, 'ability');
-    fire(ctx, 'die', { value: second, player });
-    const better = prefer === 'high' ? effective(second) > effective(first) : effective(second) < effective(first);
-    if (better) chosen = second;
-    ctx.log(player, ctx.def(mogra).name, `rolled twice and kept ${chosen}`);
-  }
-  if (hollow) ctx.log(player, 'The Hollow Hills', `inverts the roll: ${chosen} counts as ${effective(chosen)}`);
-  return effective(chosen);
-}
-
 // --- drawing ---------------------------------------------------------------
 
 /** Draw resources for a player. `reason` names the card/rule responsible (for the log). */
@@ -247,7 +221,7 @@ export function drawResources(ctx: Ctx, player: PlayerId, n: number, reason: str
   const sigrun = ctx.s.discards.resource.length && !ctx.s.turn.used[`sigrun:${player}`] ? playerHas(ctx, p, (a) => a.drawFromDiscardChoice) : null;
   if (sigrun && ctx.s.turn.number > 0) {
     const pile = ctx.s.discards.resource;
-    const looks = Math.min(pile.length, 3 + extraReveals(ctx, player));
+    const looks = Math.min(pile.length, 3);
     const picked: CardId[] = [];
     while (picked.length < looks) {
       const c = pile[nextInt(ctx.s.rng, pile.length)]!;
@@ -442,15 +416,7 @@ export function sourceName(ctx: Ctx, card: CardId): string {
 
 export type { CardKind };
 
-// --- ability reveals (Mogra's Against the Odds) -----------------------------------
-
-/** Extra cards an ability of `owner`'s reveals: one, if they control Mogra (who says so in the log). */
-export function extraReveals(ctx: Ctx, owner: PlayerId): number {
-  const mogra = playerHas(ctx, ctx.player(owner), (a) => a.extraReveal);
-  if (!mogra) return 0;
-  ctx.log(owner, ctx.def(mogra).name, 'Against the Odds: reveals one extra card');
-  return 1;
-}
+// --- ability reveals ----------------------------------------------------------------
 
 /**
  * Turn up the top `n` cards of a stack (refilling it from the discard if needed) to see whether an

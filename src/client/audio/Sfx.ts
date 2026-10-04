@@ -16,7 +16,7 @@ const SAFE_FILE = /^[A-Za-z0-9._-]+\.(mp3|ogg|wav|webm)$/;
 /** The sounds the game plays (the full list is in data/sfx-catalog.json). */
 export type SfxName =
   | 'effect-negative' | 'effect-positive' | 'shuffle' | 'deal' | 'card-flip' | 'card-place' | 'card-pickup'
-  | 'card-discard' | 'die-roll' | 'renown' | 'click' | 'effect-insight' | 'effect-draw' | 'effect-shield' | 'effect-trade'
+  | 'card-discard' | 'renown' | 'click' | 'effect-insight' | 'effect-draw' | 'effect-shield' | 'effect-trade'
   | 'ability-ready';
 
 /** The least time (ms) between two plays of one sound, so a burst of events does not machine-gun it. */

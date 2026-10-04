@@ -9,7 +9,6 @@ import { TableScene } from './render/TableScene';
 import { describe, nameOf } from './describe';
 import { attentionOf } from './attention';
 import { Hud } from './ui/Hud';
-import { Die, DIE_POS } from './render/Dice';
 import { music } from './audio/Music';
 import { sfx, type SfxName } from './audio/Sfx';
 import { THEME_SOUND, themeForAbility, type Theme } from './ui/themes';
@@ -33,7 +32,6 @@ function isAbilityResult(e: ClientEvent, by: PlayerId): boolean {
     case 'companionFaceDown': case 'companionDiscarded': case 'companionMinion': case 'resourceDiscarded':
     case 'councilHero': case 'extraLocation': case 'fallPrevented':
       return true;
-    case 'dieRolled': return e.reason === 'ability' || e.reason === 'effect';
     case 'drew': return e.player === by;
     default: return false;
   }
@@ -118,7 +116,6 @@ export class GameClient {
   private readonly scene: TableScene;
   private readonly board: Board;
   private readonly hud: Hud;
-  private readonly die: Die;
   private readonly unhook: (() => void)[] = [];
   private disposed = false;
   /** The opponent whose ability is being announced, while its results are still arriving. */
@@ -147,11 +144,7 @@ export class GameClient {
     onlyIfResponse?: boolean;
     response?: boolean;
     theme: Theme;
-    /** A die rolled by this ability (its result is shown, and the table waits for it to be read). */
-    roll?: number;
   } | null = null;
-  /** The die that an ability is rolling, until it has landed and been looked at. */
-  private dieAnim: Promise<void> | null = null;
   /** Where each hand card was just before the hand was redrawn (for cards that leave it). */
   private handSnap = new Map<string, { x: number; y: number; w: number; def: string }>();
 
@@ -170,7 +163,6 @@ export class GameClient {
       project: (x, y, z) => this.scene.project(x, y, z),
     });
     this.unhook.push(this.scene.onFrame(() => this.hud.reposition()));
-    this.die = new Die(this.scene, DIE_POS);
     // A card you bid flies down from where it sits in your hand.
     this.board.handOrigin = (def) => this.hud.handCardCenter(def);
     this.bindPointer(stage);
@@ -330,14 +322,10 @@ export class GameClient {
           if (e.reason === 'Turn' && view.turn.number > 1) music.nextRound();
           break;
         case 'turnStarted':
-          this.die.hide();
           // Other players' turns show in the top bar and on their plate; yours gets a banner.
           if (e.player === view.you) this.hud.banner('Your turn', 'turn');
           break;
         case 'encounterRevealed':
-          break;
-        case 'dieRolled':
-          this.hud.banner(`${nameOf(view, e.player)} rolls ${e.value}`, '', 900);
           break;
         case 'challengeSelected':
           this.hud.banner(`${STAT_NAMES[e.stat]} ${e.difficulty}`, 'challenge');
@@ -459,20 +447,14 @@ export class GameClient {
       case 'bid': case 'companionPlayed': sfx.play('card-place'); break;
       case 'revealed': case 'encounterRevealed': case 'locationRevealed': sfx.play('card-flip'); break;
       case 'resourceDiscarded': case 'companionDiscarded': sfx.play('card-discard'); break;
-      case 'dieRolled': sfx.play('die-roll'); break;
       case 'renownGained': sfx.play('renown'); break;
       default: break;
     }
   }
 
-  /** Dice rolling on the table, and cards flying from the deck into your hand. */
+  /** Cards flying from the deck into your hand and out of it. */
   private motionFor(e: ClientEvent, view: GameView): void {
-    if (e.type === 'dieRolled') {
-      // An ability's roll stays on the table (landed, then a few seconds to read) until its result has been dismissed.
-      const ability = e.reason === 'ability' || e.reason === 'effect';
-      this.dieAnim = this.die.roll(e.value, ability ? { hold: 2600, keep: true } : {});
-    }
-    else if (e.type === 'resourceDiscarded' && e.player === view.you) this.hud.flyDiscard(this.handSnap.get(e.card.id));
+    if (e.type === 'resourceDiscarded' && e.player === view.you) this.hud.flyDiscard(this.handSnap.get(e.card.id));
     else if (e.type === 'drew' && e.player === view.you && e.deck === 'resource' && e.reason !== 'Setup' && e.cards) {
       this.hud.flyDraw(e.cards.map((c) => c.id).filter((id): id is string => Boolean(id)));
     }
@@ -524,7 +506,6 @@ export class GameClient {
     }
     if (this.announcing && this.pendingCase && isAbilityResult(e, this.announcing)) {
       const c = this.pendingCase;
-      if (e.type === 'dieRolled') c.roll = e.value;
       if (text) c.lines.push(text);
       for (const p of targetsOf(e)) if (p !== c.owner) c.targets.add(p);
       // Cancelling an effect someone else put on the table makes this ability a response.
@@ -582,22 +563,6 @@ export class GameClient {
     const gate = this.caseGate;
     this.pendingCase = null;
     const show = c !== null && (!c.onlyIfResponse || c.response === true);
-    const rolled = c !== null && c.roll !== undefined;
-    // A die roll comes first: let it land and sit on the table so the number can be read.
-    if (rolled) await this.dieAnim;
-    // Your own ability that rolled a die gets no big card, but its result is told and must be dismissed
-    // before the round's result is shown.
-    if (c && rolled && !show) {
-      await this.settleAnims();
-      await this.hud.noticesClosed();
-      this.hud.announce(`${c.owner === c.you ? 'You rolled' : `${c.ownerName} rolled`} a ${c.roll}`, c.lines[0] ?? '', c.def, false);
-      for (const line of c.lines.slice(1)) this.hud.addToAnnouncement(line, false);
-      gate?.resolve();
-      if (this.caseGate === gate) this.caseGate = null;
-      await this.hud.noticesClosed();
-      this.die.hide();
-      return;
-    }
     // Off the table (e.g. already discarded): say it at least.
     if (c && show && c.title && !this.board.hasCard(c.key)) this.hud.banner(c.title, 'warn', 2400);
     if (c && show && this.board.hasCard(c.key)) {
@@ -624,7 +589,6 @@ export class GameClient {
     gate?.resolve();
     if (this.caseGate === gate) this.caseGate = null;
     await this.settleAnims();
-    if (rolled) this.die.hide();
   }
 
   private async settleAnims(): Promise<void> {
@@ -635,7 +599,6 @@ export class GameClient {
   dispose(): void {
     this.disposed = true;
     this.caseGate?.resolve();
-    this.die.hide();
     for (const u of this.unhook) u();
     this.transport.close();
     this.scene.dispose();

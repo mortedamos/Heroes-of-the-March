@@ -1399,7 +1399,7 @@
    "quote": null,
    "art": "enhancements__resource_fertile_2",
    "renown": 4,
-   "conditionText": "Die ranges for abilities are inverted."
+   "conditionText": null
   },
   {
    "kind": "location",

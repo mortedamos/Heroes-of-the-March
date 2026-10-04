@@ -3,7 +3,7 @@
 
 import { getDef } from './cards';
 import type { CardDef, EncounterDef, LocationDef } from './cardTypes';
-import { nextId, rollDie, shuffleInPlace } from './rng';
+import { nextId, shuffleInPlace } from './rng';
 import type {
   CardId, CardRef, DeckName, Decision, GameEvent, GameState, PlayerId, PlayerState, Task,
 } from './types';
@@ -92,12 +92,6 @@ export class Ctx {
   /** Run a task before anything already queued. */
   queueFirst(task: Task): void {
     this.s.tasks.unshift(task);
-  }
-
-  roll(player: PlayerId | null, reason: 'tiebreak' | 'ability' | 'effect'): number {
-    const v = rollDie(this.s.rng);
-    this.emit({ type: 'dieRolled', player, value: v, reason });
-    return v;
   }
 
   // --- cards ---------------------------------------------------------------

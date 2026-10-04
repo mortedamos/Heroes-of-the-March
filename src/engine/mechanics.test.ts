@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { botDecide } from '../bots/heuristic';
 import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
-import { abilityRoll, companionEnters, discardCompanion, fire, maxCompanions, replaceLocation } from './effects';
+import { companionEnters, discardCompanion, fire, maxCompanions, replaceLocation } from './effects';
 import { difficultyFor, totalFor } from './totals';
 import { getDef } from './cards';
 import { createGame } from './setup';
@@ -328,7 +328,6 @@ describe('silence, steal, negate, swap', () => {
     expect(a.claimed[0]).not.toBe(b.claimed[0]);
     expect(a.renown).toBeGreaterThan(0);
     expect(b.renown).toBeGreaterThan(0);
-    expect(g.events.some((e) => e.type === 'dieRolled' && e.reason === 'tiebreak')).toBe(false);
   });
 
   it('An Apple for the Road swaps with another bid', () => {
@@ -587,7 +586,6 @@ describe('challenge and encounter control', () => {
     const ch = viewFor(g.s, g.B).turn.challenge!;
     expect(ch.stat).toBe('G');
     expect(ch.difficulty.base).toBe(15); // printed 13, +2 in this edition
-    expect(g.events.some((e) => e.type === 'dieRolled')).toBe(false);
   });
 
   it('Ilvena: force an opposing companion onto its weakest stat (no cost)', () => {
@@ -653,7 +651,6 @@ describe('challenge and encounter control', () => {
     until(g, (s) => s.turn.companionMinions.length > 0 || s.turn.step === 'bidding');
     expect(g.s.turn.companionMinions).toHaveLength(1);
     // No dice: each player with a companion turned up a resource card, and those cards were discarded.
-    expect(g.events.some((e) => e.type === 'dieRolled')).toBe(false);
     const shown = g.events.filter((e) => e.type === 'cardShown' && e.reason === 'Iron Mites');
     expect(shown.length).toBeGreaterThanOrEqual(2);
     for (const e of shown) if (e.type === 'cardShown') expect(g.s.discards.resource).toContain(e.card.id);
@@ -674,21 +671,6 @@ describe('challenge and encounter control', () => {
     use(g, 'lord-vaelis-nightbloom', 'shadowsteeds');
     expect(g.s.turn.setAside).toHaveLength(1);
     expect(total(g, g.A, g.A)).toBe(before + 4);
-  });
-});
-
-describe('dice modifiers', () => {
-  it('The Hollow Hills invert ability rolls', () => {
-    const g = newGame();
-    standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] });
-    onTop(g.s, 'location', ['the-hollow-hills']);
-    restart(g);
-    until(g, bidFor(g.A));
-    const ctx = new Ctx(g.s);
-    const v = abilityRoll(ctx, g.A, 'high');
-    const rolls = ctx.events.filter((e) => e.type === 'dieRolled').map((e) => (e.type === 'dieRolled' ? e.value : 0));
-    expect(rolls).toHaveLength(1);
-    expect(v).toBe(7 - rolls[0]!);
   });
 });
 

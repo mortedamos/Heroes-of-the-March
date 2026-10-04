@@ -31,9 +31,6 @@ export function nextInt(s: RngState, maxExclusive: number): number {
   return Math.floor(nextFloat(s) * maxExclusive);
 }
 
-export function rollDie(s: RngState): number {
-  return 1 + nextInt(s, 6);
-}
 
 export function shuffleInPlace<T>(s: RngState, arr: T[]): void {
   for (let i = arr.length - 1; i > 0; i--) {

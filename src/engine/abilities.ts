@@ -14,7 +14,7 @@ import { CARDS, getDef } from './cards';
 import type { CardKind, EncounterDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import {
-  abilityRoll, addEffect, cardOption, companionsInPlay, councilHeroes, discardCompanion, drawResources, extraReveals, fire, hasGroup, kingdomsOf,
+  addEffect, cardOption, companionsInPlay, councilHeroes, discardCompanion, drawResources, fire, hasGroup, kingdomsOf,
   ownerOf, peekOption, revealTop, sharesKingdom, statName,
 } from './effects';
 import { nextInt } from './rng';
@@ -25,10 +25,9 @@ import { DECKS } from './types';
 export interface Source { card: CardId; owner: PlayerId | null; kind: CardKind }
 export interface OwnedSource extends Source { owner: PlayerId }
 
-export type TriggerName = 'die' | 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'companionEntered' | 'heroFell' | 'locationWon' | 'statForced' | 'turnStart'
+export type TriggerName = 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'companionEntered' | 'heroFell' | 'locationWon' | 'statForced' | 'turnStart'
   | 'minionDrawn' | 'locationReplaced' | 'companionLeft';
 export interface TriggerPayload {
-  die: { value: number; player: PlayerId | null };
   /** The turn's encounter challenge was announced (stat as modified by the location); player is the active player. */
   challengeFaced: { stat: Stat; player: PlayerId };
   encounterReplaced: { player: PlayerId };
@@ -98,12 +97,8 @@ export interface Ability {
   multiBidBonus?: { cards: number; bonus: number };
   /** Override a resource's value in context. */
   resourceValue?: (ctx: Ctx, owner: PlayerState, base: number) => number;
-  /** Mogra: roll ability dice twice on your turn and keep either. */
-  rerollAbilityDice?: boolean;
   /** Sigrun: once per turn, a draw may instead take one of three random discarded cards. */
   drawFromDiscardChoice?: boolean;
-  /** Mogra: abilities of yours that reveal cards from a stack to see whether they work reveal one extra. */
-  extraReveal?: boolean;
   /** Posy, Osric: when the hero's stat swap (heroStatSub) is used, this companion gains this much for the encounter. */
   heroSubBonus?: number;
   /** Brunna: forced-stat effects on your cards apply only if they help you. */
@@ -319,7 +314,7 @@ function flipBonus(o: { id: 'honk' | 'hiss'; stat: Stat; bonus: number; test: (d
       id: o.id, label: `${word} Reveal the top resource card: ${o.when} gains +${o.bonus} ${statName(o.stat)}`, windows: ['endOfBidding'], per: 'turn',
       canUse: (ctx) => ctx.s.decks.resource.length + ctx.s.discards.resource.length > 0,
       use: (ctx, self) => {
-        const cards = revealTop(ctx, self.owner, 'resource', 1 + extraReveals(ctx, self.owner), nameOf(ctx, self.card));
+        const cards = revealTop(ctx, self.owner, 'resource', 1, nameOf(ctx, self.card));
         const hit = cards.some((c) => o.test(ctx.def(c) as ResourceDef));
         for (const c of cards) {
           ctx.discard('resource', c);
@@ -723,7 +718,7 @@ export const ABILITIES: Record<string, Ability> = {
       canUse: (ctx) => ctx.s.decks.companion.length + ctx.s.discards.companion.length > 0,
       use: (ctx, self) => {
         const t = ctx.s.turn;
-        const revealed = revealTop(ctx, self.owner, 'companion', 3 + extraReveals(ctx, self.owner), nameOf(ctx, self.card));
+        const revealed = revealTop(ctx, self.owner, 'companion', 3, nameOf(ctx, self.card));
         const geese = revealed.filter((c) => hasGroup(ctx.def(c), 'Goose'));
         if (!geese.length) {
           for (const c of revealed) ctx.discard('companion', c);
@@ -796,7 +791,7 @@ export const ABILITIES: Record<string, Ability> = {
   'the-mage-college-vaults': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Collegium')).length),
   'marchguard-keep': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Marchguard')).length),
   'the-goose-and-kettle': drawPerOwn((ctx, p) => p.companions.filter((c) => ctx.defId(c) === 'goldie-trickgrin-keeper-of-the-goose-and-kettle').length),
-  'the-hollow-hills': { status: 'full' }, // ability die inversion handled in effects.abilityRoll
+  'the-hollow-hills': { status: 'full' },
   'parting-strand': {
     status: 'full',
     on: {

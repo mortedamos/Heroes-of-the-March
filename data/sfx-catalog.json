@@ -182,15 +182,6 @@
       "search": "sting, ominous hit"
     },
     {
-      "name": "die-roll",
-      "group": "Abilities",
-      "length": "0.6-1 s",
-      "priority": false,
-      "wired": true,
-      "plays": "Any die is rolled",
-      "search": "dice roll, dice on table"
-    },
-    {
       "name": "your-turn",
       "group": "Game events",
       "length": "0.5-1 s",

@@ -33,7 +33,6 @@ export function describe(e: ClientEvent, view: GameView): string | null {
     case 'extraLocation': return 'A second location is placed face down. The winner claims both.';
     case 'encounterRevealed': return `Encounter: ${card(e.card.def)}!`;
     case 'minionDrawn': return `…with ${card(e.card.def)} as a minion.`;
-    case 'dieRolled': return e.reason === 'tiebreak' ? `${who(e.player)} rolled ${e.value} for the tiebreak.` : `${who(e.player)} rolled a ${e.value}.`;
     case 'challengeSelected': return `Challenge: ${STAT_NAMES[e.stat]} ${e.difficulty}.`;
     case 'bid': return e.card ? `${who(e.player)} bid ${card(e.card.def)}${e.faceUp ? '' : ' face down'}.` : `${who(e.player)} bid a card face down.`;
     case 'passed': return e.auto ? null : `${who(e.player)} passed.`;

@@ -266,7 +266,7 @@ const EVENT_POLICY: Record<GameEvent['type'], 'public' | 'redact'> = {
   companionPlayed: 'public', companionDiscarded: 'public', companionDeclined: 'public',
   companionSkipped: 'public', companionFaceDown: 'public', companionMinion: 'public', locationRevealed: 'public',
   locationReplaced: 'public', extraLocation: 'public', encounterRevealed: 'public', encounterReplaced: 'public',
-  minionDrawn: 'public', dieRolled: 'public', challengeSelected: 'public', passed: 'public',
+  minionDrawn: 'public', challengeSelected: 'public', passed: 'public',
   revealed: 'public', resourceDiscarded: 'public', councilHero: 'public', ability: 'public',
   abilityUsed: 'public', abilityCountered: 'public', abilityZap: 'public', abilityIgnored: 'public', effect: 'public', effectCancelled: 'public', cardShown: 'public',
   peeked: 'public', bottomed: 'public', bidClaimed: 'public', bidsSwapped: 'public',

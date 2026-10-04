@@ -314,7 +314,6 @@ export type GameEvent =
   | { type: 'encounterRevealed'; card: CardRef }
   | { type: 'encounterReplaced'; from: CardRef; reason: string }
   | { type: 'minionDrawn'; card: CardRef }
-  | { type: 'dieRolled'; player: PlayerId | null; value: number; reason: 'tiebreak' | 'ability' | 'effect' }
   | { type: 'challengeSelected'; stat: Stat; difficulty: number }
   | { type: 'bid'; player: PlayerId; card: CardRef; faceUp: boolean }
   | { type: 'passed'; player: PlayerId; auto: boolean }
