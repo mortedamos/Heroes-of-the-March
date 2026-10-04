@@ -652,6 +652,11 @@ describe('challenge and encounter control', () => {
     restart(g);
     until(g, (s) => s.turn.companionMinions.length > 0 || s.turn.step === 'bidding');
     expect(g.s.turn.companionMinions).toHaveLength(1);
+    // No dice: each player with a companion turned up a resource card, and those cards were discarded.
+    expect(g.events.some((e) => e.type === 'dieRolled')).toBe(false);
+    const shown = g.events.filter((e) => e.type === 'cardShown' && e.reason === 'Iron Mites');
+    expect(shown.length).toBeGreaterThanOrEqual(2);
+    for (const e of shown) if (e.type === 'cardShown') expect(g.s.discards.resource).toContain(e.card.id);
     const ctx = new Ctx(g.s);
     const minion = ctx.def(g.s.turn.companionMinions[0]!);
     const diff = difficultyFor(ctx, null)!;

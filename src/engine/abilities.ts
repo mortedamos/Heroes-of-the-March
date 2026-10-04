@@ -835,19 +835,23 @@ export const ABILITIES: Record<string, Ability> = {
   'runeforged-titan': { status: 'full', difficultyByStat: { M: 10, G: 10 } },
   'iron-mites': {
     status: 'full',
-    note: 'The lowest roller gives up one of their own companions as a minion.',
+    note: 'The player whose resource card is lowest gives up one of their own companions as a minion.',
     on: {
       encounterEntered: (ctx, self, e) => {
         if (e.card !== self.card) return;
+        // Every player with a companion turns up the top resource card; the lowest value gives up a companion
+        // (ties draw again). The cards turned up are discarded.
         let rollers = ctx.clockwise().filter((p) => p.companions.length > 0);
-        while (rollers.length > 1) {
-          const rolls = rollers.map((p) => {
-            const v = ctx.roll(p.id, 'effect');
-            fire(ctx, 'die', { value: v, player: p.id });
-            return { p, v };
+        let guard = 0;
+        while (rollers.length > 1 && guard++ < 20) {
+          const draws = rollers.map((p) => {
+            const c = revealTop(ctx, p.id, 'resource', 1, 'Iron Mites')[0] ?? null;
+            const d = c ? ctx.def(c) : null;
+            return { p, c, v: d && d.kind === 'resource' ? d.value : 0 };
           });
-          const low = Math.min(...rolls.map((r) => r.v));
-          rollers = rolls.filter((r) => r.v === low).map((r) => r.p);
+          for (const x of draws) if (x.c) ctx.discard('resource', x.c);
+          const low = Math.min(...draws.map((x) => x.v));
+          rollers = draws.filter((x) => x.v === low).map((x) => x.p);
         }
         const loser = rollers[0];
         if (!loser) return;

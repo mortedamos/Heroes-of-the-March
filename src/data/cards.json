@@ -1872,7 +1872,7 @@
     "count": 0,
     "group": null
    },
-   "conditionText": "When this card comes into play as an encounter or a minion all players roll a die. The player with the lowest roll selects a companion to go into play as a minion, adding the relevant stat bonus to the selected challenge’s difficulty.",
+   "conditionText": "When this card comes into play as an encounter or a minion, each player with a companion turns up the top resource card. The player with the lowest value (ties turn up again) selects a companion to go into play as a minion, adding the relevant stat bonus to the selected challenge’s difficulty. The resource cards are then discarded.",
    "stat": "G",
    "difficulty": 13
   },

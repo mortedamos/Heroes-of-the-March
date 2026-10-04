@@ -125,7 +125,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'forced-stats', topic: 'Forced stats',
     ruling: 'A forced companion or hero contributes the forced stat instead of any other (including their own substitutions). Brunna\'s player takes whichever is higher. Mayor Hobby\'s player draws each time anyone is forced.' },
   { id: 'iron-mites', topic: 'Iron Mites',
-    ruling: 'Players with companions roll; the lowest roller (ties re-roll) gives one of their own companions to the encounter as a minion. It adds its stat for the challenge to the difficulty and is discarded at the end of the turn.' },
+    ruling: 'Players with companions each turn up the top resource card; the lowest value (ties turn up again) gives one of their own companions to the encounter as a minion. It adds its stat for the challenge to the difficulty and is discarded at the end of the turn. The resource cards turned up are discarded.' },
   { id: 'oskar', topic: 'Loremaster Oskar (Entered in the Grudge Book)',
     ruling: "At the start of bidding, once per turn, name an opponent. If they win the encounter, they have -3 to their total in the next encounter only. Aldric can counter it; if Oskar's ability is disabled the grudge is void." },
   { id: 'ilvena', topic: 'Elder Ilvena (Ruling of the Conclave)',
