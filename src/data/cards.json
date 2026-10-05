@@ -280,7 +280,7 @@
     "Warden"
    ],
    "quote": "“I fought the Mountain Wars so my grandchildren wouldn't have to. Then they went and had grandchildren.”",
-   "art": "units__raider",
+   "art": "portraits__urzha_neutral",
    "stats": {
     "P": 9,
     "M": 6,
@@ -342,7 +342,7 @@
     "Dwarf"
    ],
    "quote": "“Someone has to mind the door. Sigrun certainly won't.”",
-   "art": "units__foehammer_3",
+   "art": "portraits__tova-emberdeep-keeper-of-the-underway-door",
    "stats": {
     "P": 3,
     "M": 4,
@@ -380,7 +380,7 @@
     "Goose & Kettle"
    ],
    "quote": "“I pour the ale, I patrol the road, and I feed the geese. Mostly in that order.”",
-   "art": "units__troubadour_1",
+   "art": "portraits__tansy-brambleby-barmaid-and-volunteer",
    "stats": {
     "P": 3,
     "M": 3,
@@ -398,7 +398,7 @@
     "Halfellow"
    ],
    "quote": null,
-   "art": "units__mycomancer_1",
+   "art": "portraits__fennick-puffcap-mycomancer",
    "stats": {
     "P": 2,
     "M": 4,
@@ -417,7 +417,7 @@
     "Collegium"
    ],
    "quote": "“The Archmage says skyships are applied theory. I say they're applied nerve.”",
-   "art": "units__skyship",
+   "art": "portraits__captain-rook-halloran-skyship-captain",
    "stats": {
     "P": 5,
     "M": 2,
@@ -436,7 +436,7 @@
     "Marchguard"
    ],
    "quote": "“Five kingdoms, one shield wall. Try to keep up.”",
-   "art": "units__foehammer_4",
+   "art": "portraits__marshal-hedda-ironvow",
    "stats": {
     "P": 5,
     "M": 2,
@@ -455,7 +455,7 @@
     "Collegium"
    ],
    "quote": "“I've checked it four times. The odds are terrible. I'm coming anyway.”",
-   "art": "units__wizard_1",
+   "art": "portraits__pell-quillon-collegium-prodigy",
    "stats": {
     "P": 1,
     "M": 5,
@@ -473,7 +473,7 @@
     "Halfellow"
    ],
    "quote": null,
-   "art": "units__trouble_maker_3",
+   "art": "portraits__nettle-burrows-trouble-maker",
    "stats": {
     "P": 2,
     "M": 3,
@@ -493,7 +493,7 @@
     "Marchguard"
    ],
    "quote": null,
-   "art": "units__druid_1",
+   "art": "portraits__sister-aurelie-dane-physician",
    "stats": {
     "P": 2,
     "M": 4,
@@ -546,7 +546,7 @@
     "Warden"
    ],
    "quote": "“My brother thinks the lesser peoples are dull. My brother has never been to a halfellow wedding.”",
-   "art": "units__blade_dancer_2",
+   "art": "portraits__liriel-nightbloom",
    "stats": {
     "P": 3,
     "M": 5,
@@ -564,7 +564,7 @@
     "Collegium"
    ],
    "quote": null,
-   "art": "units__druid_2",
+   "art": "portraits__thessaly-of-the-grove",
    "stats": {
     "P": 2,
     "M": 5,
@@ -581,7 +581,7 @@
     "Orc"
    ],
    "quote": null,
-   "art": "units__longbowman_2",
+   "art": "portraits__kesh-the-bog-huntress",
    "stats": {
     "P": 5,
     "M": 1,
@@ -598,7 +598,7 @@
     "Human"
    ],
    "quote": "“I've haggled with dwarves, love. A lich is nothing.”",
-   "art": "units__troubadour_3",
+   "art": "portraits__mags-tolliver-market-trader",
    "stats": {
     "P": 3,
     "M": 2,
@@ -616,7 +616,7 @@
     "Marchguard"
    ],
    "quote": null,
-   "art": "units__militia_1",
+   "art": "portraits__hobart-thimblewick-moot-surgeon",
    "stats": {
     "P": 4,
     "M": 2,
@@ -634,7 +634,7 @@
     "Elf"
    ],
    "quote": null,
-   "art": "units__ranger_3",
+   "art": "portraits__caelan-the-exile",
    "stats": {
     "P": 2,
     "M": 4,
@@ -652,7 +652,7 @@
     "Warden"
    ],
    "quote": "“The trees keep watch. I keep them company.”",
-   "art": "units__wanderer_3",
+   "art": "portraits__elowen-leafwatch-treetop-warden",
    "stats": {
     "P": 4,
     "M": 3,
@@ -671,7 +671,7 @@
     "Marchguard"
    ],
    "quote": "“I have seen five Midsummer Fairs end in a brawl. This is merely the sixth.”",
-   "art": "units__knight_1",
+   "art": "portraits__sir-osric-vane-marshal-of-the-old-guard",
    "stats": {
     "P": 4,
     "M": 2,
@@ -690,7 +690,7 @@
     "Marchguard"
    ],
    "quote": null,
-   "art": "units__militia_2",
+   "art": "portraits__rosalind-marchwell-marchguard-clerk",
    "stats": {
     "P": 3,
     "M": 3,
@@ -708,7 +708,7 @@
     "Dwarf"
    ],
    "quote": null,
-   "art": "units__bombard",
+   "art": "portraits__brisa-blastcap-bombardier",
    "stats": {
     "P": 5,
     "M": 3,
@@ -725,7 +725,7 @@
     "Dwarf"
    ],
    "quote": "“The mountain keeps a ledger. Tonight I settle it.”",
-   "art": "portraits__stone",
+   "art": "portraits__dagny-coldhearth-the-grudge-bearer",
    "stats": {
     "P": 2,
     "M": 3,
@@ -744,7 +744,7 @@
     "Warden"
    ],
    "quote": null,
-   "art": "units__wizard_2",
+   "art": "portraits__seraphine-moonveil-warden-scholar",
    "stats": {
     "P": 2,
     "M": 6,
@@ -763,7 +763,7 @@
     "Beast"
    ],
    "quote": null,
-   "art": null,
+   "art": "portraits__honk-the-goose-rout-veteran",
    "stats": {
     "P": 4,
     "M": 3,
@@ -782,7 +782,7 @@
     "Beast"
    ],
    "quote": null,
-   "art": null,
+   "art": "portraits__duchess-the-pub-goose",
    "stats": {
     "P": 4,
     "M": 3,
@@ -801,7 +801,7 @@
     "Beast"
    ],
    "quote": null,
-   "art": null,
+   "art": "portraits__sergeant-waddle",
    "stats": {
     "P": 4,
     "M": 3,
@@ -820,7 +820,7 @@
     "Beast"
    ],
    "quote": null,
-   "art": null,
+   "art": "portraits__cobra-chicken",
    "stats": {
     "P": 4,
     "M": 3,
@@ -839,7 +839,7 @@
     "Warden"
    ],
    "quote": null,
-   "art": "units__druid_3",
+   "art": "portraits__elder-ilvena-of-the-conclave",
    "stats": {
     "P": 2,
     "M": 5,
@@ -857,7 +857,7 @@
     "Orc"
    ],
    "quote": null,
-   "art": "units__goblin_miscreant",
+   "art": "portraits__mogra-swiftfoot-goblin-runner",
    "stats": {
     "P": 3,
     "M": 3,
@@ -875,7 +875,7 @@
     "Halfellow"
    ],
    "quote": "“They're not aggressive. They're just very sure of themselves.”",
-   "art": "units__pony_patrol_1",
+   "art": "portraits__tobin-quill-goose-keeper",
    "stats": {
     "P": 3,
     "M": 4,
@@ -893,7 +893,7 @@
     "Orc"
    ],
    "quote": "“Nobody marches on an empty belly. Not even the Warchief.”",
-   "art": "units__militia_3",
+   "art": "portraits__grumma-ladlejaw-camp-cook",
    "stats": {
     "P": 3,
     "M": 4,
@@ -931,7 +931,7 @@
     "Beast"
    ],
    "quote": null,
-   "art": "units__dire_wolf",
+   "art": "portraits__moss-dire-wolf",
    "stats": {
     "P": 4,
     "M": 3,
@@ -948,7 +948,7 @@
     "Dwarf"
    ],
    "quote": "“Measure twice. Light once.”",
-   "art": "units__musketeer_2",
+   "art": "portraits__torvi-cinderkeg-master-gunner",
    "stats": {
     "P": 4,
     "M": 3,
@@ -967,7 +967,7 @@
     "Beast"
    ],
    "quote": "“Arf!”",
-   "art": null,
+   "art": "portraits__gimlet-a-very-good-dog",
    "stats": {
     "P": 3,
     "M": 3,
