@@ -20,7 +20,8 @@
    "kind": "hero",
    "triggerText": "When a Capital location enters play, draw a resource.",
    "revision": "Worded as once per turn (was 'at any time'); Physical 10 → 9 (drifted to 38% once the others were fixed).",
-   "kinText": "Kin: your hero gets +1 to all stats for each Orc companion you control."
+   "kinText": "Kin: your hero gets +1 to all stats for each Orc companion you control.",
+   "number": 1001
   },
   {
    "id": "thorgar-twice-buried",
@@ -41,7 +42,8 @@
    "kind": "hero",
    "triggerText": "If a location is won by a margin of 3 or less, draw a resource.",
    "revision": "Now always helps a little (was a 24% win rate).",
-   "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats."
+   "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats.",
+   "number": 1002
   },
   {
    "id": "aelthir-moonveil",
@@ -62,7 +64,8 @@
    "kind": "hero",
    "triggerText": "When a Guile challenge is faced, draw a resource.",
    "revision": "Now chosen once the challenge is known; Physical 3 → 5 (was a 22% win rate). Trigger now keys off the encounter's stat (no more die).",
-   "kinText": "Kin: when a Elf companion enters play, draw a resource."
+   "kinText": "Kin: when a Elf companion enters play, draw a resource.",
+   "number": 1003
   },
   {
    "id": "lord-vaelis-nightbloom",
@@ -83,7 +86,8 @@
    "kind": "hero",
    "triggerText": "When a hero falls, draw 2 resources.",
    "revision": "Mental 6 -> 7, Guile 10 -> 11, and the trigger draws 2 (was a 0.61 win rate).",
-   "kinText": "Kin: while an opponent controls a Elf companion, it gets -1 to all stats."
+   "kinText": "Kin: while an opponent controls a Elf companion, it gets -1 to all stats.",
+   "number": 1004
   },
   {
    "id": "pip-wanderfoot",
@@ -104,7 +108,8 @@
    "kind": "hero",
    "triggerText": "When a location is replaced, draw a resource.",
    "revision": "Trigger is now a replaced location (nothing in the story ties him to Ironbound).",
-   "kinText": "Kin: your hero gets +1 to all stats for each Halfellow companion you control."
+   "kinText": "Kin: your hero gets +1 to all stats for each Halfellow companion you control.",
+   "number": 1005
   },
   {
    "id": "kazra-emberdeep",
@@ -125,7 +130,8 @@
    "kind": "hero",
    "triggerText": "When an Ironbound encounter enters play, draw a resource.",
    "revision": "Trigger now Ironbound encounters (her forge, her Titans).",
-   "kinText": "Kin: when a Dwarf companion enters play, draw a resource."
+   "kinText": "Kin: when a Dwarf companion enters play, draw a resource.",
+   "number": 1006
   },
   {
    "id": "ysolde-of-the-wellspring",
@@ -146,7 +152,8 @@
    "kind": "hero",
    "triggerText": "When a Magic challenge is faced, draw a resource.",
    "revision": "Stats 6/8/4 -> 5/6/3 to pay for the Kin bonus and a more frequent trigger.",
-   "kinText": "Kin: your hero gets +1 to all stats for each Elf companion you control."
+   "kinText": "Kin: your hero gets +1 to all stats for each Elf companion you control.",
+   "number": 1007
   },
   {
    "id": "mayor-hobby-trickgrin",
@@ -166,7 +173,8 @@
    "abilityText": "You may bid all of your resource cards face down, revealing them at any time. Abilities of those resource cards take effect when revealed, not while face down.",
    "kind": "hero",
    "triggerText": "The first time each turn anyone is forced to use a different stat, draw a resource.",
-   "kinText": "Kin: while an opponent controls a Halfellow companion, it gets -1 to all stats."
+   "kinText": "Kin: while an opponent controls a Halfellow companion, it gets -1 to all stats.",
+   "number": 1008
   },
   {
    "id": "lord-paladin-aldric-ashcroft",
@@ -187,7 +195,8 @@
    "abilityText": "You may counter or disable one ability of another player's heroes or companions.",
    "kind": "hero",
    "triggerText": "When a Marchguard location enters play, or a Marchguard companion enters play under your control, draw a resource.",
-   "kinText": "Kin: your hero gets +1 to all stats for each Human companion you control."
+   "kinText": "Kin: your hero gets +1 to all stats for each Human companion you control.",
+   "number": 1009
   },
   {
    "id": "high-thane-brunna-stonefast",
@@ -208,7 +217,8 @@
    "kind": "hero",
    "triggerText": "When a Physical challenge is faced, draw a resource.",
    "revision": "Guile 7 -> 6 to pay for the Kin bonus.",
-   "kinText": "Kin: your hero gets +1 to all stats for each Dwarf companion you control."
+   "kinText": "Kin: your hero gets +1 to all stats for each Dwarf companion you control.",
+   "number": 1010
   },
   {
    "id": "queen-maren-ashcroft",
@@ -229,7 +239,8 @@
    "kind": "hero",
    "triggerText": "When a Wardhouse location enters play, draw a resource.",
    "revision": "Was usable on every turn (43% win rate).",
-   "kinText": "Kin: when a Human companion enters play, draw a resource."
+   "kinText": "Kin: when a Human companion enters play, draw a resource.",
+   "number": 1011
   },
   {
    "id": "archmage-corvin-varro",
@@ -249,7 +260,8 @@
    "kind": "hero",
    "triggerText": "When an Undead encounter enters play, draw a resource.",
    "revision": "Was any turn. With steady draws it fired every turn (50% win rate).",
-   "kinText": "Kin: when a Human companion enters play, draw a resource."
+   "kinText": "Kin: when a Human companion enters play, draw a resource.",
+   "number": 1012
   },
   {
    "id": "professor-barnaby-pickwort",
@@ -270,7 +282,8 @@
    "kind": "hero",
    "triggerText": "When an Accord location enters play, draw a resource.",
    "revision": "Physical 2 → 4 (was a 25% win rate).",
-   "kinText": "Kin: when a Halfellow companion enters play, draw a resource."
+   "kinText": "Kin: when a Halfellow companion enters play, draw a resource.",
+   "number": 1013
   },
   {
    "id": "urzha-half-tusk",
@@ -291,7 +304,8 @@
    "kind": "hero",
    "triggerText": "When a minion is drawn, draw a resource.",
    "revision": "Not This Fight almost never got used; he now picks his fights, and draws when a minion is drawn.",
-   "kinText": "Kin: while an opponent controls a Orc companion, it gets -1 to all stats."
+   "kinText": "Kin: while an opponent controls a Orc companion, it gets -1 to all stats.",
+   "number": 1014
   },
   {
    "id": "loremaster-oskar-grimgate",
@@ -312,7 +326,8 @@
    "kind": "hero",
    "triggerText": "When an Oathbreaker encounter enters play, draw a resource.",
    "revision": "Promoted from companion to hero; the old negate-a-bonus ability is gone (it won 1.41 of its fair share).",
-   "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats."
+   "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats.",
+   "number": 1015
   }
  ],
  "companions": [
@@ -333,7 +348,8 @@
    "abilityName": "Rumour Mill",
    "abilityText": "Once per turn, look at a random face-down resource card that another player has bid. If Gimlet is already in play, you may play this card as a bonus companion above your companion limit.",
    "kind": "companion",
-   "revision": "Was +2 to Wands (an innkeeper, not an enchanter)."
+   "revision": "Was +2 to Wands (an innkeeper, not an enchanter).",
+   "number": 2001
   },
   {
    "id": "tova-emberdeep-keeper-of-the-underway-door",
@@ -351,7 +367,8 @@
    "abilityName": "Waiting at the Door",
    "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
    "kind": "companion",
-   "revision": "Now two extra cards on her return (was one); Physical 1 → 2 and Mental 3 → 4 (the ability alone didn't make up for resting)."
+   "revision": "Now two extra cards on her return (was one); Physical 1 → 2 and Mental 3 → 4 (the ability alone didn't make up for resting).",
+   "number": 2002
   },
   {
    "id": "varg-ironjaw",
@@ -369,7 +386,8 @@
    "abilityName": "Pack Runner",
    "abilityText": "At the start of your turn, draw a resource card for each other Orc companion you control. Varg gains +1 to all stats while Sigrun is in your party. If Moss is already in play, you may play this card as a bonus companion above your companion limit.",
    "kind": "companion",
-   "revision": "Was a draw for Underway companions."
+   "revision": "Was a draw for Underway companions.",
+   "number": 2003
   },
   {
    "id": "tansy-brambleby-barmaid-and-volunteer",
@@ -389,7 +407,8 @@
    "abilityName": "Goose & Company",
    "abilityText": "At the start of your turn, draw a resource card for every Goose in play anywhere.",
    "kind": "companion",
-   "revision": "Was a draw when a Goose entered play, which almost never happened; now counts every Goose in play at the start of your turn."
+   "revision": "Was a draw when a Goose entered play, which almost never happened; now counts every Goose in play at the start of your turn.",
+   "number": 2004
   },
   {
    "id": "fennick-puffcap-mycomancer",
@@ -407,7 +426,8 @@
    "abilityName": "Spore Cloud",
    "abilityText": "The first time each turn anyone is forced to use a different stat, draw a resource card.",
    "kind": "companion",
-   "revision": "Was a draw for Healer companions, which almost never added up."
+   "revision": "Was a draw for Healer companions, which almost never added up.",
+   "number": 2005
   },
   {
    "id": "captain-rook-halloran-skyship-captain",
@@ -426,7 +446,8 @@
    "abilityName": "Skyship Manifest",
    "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand and draw a resource card.",
    "kind": "companion",
-   "revision": "Was a draw for Collegium companions or locations, which almost never added up."
+   "revision": "Was a draw for Collegium companions or locations, which almost never added up.",
+   "number": 2006
   },
   {
    "id": "marshal-hedda-ironvow",
@@ -445,7 +466,8 @@
    "abilityName": "Hold the Line",
    "abilityText": "Once per turn, when an opponent's ability would affect one of your companions, cancel it.",
    "kind": "companion",
-   "revision": "Was a draw for Marchguard companions or locations."
+   "revision": "Was a draw for Marchguard companions or locations.",
+   "number": 2007
   },
   {
    "id": "pell-quillon-collegium-prodigy",
@@ -464,7 +486,8 @@
    "abilityName": "Proofs and Theorems",
    "abilityText": "At the end of bidding, as resource cards are revealed, if you played at least two resource cards, each of them gains 2 to its value.",
    "kind": "companion",
-   "revision": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 to keep her from outperforming the rest."
+   "revision": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 to keep her from outperforming the rest.",
+   "number": 2008
   },
   {
    "id": "nettle-burrows-trouble-maker",
@@ -482,7 +505,8 @@
    "abilityName": "Brave Little Heart",
    "abilityText": "This companion may contribute their guile stat in place of another stat.",
    "kind": "companion",
-   "revision": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter."
+   "revision": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter.",
+   "number": 2009
   },
   {
    "id": "sister-aurelie-dane-physician",
@@ -501,7 +525,8 @@
    },
    "abilityName": "Think It Through",
    "abilityText": "This companion may contribute their mental stat in place of another stat.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2010
   },
   {
    "id": "gnash-the-butcher-of-bloodmire",
@@ -518,7 +543,8 @@
    },
    "abilityName": "Gnash SMASH",
    "abilityText": "This companion may contribute their physical stat in place of another stat.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2011
   },
   {
    "id": "sigrun-stonefast-metal-singer",
@@ -536,7 +562,8 @@
    "abilityName": "Encore!",
    "abilityText": "Once per turn, when you would draw a resource card, you may instead look at three random cards from the resource discard stack, take one and leave the rest. Sigrun gains +1 to all stats while Varg is in your party.",
    "kind": "companion",
-   "revision": "Was a random card from the discard pile; now a choice of one from three, once per turn."
+   "revision": "Was a random card from the discard pile; now a choice of one from three, once per turn.",
+   "number": 2012
   },
   {
    "id": "liriel-nightbloom",
@@ -554,7 +581,8 @@
    },
    "abilityName": "Too Clever by Half",
    "abilityText": "You can force another player's companion to contribute their guile stat in place of another stat.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2013
   },
   {
    "id": "thessaly-of-the-grove",
@@ -572,7 +600,8 @@
    },
    "abilityName": "Mind of the Grove",
    "abilityText": "You can force another player's companion to contribute their mental stat in place of another stat.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2014
   },
   {
    "id": "kesh-the-bog-huntress",
@@ -589,7 +618,8 @@
    },
    "abilityName": "Call of the Hunt",
    "abilityText": "You can force another player's companion to contribute their physical stat in place of another stat. When a Beast encounter enters play, draw a resource card.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2015
   },
   {
    "id": "mags-tolliver-market-trader",
@@ -606,7 +636,8 @@
    },
    "abilityName": "Queen for a Day",
    "abilityText": "You may double your hero's stats. At the end of the encounter this card is discarded.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2016
   },
   {
    "id": "hobart-thimblewick-moot-surgeon",
@@ -625,7 +656,8 @@
    "abilityName": "Well-Meaning Blunder",
    "abilityText": "You may force another player to use their hero's guile stat in place of another stat.",
    "kind": "companion",
-   "revision": "Was Sir Hugo Pellam (Human); now a Halfellow."
+   "revision": "Was Sir Hugo Pellam (Human); now a Halfellow.",
+   "number": 2017
   },
   {
    "id": "caelan-the-exile",
@@ -642,7 +674,8 @@
    },
    "abilityName": "Ulterior Motives",
    "abilityText": "You may force another player to use their hero's mental stat in place of another stat.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2018
   },
   {
    "id": "elowen-leafwatch-treetop-warden",
@@ -661,7 +694,8 @@
    "abilityName": "Eternal Vigilance",
    "abilityText": "You may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
    "kind": "companion",
-   "revision": "Was Wren Nightingale (Human); now an Elf."
+   "revision": "Was Wren Nightingale (Human); now an Elf.",
+   "number": 2019
   },
   {
    "id": "sir-osric-vane-marshal-of-the-old-guard",
@@ -680,7 +714,8 @@
    "abilityName": "Assess the Situation",
    "abilityText": "You may use your hero's guile stat in place of another stat. If you do, Osric gains +1 guile for this encounter.",
    "kind": "companion",
-   "revision": "Now also gains +1 when the swap is used (was a below-average card)."
+   "revision": "Now also gains +1 when the swap is used (was a below-average card).",
+   "number": 2020
   },
   {
    "id": "rosalind-marchwell-marchguard-clerk",
@@ -699,7 +734,8 @@
    "abilityName": "Cross-Reference",
    "abilityText": "You may use your hero's mental stat in place of another stat. If you do, Rosalind gains +1 to mental for this encounter.",
    "kind": "companion",
-   "revision": "Was Posy Marchbank (Halfellow); now a Human."
+   "revision": "Was Posy Marchbank (Halfellow); now a Human.",
+   "number": 2021
   },
   {
    "id": "brisa-blastcap-bombardier",
@@ -716,7 +752,8 @@
    },
    "abilityName": "Loose Powder",
    "abilityText": "You may force another player to use their hero's physical stat in place of another stat.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2022
   },
   {
    "id": "dagny-coldhearth-the-grudge-bearer",
@@ -734,7 +771,8 @@
    "abilityName": "Grudge Paid in Full",
    "abilityText": "You win the current encounter and automatically take the location. However, you must discard all resources and your hero falls. You may use this ability only once per game.",
    "kind": "companion",
-   "revision": "Was Mira Coldwater (Human); now a Dwarf grudge-bearer."
+   "revision": "Was Mira Coldwater (Human); now a Dwarf grudge-bearer.",
+   "number": 2023
   },
   {
    "id": "seraphine-moonveil-warden-scholar",
@@ -753,7 +791,8 @@
    "abilityName": "Wellspring Renewal",
    "abilityText": "When one of your companions is replaced or discarded, draw a resource card.",
    "kind": "companion",
-   "revision": "Was draw 2 when she entered play."
+   "revision": "Was draw 2 when she entered play.",
+   "number": 2024
   },
   {
    "id": "honk-the-goose-rout-veteran",
@@ -772,7 +811,8 @@
    "abilityName": "HONK!",
    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is 3 or more, gain 3 physical. Discard it either way. You keep this companion's stats.",
    "kind": "companion",
-   "revision": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats (was an 88% relative win rate; the roll almost never got used)."
+   "revision": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats (was an 88% relative win rate; the roll almost never got used).",
+   "number": 2025
   },
   {
    "id": "duchess-the-pub-goose",
@@ -791,7 +831,8 @@
    "abilityName": "Hiss",
    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is 4 or more, gain 5 guile. Discard it either way. You keep this companion's stats.",
    "kind": "companion",
-   "revision": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats."
+   "revision": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats.",
+   "number": 2026
   },
   {
    "id": "sergeant-waddle",
@@ -810,7 +851,8 @@
    "abilityName": "HONK!",
    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is odd, gain 2 physical. Discard it either way. You keep this companion's stats.",
    "kind": "companion",
-   "revision": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats."
+   "revision": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats.",
+   "number": 2027
   },
   {
    "id": "cobra-chicken",
@@ -829,7 +871,8 @@
    "abilityName": "Hiss",
    "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If it is a Wand, gain 3 guile. Discard it either way. You keep this companion's stats.",
    "kind": "companion",
-   "revision": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats."
+   "revision": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats.",
+   "number": 2028
   },
   {
    "id": "elder-ilvena-of-the-conclave",
@@ -848,7 +891,8 @@
    "abilityName": "Ruling of the Conclave",
    "abilityText": "Once per turn, before bidding, choose another player's companion: it must contribute its lowest stat this turn.",
    "kind": "companion",
-   "revision": "The discard cost is gone."
+   "revision": "The discard cost is gone.",
+   "number": 2029
   },
   {
    "id": "mogra-swiftfoot-goblin-runner",
@@ -866,7 +910,8 @@
    "abilityName": "Smash and Grab",
    "abilityText": "When you win a location, draw a resource card.",
    "kind": "companion",
-   "revision": "Was a die reroll and an extra reveal."
+   "revision": "Was a die reroll and an extra reveal.",
+   "number": 2030
   },
   {
    "id": "tobin-quill-goose-keeper",
@@ -884,7 +929,8 @@
    "abilityName": "Keeper of the Flock",
    "abilityText": "Once per turn, before bidding, reveal the top three companions. If one or more is a Goose, you may put one of them into play as a companion (normal companion limits apply). Discard the rest.",
    "kind": "companion",
-   "revision": "Was a draw when a Goose entered play, which almost never happened (effective on about 8% of triggers)."
+   "revision": "Was a draw when a Goose entered play, which almost never happened (effective on about 8% of triggers).",
+   "number": 2031
   },
   {
    "id": "grumma-ladlejaw-camp-cook",
@@ -902,7 +948,8 @@
    "abilityName": "Camp Stew",
    "abilityText": "On your turn you may force another player to use their hero's physical stat in place of another stat.",
    "kind": "companion",
-   "revision": "Was Clemence Fairbrook (Human); now an Orc."
+   "revision": "Was Clemence Fairbrook (Human); now an Orc.",
+   "number": 2032
   },
   {
    "id": "hesk-of-two-homes",
@@ -921,7 +968,8 @@
    "abilityName": "Raised by Both",
    "abilityText": "Once per turn you may re-use a once-per-turn ability of another companion you control.",
    "kind": "companion",
-   "revision": "Demoted from hero to companion; counts as both an Orc and a Human."
+   "revision": "Demoted from hero to companion; counts as both an Orc and a Human.",
+   "number": 2033
   },
   {
    "id": "moss-dire-wolf",
@@ -939,7 +987,8 @@
    },
    "abilityName": "Varg's Shadow",
    "abilityText": "If Varg is already in play, you may play this card as a bonus companion above your companion limit.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2034
   },
   {
    "id": "torvi-cinderkeg-master-gunner",
@@ -956,7 +1005,8 @@
    },
    "abilityName": "Fire in the Hole",
    "abilityText": "At the end of bidding, before the winner is declared, you may discard this companion. If you do, every opponent has -4 to their total this encounter, or -5 if Mhorgrim's Hunt is revealed under your control.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2035
   },
   {
    "id": "gimlet-a-very-good-dog",
@@ -975,7 +1025,8 @@
    },
    "abilityName": "Fetch",
    "abilityText": "Once per turn, you may swap a resource card from your hand with the top card of the resource discard stack. Gimlet gains +1 to all stats while Destiny the Frog is part of the current encounter. If Goldie is already in play, you may play this card as a bonus companion above your companion limit.",
-   "kind": "companion"
+   "kind": "companion",
+   "number": 2036
   }
  ],
  "locations": [
@@ -990,7 +1041,8 @@
    "quote": "“Every road in the Marches starts at the Waystone. Most of them come back for a drink.”",
    "art": "cities__human_city_1",
    "renown": 3,
-   "conditionText": "All players may draw a companion and put them into play, then discard a companion in play."
+   "conditionText": "All players may draw a companion and put them into play, then discard a companion in play.",
+   "number": 3001
   },
   {
    "kind": "location",
@@ -1003,7 +1055,8 @@
    "quote": null,
    "art": "buildings__palace",
    "renown": 5,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3002
   },
   {
    "kind": "location",
@@ -1016,7 +1069,8 @@
    "quote": null,
    "art": "enhancements__cave_2",
    "renown": 3,
-   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is Frostborn, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Frostborn encounters are increased by 2."
+   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is Frostborn, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Frostborn encounters are increased by 2.",
+   "number": 3003
   },
   {
    "kind": "location",
@@ -1028,7 +1082,8 @@
    "quote": null,
    "art": "enhancements__ruin_1",
    "renown": 5,
-   "conditionText": "The challenges and minion bonuses of Undead encounters are increased by 2."
+   "conditionText": "The challenges and minion bonuses of Undead encounters are increased by 2.",
+   "number": 3004
   },
   {
    "kind": "location",
@@ -1041,7 +1096,8 @@
    "quote": null,
    "art": "buildings__altar_of_ages",
    "renown": 5,
-   "conditionText": "The challenge type of the current encounter is changed to guile."
+   "conditionText": "The challenge type of the current encounter is changed to guile.",
+   "number": 3005
   },
   {
    "kind": "location",
@@ -1054,7 +1110,8 @@
    "quote": null,
    "art": "buildings__wellspring_grove",
    "renown": 4,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3006
   },
   {
    "kind": "location",
@@ -1067,7 +1124,8 @@
    "quote": null,
    "art": "buildings__ancestral_dolmen",
    "renown": 6,
-   "conditionText": "The challenges and minion bonuses of Oathbreaker encounters are increased by 2."
+   "conditionText": "The challenges and minion bonuses of Oathbreaker encounters are increased by 2.",
+   "number": 3007
   },
   {
    "kind": "location",
@@ -1079,7 +1137,8 @@
    "quote": null,
    "art": "cities__elf_city_2",
    "renown": 4,
-   "conditionText": "Each player must choose one of their companions and turn them face down. Face down companions give no bonuses and their abilities cannot be used. When this location leaves play those companions are turned face up."
+   "conditionText": "Each player must choose one of their companions and turn them face down. Face down companions give no bonuses and their abilities cannot be used. When this location leaves play those companions are turned face up.",
+   "number": 3008
   },
   {
    "kind": "location",
@@ -1092,7 +1151,8 @@
    "quote": null,
    "art": "cities__halfellow_city_2",
    "renown": 4,
-   "conditionText": "Draw a second location card and place it face down without revealing it to any player. The player who wins this location claims both."
+   "conditionText": "Draw a second location card and place it face down without revealing it to any player. The player who wins this location claims both.",
+   "number": 3009
   },
   {
    "kind": "location",
@@ -1105,7 +1165,8 @@
    "quote": null,
    "art": "enhancements__cave_3",
    "renown": 3,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3010
   },
   {
    "kind": "location",
@@ -1117,7 +1178,8 @@
    "quote": null,
    "art": "cities__elf_city_4",
    "renown": 5,
-   "conditionText": "The challenges and minion bonuses of Ironbound encounters are increased by 2."
+   "conditionText": "The challenges and minion bonuses of Ironbound encounters are increased by 2.",
+   "number": 3011
   },
   {
    "kind": "location",
@@ -1130,7 +1192,8 @@
    "quote": null,
    "art": "enhancements__scorch_1",
    "renown": 3,
-   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is a Gargoyle, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Gargoyle encounters are increased by 2."
+   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is a Gargoyle, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Gargoyle encounters are increased by 2.",
+   "number": 3012
   },
   {
    "kind": "location",
@@ -1143,7 +1206,8 @@
    "quote": null,
    "art": "buildings__runewall",
    "renown": 3,
-   "conditionText": "If any minions are in play at this location, their bonus is increased by one."
+   "conditionText": "If any minions are in play at this location, their bonus is increased by one.",
+   "number": 3013
   },
   {
    "kind": "location",
@@ -1156,7 +1220,8 @@
    "quote": "“I have the original. You may look. Please don't breathe on it.” — Professor Barnaby Pickwort",
    "art": "buildings__historical_society",
    "renown": 5,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3014
   },
   {
    "kind": "location",
@@ -1169,7 +1234,8 @@
    "quote": null,
    "art": null,
    "renown": 4,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3015
   },
   {
    "kind": "location",
@@ -1182,7 +1248,8 @@
    "quote": null,
    "art": "terrain__desert_2",
    "renown": 2,
-   "conditionText": "All players may immediately draw a resource card for every Orc companion they have in play."
+   "conditionText": "All players may immediately draw a resource card for every Orc companion they have in play.",
+   "number": 3016
   },
   {
    "kind": "location",
@@ -1195,7 +1262,8 @@
    "quote": null,
    "art": "enhancements__scorch_2",
    "renown": 6,
-   "conditionText": "All players must immediately discard a companion, then shuffle this card back into the location stack and draw a new location."
+   "conditionText": "All players must immediately discard a companion, then shuffle this card back into the location stack and draw a new location.",
+   "number": 3017
   },
   {
    "kind": "location",
@@ -1208,7 +1276,8 @@
    "quote": null,
    "art": "buildings__deep_forge",
    "renown": 4,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3018
   },
   {
    "kind": "location",
@@ -1221,7 +1290,8 @@
    "quote": null,
    "art": "buildings__treetop_watch",
    "renown": 4,
-   "conditionText": "The challenge type of the current encounter is changed to physical."
+   "conditionText": "The challenge type of the current encounter is changed to physical.",
+   "number": 3019
   },
   {
    "kind": "location",
@@ -1234,7 +1304,8 @@
    "quote": null,
    "art": "buildings__great_hall",
    "renown": 6,
-   "conditionText": "All players may immediately draw a resource card for every Warden they have in play (heroes count)."
+   "conditionText": "All players may immediately draw a resource card for every Warden they have in play (heroes count).",
+   "number": 3020
   },
   {
    "kind": "location",
@@ -1247,7 +1318,8 @@
    "quote": null,
    "art": "cities__dwarf_city_5",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Dwarf companion they have in play."
+   "conditionText": "All players may immediately draw a resource card for every Dwarf companion they have in play.",
+   "number": 3021
   },
   {
    "kind": "location",
@@ -1259,7 +1331,8 @@
    "quote": null,
    "art": "cities__halfellow_city_4",
    "renown": 5,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3022
   },
   {
    "kind": "location",
@@ -1272,7 +1345,8 @@
    "quote": null,
    "art": null,
    "renown": 4,
-   "conditionText": "The player who wins this location must discard a companion."
+   "conditionText": "The player who wins this location must discard a companion.",
+   "number": 3023
   },
   {
    "kind": "location",
@@ -1285,7 +1359,8 @@
    "quote": null,
    "art": "buildings__mage_college",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Collegium companion they have in play."
+   "conditionText": "All players may immediately draw a resource card for every Collegium companion they have in play.",
+   "number": 3024
   },
   {
    "kind": "location",
@@ -1298,7 +1373,8 @@
    "quote": null,
    "art": "cities__human_city_3",
    "renown": 4,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3025
   },
   {
    "kind": "location",
@@ -1310,7 +1386,8 @@
    "quote": null,
    "art": "cities__halfellow_city_6",
    "renown": 2,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3026
   },
   {
    "kind": "location",
@@ -1323,7 +1400,8 @@
    "quote": "“Five banners on one wall. Somebody always complains about the order.” — Marshal Hedda Ironvow",
    "art": "buildings__war_camp",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Marchguard companion they have in play."
+   "conditionText": "All players may immediately draw a resource card for every Marchguard companion they have in play.",
+   "number": 3027
   },
   {
    "kind": "location",
@@ -1335,7 +1413,8 @@
    "quote": "“Every bard in five kingdoms sets their great battles here. Nobody can say why.”",
    "art": "enhancements__ruin_2",
    "renown": 2,
-   "conditionText": "Counts as all location types."
+   "conditionText": "Counts as all location types.",
+   "number": 3028
   },
   {
    "kind": "location",
@@ -1348,7 +1427,8 @@
    "quote": null,
    "art": "cities__dwarf_city_2",
    "renown": 3,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3029
   },
   {
    "kind": "location",
@@ -1360,7 +1440,8 @@
    "quote": null,
    "art": "enhancements__cave_1",
    "renown": 4,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3030
   },
   {
    "kind": "location",
@@ -1374,7 +1455,8 @@
    "quote": null,
    "art": "enhancements__ruin_3",
    "renown": 5,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3031
   },
   {
    "kind": "location",
@@ -1387,7 +1469,8 @@
    "quote": null,
    "art": "cities__elf_city_6",
    "renown": 4,
-   "conditionText": "The challenge type of the current encounter is changed to mental."
+   "conditionText": "The challenge type of the current encounter is changed to mental.",
+   "number": 3032
   },
   {
    "kind": "location",
@@ -1399,7 +1482,8 @@
    "quote": null,
    "art": "enhancements__resource_fertile_2",
    "renown": 4,
-   "conditionText": "Fog of the Fey. All face-down resource cards stay hidden until the reveal step. No ability can force them to be revealed beforehand."
+   "conditionText": "Fog of the Fey. All face-down resource cards stay hidden until the reveal step. No ability can force them to be revealed beforehand.",
+   "number": 3033
   },
   {
    "kind": "location",
@@ -1412,7 +1496,8 @@
    "quote": "“Pint for the rumour, Mayor?” — Goldie Trickgrin",
    "art": "buildings__neighborhood_pub",
    "renown": 2,
-   "conditionText": "All players may immediately draw a resource card for every Goldie Trickgrin companion in play."
+   "conditionText": "All players may immediately draw a resource card for every Goldie Trickgrin companion in play.",
+   "number": 3034
   },
   {
    "kind": "location",
@@ -1425,7 +1510,8 @@
    "quote": null,
    "art": "cities__elf_city_6",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Elf companion they have in play."
+   "conditionText": "All players may immediately draw a resource card for every Elf companion they have in play.",
+   "number": 3035
   },
   {
    "kind": "location",
@@ -1437,7 +1523,8 @@
    "quote": "“Every war ends somewhere. The Marches have been saving this field a long time.”",
    "art": "cities__human_city_6",
    "renown": 4,
-   "conditionText": "All players must discard a resource card."
+   "conditionText": "All players must discard a resource card.",
+   "number": 3036
   },
   {
    "kind": "location",
@@ -1450,7 +1537,8 @@
    "quote": null,
    "art": "cities__human_city_2",
    "renown": 2,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3037
   },
   {
    "kind": "location",
@@ -1463,7 +1551,8 @@
    "quote": null,
    "art": null,
    "renown": 3,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3038
   },
   {
    "kind": "location",
@@ -1476,7 +1565,8 @@
    "quote": null,
    "art": "cities__halfellow_city_6",
    "renown": 3,
-   "conditionText": "All players may immediately draw a resource card for every Halfellow companion they have in play."
+   "conditionText": "All players may immediately draw a resource card for every Halfellow companion they have in play.",
+   "number": 3039
   },
   {
    "kind": "location",
@@ -1489,7 +1579,8 @@
    "quote": null,
    "art": "terrain__tundra_2",
    "renown": 2,
-   "conditionText": "If the encounter is Undead, it draws one extra Undead minion."
+   "conditionText": "If the encounter is Undead, it draws one extra Undead minion.",
+   "number": 3040
   },
   {
    "kind": "location",
@@ -1502,7 +1593,8 @@
    "quote": null,
    "art": null,
    "renown": 4,
-   "conditionText": null
+   "conditionText": null,
+   "number": 3041
   }
  ],
  "encounters": [
@@ -1523,7 +1615,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4001
   },
   {
    "kind": "encounter",
@@ -1541,7 +1634,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4002
   },
   {
    "kind": "encounter",
@@ -1559,7 +1653,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4003
   },
   {
    "kind": "encounter",
@@ -1577,7 +1672,8 @@
    },
    "conditionText": "When this card comes into play draw an Ironbound minion.",
    "stat": "M",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4004
   },
   {
    "kind": "encounter",
@@ -1595,7 +1691,8 @@
    },
    "conditionText": "When this card comes into play draw an Undead minion.",
    "stat": "M",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4005
   },
   {
    "kind": "encounter",
@@ -1613,7 +1710,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4006
   },
   {
    "kind": "encounter",
@@ -1633,7 +1731,8 @@
    },
    "conditionText": "When this card comes into play draw an Unremembered minion.",
    "stat": "G",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4007
   },
   {
    "kind": "encounter",
@@ -1652,7 +1751,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4008
   },
   {
    "kind": "encounter",
@@ -1671,7 +1771,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4009
   },
   {
    "kind": "encounter",
@@ -1690,7 +1791,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4010
   },
   {
    "kind": "encounter",
@@ -1708,7 +1810,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4011
   },
   {
    "kind": "encounter",
@@ -1726,7 +1829,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4012
   },
   {
    "kind": "encounter",
@@ -1744,7 +1848,8 @@
    },
    "conditionText": "When this card comes into play draw two minions.",
    "stat": "G",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4013
   },
   {
    "kind": "encounter",
@@ -1763,7 +1868,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 16
+   "difficulty": 16,
+   "number": 4014
   },
   {
    "kind": "encounter",
@@ -1781,7 +1887,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 18
+   "difficulty": 18,
+   "number": 4015
   },
   {
    "kind": "encounter",
@@ -1801,7 +1908,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4016
   },
   {
    "kind": "encounter",
@@ -1819,7 +1927,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4017
   },
   {
    "kind": "encounter",
@@ -1838,7 +1947,8 @@
    },
    "conditionText": "When this card comes into play draw a Wicker minion.",
    "stat": "G",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4018
   },
   {
    "kind": "encounter",
@@ -1856,7 +1966,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4019
   },
   {
    "kind": "encounter",
@@ -1874,7 +1985,8 @@
    },
    "conditionText": "When this card comes into play as an encounter or a minion, each player with a companion turns up the top resource card. The player with the lowest value (ties turn up again) selects a companion to go into play as a minion, adding the relevant stat bonus to the selected challenge’s difficulty. The resource cards are then discarded.",
    "stat": "G",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4020
   },
   {
    "kind": "encounter",
@@ -1892,7 +2004,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4021
   },
   {
    "kind": "encounter",
@@ -1911,7 +2024,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4022
   },
   {
    "kind": "encounter",
@@ -1929,7 +2043,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "G",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4023
   },
   {
    "kind": "encounter",
@@ -1947,7 +2062,8 @@
    },
    "conditionText": "When this card comes into play draw an Ironbound minion.",
    "stat": "M",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4024
   },
   {
    "kind": "encounter",
@@ -1967,7 +2083,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "G",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4025
   },
   {
    "kind": "encounter",
@@ -1987,7 +2104,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4026
   },
   {
    "kind": "encounter",
@@ -2006,7 +2124,8 @@
    },
    "conditionText": "When this card comes into play draw two Undead minions.",
    "stat": "M",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4027
   },
   {
    "kind": "encounter",
@@ -2022,7 +2141,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4028
   },
   {
    "kind": "encounter",
@@ -2042,7 +2162,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4029
   },
   {
    "kind": "encounter",
@@ -2060,7 +2181,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 16
+   "difficulty": 16,
+   "number": 4030
   },
   {
    "kind": "encounter",
@@ -2081,7 +2203,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 16
+   "difficulty": 16,
+   "number": 4031
   },
   {
    "kind": "encounter",
@@ -2099,7 +2222,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 18
+   "difficulty": 18,
+   "number": 4032
   },
   {
    "kind": "encounter",
@@ -2115,7 +2239,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 16
+   "difficulty": 16,
+   "number": 4033
   },
   {
    "kind": "encounter",
@@ -2133,7 +2258,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 10
+   "difficulty": 10,
+   "number": 4034
   },
   {
    "kind": "encounter",
@@ -2153,7 +2279,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4035
   },
   {
    "kind": "encounter",
@@ -2173,7 +2300,8 @@
    },
    "conditionText": "If the challenge is changed to Mental or Guile, its difficulty is 10.",
    "stat": "P",
-   "difficulty": 18
+   "difficulty": 18,
+   "number": 4036
   },
   {
    "kind": "encounter",
@@ -2192,7 +2320,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4037
   },
   {
    "kind": "encounter",
@@ -2212,7 +2341,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4038
   },
   {
    "kind": "encounter",
@@ -2231,7 +2361,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4039
   },
   {
    "kind": "encounter",
@@ -2251,7 +2382,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4040
   },
   {
    "kind": "encounter",
@@ -2269,7 +2401,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4041
   },
   {
    "kind": "encounter",
@@ -2287,7 +2420,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4042
   },
   {
    "kind": "encounter",
@@ -2305,7 +2439,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4043
   },
   {
    "kind": "encounter",
@@ -2323,7 +2458,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4044
   },
   {
    "kind": "encounter",
@@ -2341,7 +2477,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4045
   },
   {
    "kind": "encounter",
@@ -2360,7 +2497,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4046
   },
   {
    "kind": "encounter",
@@ -2379,7 +2517,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4047
   },
   {
    "kind": "encounter",
@@ -2397,7 +2536,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4048
   },
   {
    "kind": "encounter",
@@ -2415,7 +2555,8 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4049
   },
   {
    "kind": "encounter",
@@ -2433,7 +2574,8 @@
    },
    "conditionText": "When this card comes into play draw an Ironbound minion.",
    "stat": "P",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4050
   },
   {
    "kind": "encounter",
@@ -2451,7 +2593,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4051
   },
   {
    "kind": "encounter",
@@ -2467,7 +2610,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4052
   },
   {
    "kind": "encounter",
@@ -2483,7 +2627,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4053
   },
   {
    "kind": "encounter",
@@ -2502,7 +2647,8 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 15
+   "difficulty": 15,
+   "number": 4054
   },
   {
    "kind": "encounter",
@@ -2522,7 +2668,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 16
+   "difficulty": 16,
+   "number": 4055
   },
   {
    "kind": "encounter",
@@ -2541,7 +2688,8 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "G",
-   "difficulty": 13
+   "difficulty": 13,
+   "number": 4056
   },
   {
    "kind": "encounter",
@@ -2560,7 +2708,8 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 14
+   "difficulty": 14,
+   "number": 4057
   },
   {
    "kind": "encounter",
@@ -2579,7 +2728,8 @@
    },
    "stat": "G",
    "difficulty": 11,
-   "conditionText": "As a minion of a Skarra encounter, her minion bonus is 3. When she is a minion, she is shuffled back into the encounter stack afterwards."
+   "conditionText": "As a minion of a Skarra encounter, her minion bonus is 3. When she is a minion, she is shuffled back into the encounter stack afterwards.",
+   "number": 4058
   },
   {
    "kind": "encounter",
@@ -2597,7 +2747,8 @@
    },
    "stat": "G",
    "difficulty": 12,
-   "conditionText": "When this card comes into play, all players draw a resource card. When it is defeated, each player who survived may draw a resource card."
+   "conditionText": "When this card comes into play, all players draw a resource card. When it is defeated, each player who survived may draw a resource card.",
+   "number": 4059
   }
  ],
  "resources": [
@@ -2613,7 +2764,8 @@
    "value": 0,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed exchange it and another resource card currently in play."
+   "conditionText": "When this card is revealed exchange it and another resource card currently in play.",
+   "number": 5001
   },
   {
    "kind": "resource",
@@ -2627,7 +2779,8 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up you may draw up to 5 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack."
+   "conditionText": "When this card is revealed or played face up you may draw up to 5 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack.",
+   "number": 5002
   },
   {
    "kind": "resource",
@@ -2641,7 +2794,8 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up you may draw up to 3 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack."
+   "conditionText": "When this card is revealed or played face up you may draw up to 3 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack.",
+   "number": 5003
   },
   {
    "kind": "resource",
@@ -2655,7 +2809,8 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up you may draw a hero from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle this card back into the hero stack."
+   "conditionText": "When this card is revealed or played face up you may draw a hero from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle this card back into the hero stack.",
+   "number": 5004
   },
   {
    "kind": "resource",
@@ -2669,7 +2824,8 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up you may discard a resource from your hand and draw a hero from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle this card back into the hero stack."
+   "conditionText": "When this card is revealed or played face up you may discard a resource from your hand and draw a hero from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle this card back into the hero stack.",
+   "number": 5005
   },
   {
    "kind": "resource",
@@ -2683,7 +2839,8 @@
    "value": 0,
    "wand": false,
    "council": false,
-   "conditionText": "If your hero would fall after this card is played, you may choose your next hero from the hero stack instead of drawing one."
+   "conditionText": "If your hero would fall after this card is played, you may choose your next hero from the hero stack instead of drawing one.",
+   "number": 5006
   },
   {
    "kind": "resource",
@@ -2697,7 +2854,8 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up, every player who has bid at least one card may draw a hero from the hero stack and add its stat values to theirs for the current encounter challenge. When the encounter is finished, shuffle those heroes back into the hero stack."
+   "conditionText": "When this card is revealed or played face up, every player who has bid at least one card may draw a hero from the hero stack and add its stat values to theirs for the current encounter challenge. When the encounter is finished, shuffle those heroes back into the hero stack.",
+   "number": 5007
   },
   {
    "kind": "resource",
@@ -2711,7 +2869,8 @@
    "value": 1,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5008
   },
   {
    "kind": "resource",
@@ -2723,7 +2882,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5009
   },
   {
    "kind": "resource",
@@ -2737,7 +2897,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": "5 against Wicker encounters."
+   "conditionText": "5 against Wicker encounters.",
+   "number": 5010
   },
   {
    "kind": "resource",
@@ -2751,7 +2912,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": "5 against Ironbound."
+   "conditionText": "5 against Ironbound.",
+   "number": 5011
   },
   {
    "kind": "resource",
@@ -2765,7 +2927,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5012
   },
   {
    "kind": "resource",
@@ -2777,7 +2940,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5013
   },
   {
    "kind": "resource",
@@ -2791,7 +2955,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5014
   },
   {
    "kind": "resource",
@@ -2805,7 +2970,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5015
   },
   {
    "kind": "resource",
@@ -2819,7 +2985,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5016
   },
   {
    "kind": "resource",
@@ -2833,7 +3000,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5017
   },
   {
    "kind": "resource",
@@ -2847,7 +3015,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5018
   },
   {
    "kind": "resource",
@@ -2859,7 +3028,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5019
   },
   {
    "kind": "resource",
@@ -2873,7 +3043,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5020
   },
   {
    "kind": "resource",
@@ -2887,7 +3058,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5021
   },
   {
    "kind": "resource",
@@ -2901,7 +3073,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": "Wands give no bonuses this turn."
+   "conditionText": "Wands give no bonuses this turn.",
+   "number": 5022
   },
   {
    "kind": "resource",
@@ -2915,7 +3088,8 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5023
   },
   {
    "kind": "resource",
@@ -2929,7 +3103,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5024
   },
   {
    "kind": "resource",
@@ -2943,7 +3118,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5025
   },
   {
    "kind": "resource",
@@ -2955,7 +3131,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5026
   },
   {
    "kind": "resource",
@@ -2969,7 +3146,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5027
   },
   {
    "kind": "resource",
@@ -2983,7 +3161,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "Wands give no bonuses this turn."
+   "conditionText": "Wands give no bonuses this turn.",
+   "number": 5028
   },
   {
    "kind": "resource",
@@ -2997,7 +3176,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "5 against Constructs and Ironbound."
+   "conditionText": "5 against Constructs and Ironbound.",
+   "number": 5029
   },
   {
    "kind": "resource",
@@ -3011,7 +3191,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5030
   },
   {
    "kind": "resource",
@@ -3026,7 +3207,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "If your hero would fall the round this card was played, you may instead draw a resource card for every other player."
+   "conditionText": "If your hero would fall the round this card was played, you may instead draw a resource card for every other player.",
+   "number": 5031
   },
   {
    "kind": "resource",
@@ -3040,7 +3222,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "5 against Ironbound."
+   "conditionText": "5 against Ironbound.",
+   "number": 5032
   },
   {
    "kind": "resource",
@@ -3052,7 +3235,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5033
   },
   {
    "kind": "resource",
@@ -3066,7 +3250,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up shuffle the current location back into the location stack and draw a new location."
+   "conditionText": "When this card is revealed or played face up shuffle the current location back into the location stack and draw a new location.",
+   "number": 5034
   },
   {
    "kind": "resource",
@@ -3078,7 +3263,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "At the end of the current turn you may draw a companion from the discard stack and put them into play immediately."
+   "conditionText": "At the end of the current turn you may draw a companion from the discard stack and put them into play immediately.",
+   "number": 5035
   },
   {
    "kind": "resource",
@@ -3092,7 +3278,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5036
   },
   {
    "kind": "resource",
@@ -3106,7 +3293,8 @@
    "value": 3,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5037
   },
   {
    "kind": "resource",
@@ -3120,7 +3308,8 @@
    "value": 3,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5038
   },
   {
    "kind": "resource",
@@ -3132,7 +3321,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up, you may change the current location to The Wardens' Hall, then shuffle the replaced location back into the location stack."
+   "conditionText": "When this card is revealed or played face up, you may change the current location to The Wardens' Hall, then shuffle the replaced location back into the location stack.",
+   "number": 5039
   },
   {
    "kind": "resource",
@@ -3144,7 +3334,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5040
   },
   {
    "kind": "resource",
@@ -3158,7 +3349,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5041
   },
   {
    "kind": "resource",
@@ -3172,7 +3364,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed, draw a new location and shuffle the previous one back into the location stack."
+   "conditionText": "When this card is revealed, draw a new location and shuffle the previous one back into the location stack.",
+   "number": 5042
   },
   {
    "kind": "resource",
@@ -3186,7 +3379,8 @@
    "value": 3,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5043
   },
   {
    "kind": "resource",
@@ -3200,7 +3394,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5044
   },
   {
    "kind": "resource",
@@ -3212,7 +3407,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5045
   },
   {
    "kind": "resource",
@@ -3227,7 +3423,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up, you may change the stat needed for you to beat the current encounter challenge to Mental."
+   "conditionText": "When this card is revealed or played face up, you may change the stat needed for you to beat the current encounter challenge to Mental.",
+   "number": 5046
   },
   {
    "kind": "resource",
@@ -3242,7 +3439,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5047
   },
   {
    "kind": "resource",
@@ -3256,7 +3454,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5048
   },
   {
    "kind": "resource",
@@ -3268,7 +3467,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play."
+   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "number": 5049
   },
   {
    "kind": "resource",
@@ -3280,7 +3480,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play."
+   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "number": 5050
   },
   {
    "kind": "resource",
@@ -3292,7 +3493,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play."
+   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "number": 5051
   },
   {
    "kind": "resource",
@@ -3304,7 +3506,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play."
+   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "number": 5052
   },
   {
    "kind": "resource",
@@ -3316,7 +3519,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play."
+   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "number": 5053
   },
   {
    "kind": "resource",
@@ -3328,7 +3532,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play."
+   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "number": 5054
   },
   {
    "kind": "resource",
@@ -3342,7 +3547,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed its bonus is equal to the mental stat of the companion in play of your choice."
+   "conditionText": "When this card is revealed its bonus is equal to the mental stat of the companion in play of your choice.",
+   "number": 5055
   },
   {
    "kind": "resource",
@@ -3356,7 +3562,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up you may change the stat needed for you to beat the current encounter challenge to Physical."
+   "conditionText": "When this card is revealed or played face up you may change the stat needed for you to beat the current encounter challenge to Physical.",
+   "number": 5056
   },
   {
    "kind": "resource",
@@ -3368,7 +3575,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource from the discard stack, but it cannot be used this turn."
+   "conditionText": "When this card is revealed you may draw a resource from the discard stack, but it cannot be used this turn.",
+   "number": 5057
   },
   {
    "kind": "resource",
@@ -3380,7 +3588,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5058
   },
   {
    "kind": "resource",
@@ -3392,7 +3601,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5059
   },
   {
    "kind": "resource",
@@ -3404,7 +3614,8 @@
    "value": 4,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5060
   },
   {
    "kind": "resource",
@@ -3416,7 +3627,8 @@
    "value": 4,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5061
   },
   {
    "kind": "resource",
@@ -3431,7 +3643,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5062
   },
   {
    "kind": "resource",
@@ -3443,7 +3656,8 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5063
   },
   {
    "kind": "resource",
@@ -3457,7 +3671,8 @@
    "value": 5,
    "wand": true,
    "council": false,
-   "conditionText": "Counts as a Wand."
+   "conditionText": "Counts as a Wand.",
+   "number": 5064
   },
   {
    "kind": "resource",
@@ -3471,7 +3686,8 @@
    "value": 5,
    "wand": true,
    "council": false,
-   "conditionText": "Counts as a Wand."
+   "conditionText": "Counts as a Wand.",
+   "number": 5065
   },
   {
    "kind": "resource",
@@ -3485,7 +3701,8 @@
    "value": 5,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5066
   },
   {
    "kind": "resource",
@@ -3497,7 +3714,8 @@
    "value": 5,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5067
   },
   {
    "kind": "resource",
@@ -3512,7 +3730,8 @@
    "value": 5,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5068
   },
   {
    "kind": "resource",
@@ -3527,7 +3746,8 @@
    "value": 6,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5069
   },
   {
    "kind": "resource",
@@ -3541,7 +3761,8 @@
    "value": 5,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up discard the current location and draw a new one."
+   "conditionText": "When this card is revealed or played face up discard the current location and draw a new one.",
+   "number": 5070
   },
   {
    "kind": "resource",
@@ -3555,7 +3776,8 @@
    "value": 6,
    "wand": false,
    "council": false,
-   "conditionText": "No hero can fall the turn this card is played. If a hero would fall, it is prevented. No resource cards are drawn because of a fall."
+   "conditionText": "No hero can fall the turn this card is played. If a hero would fall, it is prevented. No resource cards are drawn because of a fall.",
+   "number": 5071
   },
   {
    "kind": "resource",
@@ -3569,7 +3791,8 @@
    "value": 6,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5072
   },
   {
    "kind": "resource",
@@ -3583,7 +3806,8 @@
    "value": 6,
    "wand": true,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5073
   },
   {
    "kind": "resource",
@@ -3595,7 +3819,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": null
+   "conditionText": null,
+   "number": 5074
   },
   {
    "kind": "resource",
@@ -3610,7 +3835,8 @@
    "value": 1,
    "wand": false,
    "council": false,
-   "conditionText": "Any goose companions get an additional +2 for this encounter."
+   "conditionText": "Any goose companions get an additional +2 for this encounter.",
+   "number": 5075
   },
   {
    "kind": "resource",
@@ -3624,7 +3850,8 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up, if you lose the current encounter (your hero falls), the winner has -3 during the next encounter. It has +1 if your hero is Oskar."
+   "conditionText": "When this card is revealed or played face up, if you lose the current encounter (your hero falls), the winner has -3 during the next encounter. It has +1 if your hero is Oskar.",
+   "number": 5076
   }
  ]
 }

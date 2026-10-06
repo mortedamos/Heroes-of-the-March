@@ -18,6 +18,8 @@ interface BaseDef {
   quote: string | null;
   /** Art file stem in _build/art (without extension), or null for a generated placeholder. */
   art: string | null;
+  /** The card's permanent number (data/card-numbers.json): it stays with the card when its name is edited. */
+  number?: number;
   /** Set when data/balance.json changes this card from the printed v0.3 version: the reason. */
   revision?: string;
 }
