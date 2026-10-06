@@ -10,9 +10,12 @@ import { describe, nameOf } from './describe';
 import { attentionOf } from './attention';
 import { Hud } from './ui/Hud';
 import { music } from './audio/Music';
+import { ambience } from './audio/Ambience';
 import { sfx, type SfxName } from './audio/Sfx';
 import { THEME_SOUND, themeForAbility, type Theme } from './ui/themes';
 import { isTouch, syncBodyClasses } from './viewport';
+import { debugEnabled, loadDebugPrefs, type DebugApi } from './ui/DebugMenu';
+import type { ThemeId } from './render/env/themes';
 
 const ERROR_TEXT: Record<string, string> = {
   stale_decision: 'That choice was already made.',
@@ -128,6 +131,8 @@ export class GameClient {
   private readySeen = new Set<string>();
   /** Abilities the player skipped (turn:card:ability:window): no glow for that window, but later windows still offer them. */
   private skipped = new Set<string>();
+  /** The music's current level while the camera is lifted (1 = as set, 0.25 = fully away from the board). */
+  private duck = 1;
   /** The table card under the pointer, if any. */
   private hoverKey: string | null = null;
   /** Animations still playing; an announcement waits for them so it appears after the zap. */
@@ -159,10 +164,13 @@ export class GameClient {
     this.hud = new Hud(overlay, {
       send: (cmd) => this.send(cmd),
       skipAbility: (cardId, ability) => this.skipAbility(cardId, ability),
+      ...(debugEnabled() ? { debug: this.debugApi() } : {}),
       newGame: onNewGame,
       project: (x, y, z) => this.scene.project(x, y, z),
     });
     this.unhook.push(this.scene.onFrame(() => this.hud.reposition()));
+    // Away from the board the music steps back to 25% and the place's own sounds drift in.
+    this.unhook.push(this.scene.onFrame(() => this.mixForCamera()));
     // A card you bid flies down from where it sits in your hand.
     this.board.handOrigin = (def) => this.hud.handCardCenter(def);
     this.bindPointer(stage);
@@ -319,6 +327,36 @@ export class GameClient {
     if (this.disposed) return;
     await this.hud.showPlace(d.name, d.renown, d.conditionText, d.quote);
     await this.scene.swingBack();
+  }
+
+  /** The debug panel's hold on the table's look; it also restores what was set last time. */
+  private debugApi(): DebugApi {
+    const env = this.scene.environment;
+    const saved = loadDebugPrefs();
+    env.setFogLevel(saved.fog);
+    env.setHaze(saved.haze);
+    if (saved.pinned && env.themeIds.includes(saved.pinned as ThemeId)) env.pin(saved.pinned as ThemeId);
+    return {
+      themes: env.themeIds,
+      theme: () => env.current,
+      pinned: () => env.pinned,
+      pin: (id) => env.pin(id as ThemeId | null),
+      fog: () => env.fogAmount,
+      setFog: (v) => env.setFogLevel(v),
+      haze: () => env.hazeAmount,
+      setHaze: (v) => env.setHaze(v),
+      playAmbience: () => ambience.playNow(),
+    };
+  }
+
+  /** Eases the music down while the camera is lifted, and tells the ambience how far out it is. */
+  private mixForCamera(): void {
+    const out = this.scene.lookOut;
+    const t = Math.min(1, Math.max(0, (out - 0.1) / 0.5));
+    const target = 1 - 0.75 * (t * t * (3 - 2 * t));
+    this.duck += (target - this.duck) * 0.08;
+    music.setDuck(this.duck);
+    ambience.update(out, this.scene.environment.current);
   }
 
   private async present(view: GameView, events: ClientEvent[]): Promise<void> {
@@ -636,6 +674,8 @@ export class GameClient {
 
   dispose(): void {
     this.disposed = true;
+    music.setDuck(1);
+    ambience.stop();
     this.caseGate?.resolve();
     for (const u of this.unhook) u();
     this.transport.close();

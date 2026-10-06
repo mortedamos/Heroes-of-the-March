@@ -9,7 +9,15 @@ import { THEMES, themeFor, type Look, type ThemeId } from './themes';
 
 const FLOOR_Y = -0.9;
 const FADE_S = 1.8;
-const FLOOR_SIZE = 160;
+/**
+ * The sky oval: semi-axes in world units (along the table, up, behind the table), and how far it is sunk below the table.
+ * Sunk, the panorama's own horizon is hidden behind the ground, so the far edge of the ground meets the sky a little
+ * above it, in the part of the picture that fades into the ground's fog colour (see horizonColor).
+ */
+const DOME = { long: 125, tall: 125, short: 80, drop: 4 };
+
+/** The ground reaches past the sky oval on every side, so no lower half of the panorama shows beyond its edge. */
+const FLOOR_SIZE = DOME.long * 2 + 40;
 
 export interface EnvLights { hemi: THREE.HemisphereLight; key: THREE.DirectionalLight; warm: THREE.PointLight }
 
@@ -89,12 +97,21 @@ export class Environment {
   private readonly table = new THREE.Group();
   private readonly fog: THREE.Fog;
   private readonly bg: THREE.Color;
+  private readonly fogRgb = { r: 0, g: 0, b: 0 };
+  /** Debug: 1 = the fog each place was designed with, 0 = none, higher = thicker. */
+  private fogLevel = 1;
+  /** Debug: a place held fixed whatever the game reveals. */
+  private pinnedTheme: ThemeId | null = null;
   private readonly dome: THREE.Mesh;
   private readonly blank = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
   private readonly domeUniforms = {
     top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() },
     skyFrom: { value: this.blank as THREE.Texture }, skyTo: { value: this.blank as THREE.Texture },
     wFrom: { value: 0 }, wTo: { value: 0 },
+    /** The fog colour as it is shown on screen (output colour space), for the sky to meet the ground. */
+    fogOut: { value: new THREE.Vector3() },
+    /** Scales how high the horizon haze reaches (1 = as designed; the debug panel changes it). */
+    haze: { value: 1 },
   };
   private readonly skies = new Map<ThemeId, THREE.Texture>();
   /** Horizon colour read from each loaded panorama, so the ground fades into the sky without a seam. */
@@ -141,13 +158,19 @@ export class Environment {
     });
 
     this.dome = new THREE.Mesh(
-      new THREE.SphereGeometry(100, 24, 12),
+      // A unit sphere with plenty of facets (a coarse one bends straight lines in the panorama into a "box"), stretched below.
+      new THREE.SphereGeometry(1, 96, 48),
       new THREE.ShaderMaterial({
         uniforms: this.domeUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
         vertexShader: 'varying vec3 vP; varying vec2 vUv; void main(){ vP = normalize(position); vUv = vec2(1.0 - uv.x, uv.y); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-        fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; varying vec3 vP; varying vec2 vUv;\nvoid main(){ float h = pow(clamp(vP.y, 0.0, 1.0), 0.55); vec3 c = mix(bottom, top, h);\nc = mix(c, texture2D(skyFrom, vUv).rgb, wFrom); c = mix(c, texture2D(skyTo, vUv).rgb, wTo); gl_FragColor = vec4(c, 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+        fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform vec3 fogOut; uniform float haze; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; varying vec3 vP; varying vec2 vUv;\nvoid main(){ float h = pow(clamp(vP.y, 0.0, 1.0), mix(0.55, 1.4, max(wFrom, wTo))); vec3 c = mix(bottom, top, h);\nfloat vis = smoothstep(0.07 * haze, 0.32 * haze + 0.001, vP.y); c = mix(c, texture2D(skyFrom, vUv).rgb, wFrom * vis); c = mix(c, texture2D(skyTo, vUv).rgb, wTo * vis); gl_FragColor = vec4(c, 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n// The ground fades into the fog colour, which is not tone mapped: so the sky meets it as exactly that colour, with no line.\ngl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * haze, 0.3 * haze + 0.001, vP.y));\n}',
       }),
     );
+    // An oval, not a ball: long across the table (x) and shallow behind it (z). The camera looks along the short axis,
+    // so what it sees is the long, gently curved side of the oval: a wide backdrop, not the inside of a box. The
+    // height matches the length so the panorama keeps its proportions where it is seen.
+    this.dome.scale.set(DOME.long, DOME.tall, DOME.short);
+    this.dome.position.y = -DOME.drop;
     this.dome.renderOrder = -2;
     this.group.add(this.dome);
 
@@ -208,7 +231,7 @@ export class Environment {
     });
   }
 
-  /** The average colour of the band just around the panorama's horizon, a touch darker. */
+  /** The average colour of the band of the panorama where the far edge of the ground meets it (just above its horizon), a touch darker. */
   private horizonColor(tex: THREE.Texture): THREE.Color | null {
     try {
       const img = tex.image as CanvasImageSource;
@@ -216,7 +239,7 @@ export class Environment {
       c.width = 64; c.height = 32;
       const g = c.getContext('2d')!;
       g.drawImage(img, 0, 0, 64, 32);
-      const d = g.getImageData(0, 15, 64, 3).data;
+      const d = g.getImageData(0, 13, 64, 2).data;
       let r = 0, gr = 0, b = 0;
       const n = d.length / 4;
       for (let i = 0; i < d.length; i += 4) { r += d[i]!; gr += d[i + 1]!; b += d[i + 2]!; }
@@ -257,7 +280,32 @@ export class Environment {
 
   /** Follow the location on the table: null keeps whatever is showing. */
   setLocation(def: string | null | undefined): void {
-    if (def) this.setTheme(themeFor(def));
+    if (def && !this.pinnedTheme) this.setTheme(themeFor(def));
+  }
+
+  // --- debug controls ---------------------------------------------------------------
+
+  /** Every look the table can have. */
+  get themeIds(): ThemeId[] { return Object.keys(THEMES) as ThemeId[]; }
+  get pinned(): ThemeId | null { return this.pinnedTheme; }
+  /** Hold one look fixed (null: follow the game's locations again). */
+  pin(id: ThemeId | null): void {
+    this.pinnedTheme = id;
+    if (id) this.setTheme(id);
+  }
+  get fogAmount(): number { return this.fogLevel; }
+  /** 0 = no fog, 1 = as designed, higher = the fog starts nearer. */
+  setFogLevel(level: number): void {
+    this.fogLevel = Math.max(0, level);
+    this.setCameraDistance(this.camDist);
+  }
+  get hazeAmount(): number { return this.domeUniforms.haze.value; }
+  setHaze(level: number): void { this.domeUniforms.haze.value = Math.max(0, level); }
+
+  /** Where the fog starts and ends, from the look's own numbers and the debug fog level. */
+  private fogRange(n: { fogNear: number; fogFar: number }): { near: number; far: number } {
+    if (this.fogLevel <= 0.001) return { near: 1e5, far: 2e5 };
+    return { near: this.camDist + n.fogNear / this.fogLevel, far: this.camDist + n.fogFar / this.fogLevel };
   }
 
   setTheme(id: ThemeId, instant = false): void {
@@ -330,8 +378,9 @@ export class Environment {
   /** The distance from the camera to the table, so the fog stays behind it. */
   setCameraDistance(dist: number): void {
     this.camDist = dist;
-    this.fog.near = dist + this.shown.n.fogNear;
-    this.fog.far = dist + this.shown.n.fogFar;
+    const r = this.fogRange(this.shown.n);
+    this.fog.near = r.near;
+    this.fog.far = r.far;
   }
 
   /** (Re)build the slab the cards lie on: top, rim and plinth, `w` x `d` and centred on z = `cz`. */
@@ -441,10 +490,13 @@ export class Environment {
     const n = s.n;
     this.bg.copy(s.sky);
     this.fog.color.copy(s.sky);
-    this.fog.near = this.camDist + n.fogNear;
-    this.fog.far = this.camDist + n.fogFar;
+    const r = this.fogRange(n);
+    this.fog.near = r.near;
+    this.fog.far = r.far;
     this.domeUniforms.top.value.copy(s.skyTop);
     this.domeUniforms.bottom.value.copy(s.sky);
+    this.fog.color.getRGB(this.fogRgb, this.renderer.outputColorSpace);
+    this.domeUniforms.fogOut.value.set(this.fogRgb.r, this.fogRgb.g, this.fogRgb.b);
     this.renderer.toneMappingExposure = n.exposure;
     const { hemi, key, warm } = this.lights;
     hemi.color.copy(s.hemiSky); hemi.groundColor.copy(s.hemiGround); hemi.intensity = n.hemi;

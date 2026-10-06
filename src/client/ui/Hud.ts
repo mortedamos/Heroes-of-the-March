@@ -12,6 +12,7 @@ import { nameOf } from '../describe';
 import { isTouch, onLongPress } from '../viewport';
 import { append, clear, h, replace } from './dom';
 import { toggleMusicMenu } from './MusicMenu';
+import { toggleDebugMenu, type DebugApi } from './DebugMenu';
 import { attentionOf } from '../attention';
 import { abilityBox } from '../render/cardFaces';
 import { sfx } from '../audio/Sfx';
@@ -31,6 +32,8 @@ function thumbSizes(): { hand: number; option: number; drawn: number } {
 
 export interface HudDeps {
   send(cmd: Command): void;
+  /** The debug panel's controls (dev builds and ?debug only). */
+  debug?: DebugApi;
   /** Skip a usable ability for now (the Skip button on its card). */
   skipAbility(cardId: string, ability: string): void;
   newGame(): void;
@@ -290,6 +293,7 @@ export class Hud {
         v.turn.number ? `Turn ${v.turn.number} · ${active}${v.turn.active === v.you ? '' : "'s turn"} · ${STEP_LABEL[v.turn.step] ?? v.turn.step}` : 'Setting up…'),
       h('nav', { class: 'top-actions' },
         h('button', { class: 'btn ghost', on: { click: (e) => toggleMusicMenu(e.currentTarget as HTMLElement) } }, '♫ Music'),
+        this.deps.debug ? h('button', { class: 'btn ghost', on: { click: (e) => toggleDebugMenu(e.currentTarget as HTMLElement, this.deps.debug!) } }, 'Debug') : '',
         h('button', { class: 'btn ghost', on: { click: () => this.showRules() } }, 'Rules'),
         h('button', { class: 'btn ghost', on: { click: () => this.setLogOpen(this.logPanel.classList.contains('collapsed')) } }, 'Log'),
         h('button', { class: 'btn ghost', on: { click: () => this.confirmNewGame() } },

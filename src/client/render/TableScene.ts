@@ -15,7 +15,7 @@ const ZOOM_MAX = 1.25;
 export class TableScene {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
-  readonly camera = new THREE.PerspectiveCamera(40, 1, 0.1, 200);
+  readonly camera = new THREE.PerspectiveCamera(40, 1, 0.1, 400);
   readonly tweens = new Tweens();
   /** The key light: it drifts slowly, so every shadow on the table drifts with it. */
   readonly keyLight = new THREE.DirectionalLight('#ffe7c2', 2.1);
@@ -226,6 +226,11 @@ export class TableScene {
     if (s0 > 0) await this.tweens.add(1300, (k) => this.setShot(s0 * (1 - k)), { owner: this.shotOwner });
     this.shot = 0;
     document.body.classList.remove('establishing');
+  }
+
+  /** How far the camera is from the play view, 0..1: the establishing shot or the player lifting it to look across the table. */
+  get lookOut(): number {
+    return Math.max(this.shot, this.shape === 'wide' ? this.view.amt : 0);
   }
 
   private setShot(k: number): void {
