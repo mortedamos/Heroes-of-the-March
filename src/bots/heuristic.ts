@@ -452,6 +452,8 @@ function decideBid(t: Table, d: PendingView, level: BotLevel, rand: Rand): Comma
   const mine = t.myEstimate();
   const difficulty = proj.difficulty;
   const bestRival = t.bestRivalEstimate(level === 'hard' ? 1 : 0);
+  const curse = pickCurse(t, mine, bestRival, level, rand);
+  if (curse) return { type: 'bid.play', decision, card: curse };
   const buffer = level === 'easy' ? 0 : 1;
   const targetWin = Math.max(difficulty, bestRival + 1 + buffer);
   if (mine >= targetWin) return pass;
@@ -473,6 +475,19 @@ function decideBid(t: Table, d: PendingView, level: BotLevel, rand: Rand): Comma
   // Mayor Hobby: keep the first bid hidden to bluff (normal/hard).
   const faceDown = detail.canFaceDown && level !== 'easy';
   return faceDown ? { type: 'bid.play', decision, card: pick.id, faceDown: true } : { type: 'bid.play', decision, card: pick.id };
+}
+
+/**
+ * A curse (a resource with a negative value) is played at the player who is ahead of us: it lands in their bid and
+ * counts against them. Play the smallest one that drops them below us, or the biggest if none does.
+ */
+function pickCurse(t: Table, mine: number, bestRival: number, level: BotLevel, rand: Rand): string | null {
+  if (level === 'easy' && rand() < 0.5) return null;
+  if (bestRival < mine) return null; // nobody is beating us: no need
+  const curses = t.view.hand.flatMap((h) => { const d = getDef(h.card.def); return d.kind === 'resource' && d.value < 0 ? [{ id: h.card.id, cut: -d.value }] : []; });
+  if (!curses.length) return null;
+  curses.sort((a, b) => a.cut - b.cut);
+  return (curses.find((c) => bestRival - c.cut < mine) ?? curses[curses.length - 1]!).id;
 }
 
 // --- choices ---------------------------------------------------------------------
@@ -630,6 +645,8 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
     }
     case 'waystoneDraw':
       return ['draw'];
+    case 'curseTarget':
+      return [pickMax((v) => { const o = t.view.players.find((x) => x.id === v); return o ? t.estimate(o) + t.threat(o) * 0.1 : 0; })];
   }
   return one(values[0]);
 }

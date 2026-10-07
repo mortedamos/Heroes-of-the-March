@@ -245,19 +245,17 @@ export const THEMES: Record<ThemeId, Theme> = {
 
 /** Which look each location has. Anything unlisted keeps the plain felt. */
 const LOCATION_THEME: Record<string, ThemeId> = {
-  'the-waystone-inn-rivermeet': 'tavern', 'the-goose-and-kettle': 'tavern', 'the-moot-hall': 'tavern',
-  'old-kingsford-docks': 'harbor', 'parting-strand': 'harbor',
-  'the-frostfells': 'snow',
-  'the-barrowlands': 'crypt', 'tomb-of-the-first-wardens': 'crypt', 'barrowdeep': 'crypt', 'the-last-field': 'crypt', 'the-umbral-deep': 'crypt',
+  'the-goose-and-kettle': 'tavern', 'parting-strand': 'harbor',
+  'the-barrowlands': 'crypt', 'tomb-of-the-first-wardens': 'crypt', 'barrowdeep': 'crypt', 'the-umbral-deep': 'crypt',
   'the-deep-forge-of-karrak': 'forge', 'the-old-quarry': 'forge', 'the-crack-in-the-marchstone': 'forge', 'gorewatch': 'forge',
-  'the-storybook-glade': 'forest', 'the-silverwood-hunt': 'forest', 'the-memory-of-the-heartwood': 'forest', 'sylvaneth': 'forest',
+  'the-storybook-glade': 'forest', 'the-silverwood-hunt': 'forest', 'sylvaneth': 'forest',
   'the-hollow-hills': 'forest', 'the-hollow-between': 'forest', 'the-mirror-marches': 'forest', 'silverlake-at-midsummer': 'forest',
-  'marchguard-keep': 'fortress', 'the-wardens-hall': 'fortress', 'the-well-of-oaths': 'fortress', 'the-field-of-oaths': 'fortress',
-  'grimgate': 'fortress', 'kingsford': 'fortress', 'the-heart-of-the-marchstone': 'fortress', 'the-speaking-stones': 'fortress',
+  'marchguard-keep': 'fortress', 'the-wardens-hall': 'fortress', 'the-field-of-oaths': 'fortress',
+  'grimgate': 'fortress', 'kingsford': 'fortress', 'the-speaking-stones': 'fortress',
   'the-hearthlands-archive': 'archive', 'the-mage-college-vaults': 'archive', 'the-sealed-archive': 'archive',
   'the-collegium-observatory': 'archive', 'the-endless-stair': 'archive',
   'the-endless-road': 'plains', 'clover-hollow': 'plains', 'hearthmeadow': 'plains',
-  'the-skyship-valour': 'sky', 'wreck-of-the-skyship-gallant': 'sky',
+  'the-skyship-valour': 'sky',
 };
 
 export const themeFor = (locationDef: string | null | undefined): ThemeId => (locationDef && LOCATION_THEME[locationDef]) || 'felt';

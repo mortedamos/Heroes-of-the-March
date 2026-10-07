@@ -5,17 +5,16 @@
    "id": "warchief-grukka-ironjaw",
    "name": "Warchief Grukka Ironjaw",
    "groups": [
-    "Orc",
-    "Warden"
+    "Orc"
    ],
    "quote": "“Your stone was a cage. Cage bars break.”",
    "art": "portraits__grukka_defiant",
    "stats": {
     "P": 10,
-    "M": 8,
-    "G": 6
+    "M": 6,
+    "G": 8
    },
-   "abilityName": "Mine Now",
+   "abilityName": "Strike the Heart",
    "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
    "kind": "hero",
    "triggerText": "When a Capital location enters play, draw a resource.",
@@ -27,20 +26,19 @@
    "id": "thorgar-twice-buried",
    "name": "Thorgar Twice-Buried",
    "groups": [
-    "Dwarf",
-    "Warden"
+    "Dwarf"
    ],
    "quote": "“The mountain's had two goes at me. It can wait its turn like everyone else.”",
    "art": "portraits__thorgar_neutral",
    "stats": {
     "P": 7,
-    "M": 7,
+    "M": 6,
     "G": 8
    },
    "abilityName": "Dug Out Twice",
-   "abilityText": "You gain 1 to all stats. At the end of bidding, if you would not survive the encounter, you gain 5 instead.",
+   "abilityText": "At the end of bidding, if you would not survive the encounter, you gain 5 to any one stat until the end of the round.",
    "kind": "hero",
-   "triggerText": "If a location is won by a margin of 3 or less, draw a resource.",
+   "triggerText": "When an Undead encounter enters play, draw a resource.",
    "revision": "Now always helps a little (was a 24% win rate).",
    "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats.",
    "number": 1002
@@ -50,13 +48,13 @@
    "name": "Aelthir Moonveil",
    "groups": [
     "Elf",
-    "Warden"
+    "Accord"
    ],
    "quote": "“I held the torch when your ancestors swore. I remember how young they all looked.”",
    "art": "portraits__aelthir_wistful",
    "stats": {
     "P": 4,
-    "M": 6,
+    "M": 8,
     "G": 9
    },
    "abilityName": "I Held the Torch",
@@ -71,20 +69,19 @@
    "id": "lord-vaelis-nightbloom",
    "name": "Lord Vaelis Nightbloom",
    "groups": [
-    "Elf",
-    "Warden"
+    "Elf"
    ],
    "quote": "“One does not converse with mayflies. One outlives them.”",
    "art": "portraits__vaelis_aloof",
    "stats": {
-    "P": 7,
+    "P": 6,
     "M": 10,
-    "G": 13
+    "G": 10
    },
-   "abilityName": "Master of Shadowsteeds",
+   "abilityName": "Master Manipulator",
    "abilityText": "At the start of bidding you may draw the next card from the encounter stack and use its minion bonus this turn as a bonus to all of your stats.",
    "kind": "hero",
-   "triggerText": "When a hero falls, draw 2 resources.",
+   "triggerText": "When a hero falls, draw 3 resources.",
    "revision": "Mental 6 -> 7, Guile 10 -> 11, and the trigger draws 2 (was a 0.61 win rate).",
    "kinText": "Kin: while an opponent controls a Elf companion, it gets -1 to all stats.",
    "number": 1004
@@ -104,7 +101,7 @@
     "G": 9
    },
    "abilityName": "Pockets Full of Everything",
-   "abilityText": "On any turn but your own you may claim a face-down resource card from another player as your own. If you have resource cards, a random one of yours takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
+   "abilityText": "Before cards are revealed at the end of bidding, claim a face-down resource card from another player as your own. If you have resource cards, a random one of yours takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
    "kind": "hero",
    "triggerText": "When a location is replaced, draw a resource.",
    "revision": "Trigger is now a replaced location (nothing in the story ties him to Ironbound).",
@@ -115,8 +112,7 @@
    "id": "kazra-emberdeep",
    "name": "Kazra Emberdeep",
    "groups": [
-    "Dwarf",
-    "Warden"
+    "Dwarf"
    ],
    "quote": "“Titan's done. Point it at something you don't like.”",
    "art": "portraits__kazra_focused",
@@ -150,7 +146,7 @@
    "abilityName": "The Forest Walks With Me",
    "abilityText": "While this hero is in play as your hero, you may have a maximum of three companions instead of two.",
    "kind": "hero",
-   "triggerText": "When a Magic challenge is faced, draw a resource.",
+   "triggerText": "When an Beast encounter enters play, draw a resource.",
    "revision": "Stats 6/8/4 -> 5/6/3 to pay for the Kin bonus and a more frequent trigger.",
    "kinText": "Kin: your hero gets +1 to all stats for each Elf companion you control.",
    "number": 1007
@@ -159,14 +155,13 @@
    "id": "mayor-hobby-trickgrin",
    "name": "Mayor Hobby Trickgrin",
    "groups": [
-    "Halfellow",
-    "Warden"
+    "Halfellow"
    ],
    "quote": "“I have a little plan. It involves a goose. No, a different goose.”",
    "art": "portraits__hobby_scheming",
    "stats": {
     "P": 4,
-    "M": 5,
+    "M": 7,
     "G": 10
    },
    "abilityName": "A Little Plan",
@@ -181,15 +176,14 @@
    "name": "Lord-Paladin Aldric Ashcroft",
    "groups": [
     "Human",
-    "Warden",
     "Marchguard"
    ],
    "quote": "“The Dawn guides my blade. And my blade has opinions.”",
    "art": "portraits__aldric_fervent",
    "stats": {
     "P": 10,
-    "M": 3,
-    "G": 6
+    "M": 4,
+    "G": 8
    },
    "abilityName": "Shield of the Dawn",
    "abilityText": "You may counter or disable one ability of another player's heroes or companions.",
@@ -202,15 +196,14 @@
    "id": "high-thane-brunna-stonefast",
    "name": "High Thane Brunna Stonefast",
    "groups": [
-    "Dwarf",
-    "Warden"
+    "Dwarf"
    ],
    "quote": "“Walls first. Then we talk. Then more walls.”",
    "art": "portraits__brunna_proud",
    "stats": {
     "P": 8,
     "M": 6,
-    "G": 6
+    "G": 8
    },
    "abilityName": "Walls First",
    "abilityText": "You may ignore any opponent's ability that would force a hero or companion under your control to contribute a different stat, stop one of your companions contributing stats, or make one of your resource cards count as a negative.",
@@ -225,14 +218,15 @@
    "name": "Queen Maren Ashcroft",
    "groups": [
     "Human",
-    "Warden"
+    "Marchguard",
+    "Collegium"
    ],
    "quote": "“The Temple says I was chosen. The Collegium says I was elected. I say the war won't win itself.”",
    "art": "portraits__maren_resolute",
    "stats": {
     "P": 4,
-    "M": 9,
-    "G": 5
+    "M": 8,
+    "G": 9
    },
    "abilityName": "Royal Requisition",
    "abilityText": "Before bidding on your turn, you may trade a resource card from your hand with a random card in another player's hand.",
@@ -246,19 +240,20 @@
    "id": "archmage-corvin-varro",
    "name": "Archmage Corvin Varro",
    "groups": [
-    "Human"
+    "Human",
+    "Collegium"
    ],
    "quote": "“If prayer could hold a wall, Lord-Paladin, I'd be out of a job.”",
    "art": "portraits__corvin_wry",
    "stats": {
     "P": 2,
-    "M": 6,
-    "G": 2
+    "M": 10,
+    "G": 8
    },
    "abilityName": "Entered Into the Record",
    "abilityText": "On your turn, any time you would draw a resource, you may draw an additional resource.",
    "kind": "hero",
-   "triggerText": "When an Undead encounter enters play, draw a resource.",
+   "triggerText": "When a Mental challenge is faced, draw a resource.",
    "revision": "Was any turn. With steady draws it fired every turn (50% win rate).",
    "kinText": "Kin: when a Human companion enters play, draw a resource.",
    "number": 1012
@@ -273,12 +268,12 @@
    "quote": "“The ruins were wardhouses. The Society has known for two hundred years. Nobody ever asks.”",
    "art": "portraits__barnaby_neutral",
    "stats": {
-    "P": 5,
+    "P": 4,
     "M": 10,
-    "G": 11
+    "G": 8
    },
    "abilityName": "The Society's Maps",
-   "abilityText": "On your turn you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
+   "abilityText": "Once per turn, after the location is revealed, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
    "kind": "hero",
    "triggerText": "When an Accord location enters play, draw a resource.",
    "revision": "Physical 2 → 4 (was a 25% win rate).",
@@ -318,10 +313,10 @@
    "art": "portraits__oskar_grudging",
    "stats": {
     "P": 8,
-    "M": 10,
+    "M": 7,
     "G": 9
    },
-   "abilityName": "Entered in the Grudge Book",
+   "abilityName": "Entered in the Book of Grudges",
    "abilityText": "At the start of bidding, choose an opponent. If that opponent wins this encounter, they have -3 during the next encounter.",
    "kind": "hero",
    "triggerText": "When an Oathbreaker encounter enters play, draw a resource.",
@@ -335,8 +330,7 @@
    "id": "goldie-trickgrin-keeper-of-the-goose-and-kettle",
    "name": "Goldie Trickgrin, Keeper of the Goose & Kettle",
    "groups": [
-    "Halfellow",
-    "Goose & Kettle"
+    "Halfellow"
    ],
    "quote": "“Sit. Eat. The war will still be there after pie.”",
    "art": "portraits__goldie_happy",
@@ -394,8 +388,7 @@
    "name": "Tansy Brambleby, Barmaid and Volunteer",
    "groups": [
     "Halfellow",
-    "Marchguard",
-    "Goose & Kettle"
+    "Marchguard"
    ],
    "quote": "“I pour the ale, I patrol the road, and I feed the geese. Mostly in that order.”",
    "art": "portraits__tansy-brambleby-barmaid-and-volunteer",
@@ -1013,7 +1006,6 @@
    "name": "Gimlet, a Very Good Dog",
    "groups": [
     "Halfellow",
-    "Goose & Kettle",
     "Beast"
    ],
    "quote": "“Arf!”",
@@ -1032,20 +1024,6 @@
  "locations": [
   {
    "kind": "location",
-   "id": "the-waystone-inn-rivermeet",
-   "name": "The Waystone Inn, Rivermeet",
-   "groups": [
-    "Capital",
-    "Human"
-   ],
-   "quote": "“Every road in the Marches starts at the Waystone. Most of them come back for a drink.”",
-   "art": "cities__human_city_1",
-   "renown": 3,
-   "conditionText": "All players may draw a companion and put them into play, then discard a companion in play.",
-   "number": 3001
-  },
-  {
-   "kind": "location",
    "id": "kingsford",
    "name": "Kingsford",
    "groups": [
@@ -1057,20 +1035,6 @@
    "renown": 5,
    "conditionText": null,
    "number": 3002
-  },
-  {
-   "kind": "location",
-   "id": "the-frostfells",
-   "name": "The Frostfells",
-   "groups": [
-    "Dwarf",
-    "Marchguard"
-   ],
-   "quote": null,
-   "art": "enhancements__cave_2",
-   "renown": 3,
-   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is Frostborn, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Frostborn encounters are increased by 2.",
-   "number": 3003
   },
   {
    "kind": "location",
@@ -1098,34 +1062,6 @@
    "renown": 5,
    "conditionText": "The challenge type of the current encounter is changed to guile.",
    "number": 3005
-  },
-  {
-   "kind": "location",
-   "id": "the-well-of-oaths",
-   "name": "The Well of Oaths",
-   "groups": [
-    "Wardhouse",
-    "Accord"
-   ],
-   "quote": null,
-   "art": "buildings__wellspring_grove",
-   "renown": 4,
-   "conditionText": null,
-   "number": 3006
-  },
-  {
-   "kind": "location",
-   "id": "the-heart-of-the-marchstone",
-   "name": "The Heart of the Marchstone",
-   "groups": [
-    "Accord",
-    "Marchguard"
-   ],
-   "quote": null,
-   "art": "buildings__ancestral_dolmen",
-   "renown": 6,
-   "conditionText": "The challenges and minion bonuses of Oathbreaker encounters are increased by 2.",
-   "number": 3007
   },
   {
    "kind": "location",
@@ -1165,7 +1101,7 @@
    "quote": null,
    "art": "enhancements__cave_3",
    "renown": 3,
-   "conditionText": null,
+   "conditionText": "All players must discard a resource card.",
    "number": 3010
   },
   {
@@ -1180,20 +1116,6 @@
    "renown": 5,
    "conditionText": "The challenges and minion bonuses of Ironbound encounters are increased by 2.",
    "number": 3011
-  },
-  {
-   "kind": "location",
-   "id": "wreck-of-the-skyship-gallant",
-   "name": "Wreck of the Skyship Gallant",
-   "groups": [
-    "Human",
-    "Marchguard"
-   ],
-   "quote": null,
-   "art": "enhancements__scorch_1",
-   "renown": 3,
-   "conditionText": "When this location enters play, look at the top 5 encounter cards. If one is a Gargoyle, it becomes the encounter; otherwise discard them. The challenges and minion bonuses of Gargoyle encounters are increased by 2.",
-   "number": 3012
   },
   {
    "kind": "location",
@@ -1212,7 +1134,7 @@
   {
    "kind": "location",
    "id": "the-hearthlands-archive",
-   "name": "The Hearthlands Archive",
+   "name": "Hearthlands Historical Society",
    "groups": [
     "Halfellow",
     "Accord"
@@ -1284,8 +1206,7 @@
    "id": "the-silverwood-hunt",
    "name": "The Silverwood Hunt",
    "groups": [
-    "Elf",
-    "Marchguard"
+    "Elf"
    ],
    "quote": null,
    "art": "buildings__treetop_watch",
@@ -1361,20 +1282,6 @@
    "renown": 4,
    "conditionText": "All players may immediately draw a resource card for every Collegium companion they have in play.",
    "number": 3024
-  },
-  {
-   "kind": "location",
-   "id": "old-kingsford-docks",
-   "name": "Old Kingsford Docks",
-   "groups": [
-    "Capital",
-    "Human"
-   ],
-   "quote": null,
-   "art": "cities__human_city_3",
-   "renown": 4,
-   "conditionText": null,
-   "number": 3025
   },
   {
    "kind": "location",
@@ -1460,20 +1367,6 @@
   },
   {
    "kind": "location",
-   "id": "the-memory-of-the-heartwood",
-   "name": "The Memory of the Heartwood",
-   "groups": [
-    "Accord",
-    "Elf"
-   ],
-   "quote": null,
-   "art": "cities__elf_city_6",
-   "renown": 4,
-   "conditionText": "The challenge type of the current encounter is changed to mental.",
-   "number": 3032
-  },
-  {
-   "kind": "location",
    "id": "the-hollow-hills",
    "name": "The Hollow Hills",
    "groups": [
@@ -1490,13 +1383,12 @@
    "id": "the-goose-and-kettle",
    "name": "The Goose & Kettle",
    "groups": [
-    "Capital",
     "Halfellow"
    ],
    "quote": "“Pint for the rumour, Mayor?” — Goldie Trickgrin",
    "art": "buildings__neighborhood_pub",
    "renown": 2,
-   "conditionText": "All players may immediately draw a resource card for every Goldie Trickgrin companion in play.",
+   "conditionText": "All players may draw a companion and put them into play, then discard a companion in play.",
    "number": 3034
   },
   {
@@ -1515,33 +1407,6 @@
   },
   {
    "kind": "location",
-   "id": "the-last-field",
-   "name": "The Last Field",
-   "groups": [
-    "Orc"
-   ],
-   "quote": "“Every war ends somewhere. The Marches have been saving this field a long time.”",
-   "art": "cities__human_city_6",
-   "renown": 4,
-   "conditionText": "All players must discard a resource card.",
-   "number": 3036
-  },
-  {
-   "kind": "location",
-   "id": "the-moot-hall",
-   "name": "The Moot Hall",
-   "groups": [
-    "Capital",
-    "Halfellow"
-   ],
-   "quote": null,
-   "art": "cities__human_city_2",
-   "renown": 2,
-   "conditionText": null,
-   "number": 3037
-  },
-  {
-   "kind": "location",
    "id": "the-sealed-archive",
    "name": "The Sealed Archive",
    "groups": [
@@ -1551,7 +1416,7 @@
    "quote": null,
    "art": null,
    "renown": 3,
-   "conditionText": null,
+   "conditionText": "The challenge type of the current encounter is changed to mental.",
    "number": 3038
   },
   {
@@ -1604,7 +1469,8 @@
    "name": "The Deathless Captain",
    "groups": [
     "Undead",
-    "Human"
+    "Human",
+    "Marchguard"
    ],
    "quote": "“I remember being warm. I remember wanting things. I want them still: your towns, your fields, your breath.”",
    "art": "units__shadowsteed",
@@ -1621,9 +1487,10 @@
   {
    "kind": "encounter",
    "id": "the-barrow-legion",
-   "name": "The Barrow Legion",
+   "name": "Gorathaxus, Goose of the Void",
    "groups": [
-    "Undead"
+    "Undead",
+    "Goose"
    ],
    "quote": "“The barrows are full. Time to empty them.”",
    "art": "units__skeleton",
@@ -1716,10 +1583,9 @@
   {
    "kind": "encounter",
    "id": "abbess-hollis-of-the-unremembered",
-   "name": "Abbess Hollis of the Unremembered",
+   "name": "Abbess Hollis, the Unremembered",
    "groups": [
     "Human",
-    "Unremembered",
     "Undead"
    ],
    "quote": null,
@@ -1727,9 +1593,9 @@
    "minionValue": 2,
    "minions": {
     "count": 1,
-    "group": "Unremembered"
+    "group": "Undead"
    },
-   "conditionText": "When this card comes into play draw an Unremembered minion.",
+   "conditionText": "When this card comes into play draw an Undead minion.",
    "stat": "G",
    "difficulty": 13,
    "number": 4007
@@ -1740,7 +1606,8 @@
    "name": "Magister Ilse Varro, the Unmaker",
    "groups": [
     "Oathbreaker",
-    "Human"
+    "Human",
+    "Collegium"
    ],
    "quote": null,
    "art": null,
@@ -1756,50 +1623,11 @@
   },
   {
    "kind": "encounter",
-   "id": "an-unremembered-one",
-   "name": "An Unremembered One",
-   "groups": [
-    "Unremembered",
-    "Undead"
-   ],
-   "quote": null,
-   "art": "units__wisp",
-   "minionValue": 2,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "G",
-   "difficulty": 15,
-   "number": 4009
-  },
-  {
-   "kind": "encounter",
-   "id": "warborn-brood-soldier",
-   "name": "Warborn Brood-Soldier",
-   "groups": [
-    "Warborn",
-    "Orc"
-   ],
-   "quote": "“Hatched for war on Tuesday. Marching by Wednesday.”",
-   "art": "units__raptor_1",
-   "minionValue": 4,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "G",
-   "difficulty": 15,
-   "number": 4010
-  },
-  {
-   "kind": "encounter",
    "id": "ironbound-tomb-legion",
    "name": "Ironbound Tomb-Legion",
    "groups": [
-    "Ironbound"
+    "Ironbound",
+    "Undead"
    ],
    "quote": "“We slept in the dark for a thousand years. We are done sleeping.”",
    "art": "units__impaler_2",
@@ -1809,7 +1637,7 @@
     "group": null
    },
    "conditionText": null,
-   "stat": "G",
+   "stat": "P",
    "difficulty": 15,
    "number": 4011
   },
@@ -1837,7 +1665,8 @@
    "id": "elder-morvaine-the-undying",
    "name": "Elder Morvaine the Undying",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Elf"
    ],
    "quote": null,
    "art": null,
@@ -1848,7 +1677,7 @@
    },
    "conditionText": "When this card comes into play draw two minions.",
    "stat": "G",
-   "difficulty": 13,
+   "difficulty": 14,
    "number": 4013
   },
   {
@@ -1876,7 +1705,8 @@
    "id": "the-sundered-warden",
    "name": "The Sundered Warden",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Accord"
    ],
    "quote": "“A thousand years inside a rock. You will forgive me if I am in a mood.”",
    "art": null,
@@ -1906,7 +1736,7 @@
     "count": 1,
     "group": null
    },
-   "conditionText": "When this card comes into play draw a minion.",
+   "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
    "difficulty": 14,
    "number": 4016
@@ -1933,9 +1763,9 @@
   {
    "kind": "encounter",
    "id": "the-harvest-crone",
-   "name": "The Harvest Crone",
+   "name": "Harvest Crone",
    "groups": [
-    "Wicker",
+    "Halfellow",
     "Undead"
    ],
    "quote": null,
@@ -1943,38 +1773,19 @@
    "minionValue": 2,
    "minions": {
     "count": 1,
-    "group": "Wicker"
+    "group": null
    },
-   "conditionText": "When this card comes into play draw a Wicker minion.",
+   "conditionText": null,
    "stat": "G",
    "difficulty": 13,
    "number": 4018
   },
   {
    "kind": "encounter",
-   "id": "maddened-mossfolk",
-   "name": "Maddened Mossfolk",
-   "groups": [
-    "Mossfolk"
-   ],
-   "quote": null,
-   "art": "units__awakened_oak_2",
-   "minionValue": 4,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "P",
-   "difficulty": 14,
-   "number": 4019
-  },
-  {
-   "kind": "encounter",
    "id": "iron-mites",
-   "name": "Iron Mites",
+   "name": "Infectous Zombie",
    "groups": [
-    "Ironbound"
+    "Undead"
    ],
    "quote": null,
    "art": null,
@@ -2009,30 +1820,11 @@
   },
   {
    "kind": "encounter",
-   "id": "wardhouse-gargoyles",
-   "name": "Wardhouse Gargoyles",
-   "groups": [
-    "Gargoyle",
-    "Ironbound"
-   ],
-   "quote": "“They guarded the wards for a thousand years. Now the wards are gone, and they are still guarding.”",
-   "art": "units__highland_griffin_1",
-   "minionValue": 2,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "P",
-   "difficulty": 15,
-   "number": 4022
-  },
-  {
-   "kind": "encounter",
    "id": "the-laughing-prince",
    "name": "The Laughing Prince",
    "groups": [
-    "Fey Court"
+    "Elf",
+    "Oathbreaker"
    ],
    "quote": null,
    "art": null,
@@ -2068,7 +1860,7 @@
   {
    "kind": "encounter",
    "id": "skarra-ironjaw-the-bog-mother",
-   "name": "Skarra Ironjaw, the Bog-Mother",
+   "name": "Skarra, the Bog-Mother",
    "groups": [
     "Oathbreaker",
     "Skarra",
@@ -2081,7 +1873,7 @@
     "count": 1,
     "group": null
    },
-   "conditionText": "When this card comes into play draw a minion.",
+   "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "G",
    "difficulty": 14,
    "number": 4025
@@ -2102,7 +1894,7 @@
     "count": 1,
     "group": null
    },
-   "conditionText": "When this card comes into play draw a minion.",
+   "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
    "difficulty": 13,
    "number": 4026
@@ -2112,8 +1904,9 @@
    "id": "mortedamos-the-necromancer",
    "name": "Mortedamos the Necromancer",
    "groups": [
-    "Necromancer",
-    "Undead"
+    "Collegium",
+    "Undead",
+    "Human"
    ],
    "quote": "“Every curse ever spoken, written in one book. I only needed to read it aloud.”",
    "art": "enhancements__item_mortedamos_1",
@@ -2151,7 +1944,8 @@
    "groups": [
     "Oathbreaker",
     "Skarra",
-    "Orc"
+    "Orc",
+    "Accord"
    ],
    "quote": "“Twenty years they passed me over. Twenty years I have been sharpening.”",
    "art": "portraits__skarra_angry",
@@ -2160,29 +1954,10 @@
     "count": 1,
     "group": null
    },
-   "conditionText": "When this card comes into play draw a minion.",
+   "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
    "difficulty": 14,
    "number": 4029
-  },
-  {
-   "kind": "encounter",
-   "id": "old-mother-henbane-herbwife",
-   "name": "Old Mother Henbane, Herbwife",
-   "groups": [
-    "Human"
-   ],
-   "quote": "“Herbs for your hurts, dearie? …Oh, I can't keep this up. It's ME, morsel! SKARRA!”",
-   "art": "units__bog_witch_2",
-   "minionValue": 0,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "M",
-   "difficulty": 16,
-   "number": 4030
   },
   {
    "kind": "encounter",
@@ -2201,7 +1976,7 @@
     "count": 0,
     "group": null
    },
-   "conditionText": null,
+   "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
    "difficulty": 16,
    "number": 4031
@@ -2211,7 +1986,10 @@
    "id": "vorhal-first-of-the-wardens",
    "name": "Vorhal, First of the Wardens",
    "groups": [
-    "Oathbreaker"
+    "Oathbreaker",
+    "Undead",
+    "Warden",
+    "Accord"
    ],
    "quote": null,
    "art": null,
@@ -2244,31 +2022,11 @@
   },
   {
    "kind": "encounter",
-   "id": "iron-beetles",
-   "name": "Iron Beetles",
-   "groups": [
-    "Ironbound"
-   ],
-   "quote": null,
-   "art": null,
-   "minionValue": 3,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "M",
-   "difficulty": 10,
-   "number": 4034
-  },
-  {
-   "kind": "encounter",
    "id": "wyrmkin-warband",
    "name": "Wyrmkin Warband",
    "groups": [
-    "Wyrmkin",
-    "Beast",
-    "Dwarf"
+    "Orc",
+    "Beast"
    ],
    "quote": null,
    "art": "units__marsh_adder_1",
@@ -2287,7 +2045,6 @@
    "id": "runeforged-titan",
    "name": "Runeforged Titan",
    "groups": [
-    "Construct",
     "Ironbound",
     "Dwarf"
    ],
@@ -2305,32 +2062,11 @@
   },
   {
    "kind": "encounter",
-   "id": "gargoyle-whelps",
-   "name": "Gargoyle Whelps",
-   "groups": [
-    "Gargoyle",
-    "Ironbound"
-   ],
-   "quote": null,
-   "art": "units__frost_lynx_2",
-   "minionValue": 4,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "G",
-   "difficulty": 15,
-   "number": 4037
-  },
-  {
-   "kind": "encounter",
    "id": "fen-wyrmkin",
    "name": "Fen Wyrmkin",
    "groups": [
-    "Wyrmkin",
-    "Beast",
-    "Dwarf"
+    "Orc",
+    "Beast"
    ],
    "quote": null,
    "art": "units__marsh_adder_2",
@@ -2349,7 +2085,7 @@
    "id": "the-hooded-penitents",
    "name": "The Hooded Penitents",
    "groups": [
-    "Unremembered",
+    "Human",
     "Undead"
    ],
    "quote": "“They walk in silence. They forgot how to do anything else.”",
@@ -2369,7 +2105,6 @@
    "id": "scarecrows",
    "name": "Scarecrows",
    "groups": [
-    "Wicker",
     "Undead",
     "Halfellow"
    ],
@@ -2444,30 +2179,9 @@
   },
   {
    "kind": "encounter",
-   "id": "rimeguard-of-the-frostfells",
-   "name": "Rimeguard of the Frostfells",
-   "groups": [
-    "Frostborn"
-   ],
-   "quote": "“The cold keeps. The cold always keeps.” — Rimeguard saying",
-   "art": "units__frost_lynx_1",
-   "minionValue": 3,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "P",
-   "difficulty": 15,
-   "number": 4044
-  },
-  {
-   "kind": "encounter",
    "id": "bridge-trolls",
    "name": "Bridge Trolls",
-   "groups": [
-    "Dwarf"
-   ],
+   "groups": [],
    "quote": "“Toll. Toll. TOLL. No toll? SMASH. Then toll.”",
    "art": "units__ogre_1",
    "minionValue": 4,
@@ -2485,7 +2199,6 @@
    "id": "dire-spider-brood",
    "name": "Dire Spider Brood",
    "groups": [
-    "Spider",
     "Beast"
    ],
    "quote": "“Count the shadows. If there's one more than there should be, run.”",
@@ -2502,30 +2215,11 @@
   },
   {
    "kind": "encounter",
-   "id": "changelings",
-   "name": "Changelings",
-   "groups": [
-    "Changeling",
-    "Halfellow"
-   ],
-   "quote": null,
-   "art": "units__dire_wolf",
-   "minionValue": 2,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "P",
-   "difficulty": 15,
-   "number": 4047
-  },
-  {
-   "kind": "encounter",
    "id": "iron-shade",
    "name": "Iron-Shade",
    "groups": [
-    "Ironbound"
+    "Ironbound",
+    "Undead"
    ],
    "quote": null,
    "art": null,
@@ -2561,9 +2255,10 @@
   {
    "kind": "encounter",
    "id": "the-iron-colossus",
-   "name": "The Iron Colossus",
+   "name": "Iron Golem",
    "groups": [
-    "Ironbound"
+    "Ironbound",
+    "Collegium"
    ],
    "quote": null,
    "art": "units__runeforged_titan",
@@ -2572,29 +2267,10 @@
     "count": 1,
     "group": "Ironbound"
    },
-   "conditionText": "When this card comes into play draw an Ironbound minion.",
+   "conditionText": null,
    "stat": "P",
    "difficulty": 14,
    "number": 4050
-  },
-  {
-   "kind": "encounter",
-   "id": "the-grave-hunger",
-   "name": "The Grave-Hunger",
-   "groups": [
-    "Undead"
-   ],
-   "quote": "“You cannot starve a hunger that eats death itself.”",
-   "art": null,
-   "minionValue": 2,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "M",
-   "difficulty": 15,
-   "number": 4051
   },
   {
    "kind": "encounter",
@@ -2616,7 +2292,7 @@
   {
    "kind": "encounter",
    "id": "the-prisoner-of-the-ninth-ward",
-   "name": "The Prisoner of the Ninth Ward",
+   "name": "The Prisoner of the Ward",
    "groups": [],
    "quote": "“It has worn a hundred faces since it got out. None of them fit.”",
    "art": null,
@@ -2632,30 +2308,10 @@
   },
   {
    "kind": "encounter",
-   "id": "mayor-pickering-not-really",
-   "name": "Mayor Pickering (Not Really)",
-   "groups": [
-    "Changeling",
-    "Halfellow"
-   ],
-   "quote": "“A fine morning, fellow halfellows! Tell me, where do you keep the, ah, treasury?”",
-   "art": null,
-   "minionValue": 1,
-   "minions": {
-    "count": 0,
-    "group": null
-   },
-   "conditionText": null,
-   "stat": "G",
-   "difficulty": 15,
-   "number": 4054
-  },
-  {
-   "kind": "encounter",
    "id": "the-dream-warden",
    "name": "The Dream-Warden",
    "groups": [
-    "Phantom",
+    "Elf",
     "Oathbreaker",
     "Undead"
    ],
@@ -2676,7 +2332,6 @@
    "id": "the-brood-queen-of-the-webwood",
    "name": "The Brood-Queen of the Webwood",
    "groups": [
-    "Spider",
     "Beast"
    ],
    "quote": "“My children are hungry, and the Marches are so very full.”",
@@ -2694,9 +2349,9 @@
   {
    "kind": "encounter",
    "id": "the-hollow-kin",
-   "name": "The Hollow Kin",
+   "name": "Hollow Kin",
    "groups": [
-    "Phantom",
+    "Halfellow",
     "Undead"
    ],
    "quote": "“Mother, Father, Sister, Son. We only want a body each.”",
@@ -2728,15 +2383,15 @@
    },
    "stat": "G",
    "difficulty": 11,
-   "conditionText": "As a minion of a Skarra encounter, her minion bonus is 3. When she is a minion, she is shuffled back into the encounter stack afterwards.",
+   "conditionText": "When this card comes into play as an encounter, draw a Skarra enounter. That card becomes the encounter, and this card becomes the minion.",
    "number": 4058
   },
   {
    "kind": "encounter",
    "id": "the-treasure-trow",
-   "name": "The Treasure Trow",
+   "name": "Treasure Trow",
    "groups": [
-    "Fey Court"
+    "Wardhouse"
    ],
    "quote": null,
    "art": null,
@@ -2771,9 +2426,7 @@
    "kind": "resource",
    "id": "call-the-five-crowns",
    "name": "Call the Five Crowns",
-   "groups": [
-    "Human"
-   ],
+   "groups": [],
    "quote": "“Five crowns in one room, and not one of them on fire. Write it down.” — Queen Maren",
    "art": null,
    "value": 0,
@@ -2786,9 +2439,7 @@
    "kind": "resource",
    "id": "three-banners-raised",
    "name": "Three Banners Raised",
-   "groups": [
-    "Human"
-   ],
+   "groups": [],
    "quote": "“Three of them. Heaven help the enemy. Heaven help the catering.” — Goldie Trickgrin",
    "art": null,
    "value": 0,
@@ -2801,9 +2452,7 @@
    "kind": "resource",
    "id": "shoulder-to-shoulder",
    "name": "Shoulder to Shoulder",
-   "groups": [
-    "Human"
-   ],
+   "groups": [],
    "quote": null,
    "art": null,
    "value": 0,
@@ -2846,9 +2495,7 @@
    "kind": "resource",
    "id": "the-gathering-of-heroes",
    "name": "The Gathering of Heroes",
-   "groups": [
-    "Human"
-   ],
+   "groups": [],
    "quote": null,
    "art": null,
    "value": 0,
@@ -2887,21 +2534,6 @@
   },
   {
    "kind": "resource",
-   "id": "torch-and-tinder",
-   "name": "Torch and Tinder",
-   "groups": [
-    "Orc"
-   ],
-   "quote": null,
-   "art": null,
-   "value": 2,
-   "wand": false,
-   "council": false,
-   "conditionText": "5 against Wicker encounters.",
-   "number": 5010
-  },
-  {
-   "kind": "resource",
    "id": "gold-filings",
    "name": "Gold Filings",
    "groups": [
@@ -2919,9 +2551,7 @@
    "kind": "resource",
    "id": "feathered-cap",
    "name": "Feathered Cap",
-   "groups": [
-    "Elf"
-   ],
+   "groups": [],
    "quote": "“A goose feather. Every Mayor needs one.” — Hobby Trickgrin",
    "art": "enhancements__item_feather_1",
    "value": 2,
@@ -2932,24 +2562,9 @@
   },
   {
    "kind": "resource",
-   "id": "half-moon-spectacles",
-   "name": "Half-Moon Spectacles",
-   "groups": [],
-   "quote": "“Footnote three. I shall need my other spectacles.” — Professor Barnaby Pickwort",
-   "art": null,
-   "value": 2,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5013
-  },
-  {
-   "kind": "resource",
    "id": "sprig-of-heather",
    "name": "Sprig of Heather",
-   "groups": [
-    "Elf"
-   ],
+   "groups": [],
    "quote": "“If the heather wilts, there's a hex in the room.”",
    "art": null,
    "value": 2,
@@ -3022,7 +2637,9 @@
    "kind": "resource",
    "id": "seal-of-the-accord",
    "name": "Seal of the Accord",
-   "groups": [],
+   "groups": [
+    "Accord"
+   ],
    "quote": null,
    "art": null,
    "value": 2,
@@ -3048,21 +2665,6 @@
   },
   {
    "kind": "resource",
-   "id": "shepherds-crook",
-   "name": "Shepherd's Crook",
-   "groups": [
-    "Halfellow"
-   ],
-   "quote": null,
-   "art": null,
-   "value": 2,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5021
-  },
-  {
-   "kind": "resource",
    "id": "cold-iron-barrier",
    "name": "Cold Iron Barrier",
    "groups": [
@@ -3078,25 +2680,11 @@
   },
   {
    "kind": "resource",
-   "id": "tin-whistle",
-   "name": "Tin Whistle",
-   "groups": [
-    "Halfellow"
-   ],
-   "quote": "“Three notes and every goose in the Hearthlands comes running.”",
-   "art": null,
-   "value": 2,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5023
-  },
-  {
-   "kind": "resource",
    "id": "scrying-lenses",
    "name": "Scrying Lenses",
    "groups": [
-    "Human"
+    "Human",
+    "Collegium"
    ],
    "quote": "“The left lens sees tomorrow. The right one needs cleaning.” — Archmage Corvin",
    "art": null,
@@ -3111,7 +2699,7 @@
    "id": "hundred-year-journal",
    "name": "Hundred-Year Journal",
    "groups": [
-    "Human"
+    "Elf"
    ],
    "quote": "“Day one hundred and four: the geese have unionised.”",
    "art": null,
@@ -3125,7 +2713,9 @@
    "kind": "resource",
    "id": "ring-of-warding",
    "name": "Ring of Warding",
-   "groups": [],
+   "groups": [
+    "Warden"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -3154,7 +2744,7 @@
    "id": "null-rune-seal",
    "name": "Null-Rune Seal",
    "groups": [
-    "Dwarf"
+    "Human"
    ],
    "quote": null,
    "art": null,
@@ -3169,7 +2759,8 @@
    "id": "rune-of-unmaking",
    "name": "Rune of Unmaking",
    "groups": [
-    "Dwarf"
+    "Dwarf",
+    "Ironbound"
    ],
    "quote": null,
    "art": null,
@@ -3181,26 +2772,12 @@
   },
   {
    "kind": "resource",
-   "id": "glamour-rouge",
-   "name": "Glamour Rouge",
-   "groups": [
-    "Elf"
-   ],
-   "quote": null,
-   "art": null,
-   "value": 3,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5030
-  },
-  {
-   "kind": "resource",
    "id": "the-amulet-of-aesia",
    "name": "The Amulet of Aesia",
    "groups": [
     "Human",
-    "Elf"
+    "Elf",
+    "Accord"
    ],
    "quote": null,
    "art": "enhancements__item_amulet_of_aesia_1",
@@ -3227,23 +2804,10 @@
   },
   {
    "kind": "resource",
-   "id": "wool-traveling-cloak",
-   "name": "Wool Traveling Cloak",
-   "groups": [],
-   "quote": null,
-   "art": null,
-   "value": 3,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5033
-  },
-  {
-   "kind": "resource",
    "id": "wayfinders-die",
-   "name": "Wayfinder's Die",
+   "name": "Wayfinder's Compass",
    "groups": [
-    "Orc"
+    "Halfellow"
    ],
    "quote": null,
    "art": null,
@@ -3256,7 +2820,7 @@
   {
    "kind": "resource",
    "id": "gauntlet-of-returning",
-   "name": "Gauntlet of Returning",
+   "name": "Pariapt of the Phoenix",
    "groups": [],
    "quote": null,
    "art": null,
@@ -3265,21 +2829,6 @@
    "council": false,
    "conditionText": "At the end of the current turn you may draw a companion from the discard stack and put them into play immediately.",
    "number": 5035
-  },
-  {
-   "kind": "resource",
-   "id": "draught-of-forgetting",
-   "name": "Draught of Forgetting",
-   "groups": [
-    "Undead"
-   ],
-   "quote": null,
-   "art": null,
-   "value": 3,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5036
   },
   {
    "kind": "resource",
@@ -3315,7 +2864,9 @@
    "kind": "resource",
    "id": "the-wardens-horn",
    "name": "The Wardens' Horn",
-   "groups": [],
+   "groups": [
+    "Warden"
+   ],
    "quote": null,
    "art": null,
    "value": 3,
@@ -3323,19 +2874,6 @@
    "council": false,
    "conditionText": "When this card is revealed or played face up, you may change the current location to The Wardens' Hall, then shuffle the replaced location back into the location stack.",
    "number": 5039
-  },
-  {
-   "kind": "resource",
-   "id": "speaking-shell",
-   "name": "Speaking Shell",
-   "groups": [],
-   "quote": "“Speak into the shell and someone, somewhere, is obliged to answer.”",
-   "art": null,
-   "value": 3,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5040
   },
   {
    "kind": "resource",
@@ -3582,7 +3120,9 @@
    "kind": "resource",
    "id": "cloak-of-hiding",
    "name": "Cloak of Hiding",
-   "groups": [],
+   "groups": [
+    "Halfellow"
+   ],
    "quote": "“What cloak?”",
    "art": "enhancements__item_cloak_1",
    "value": 4,
@@ -3590,19 +3130,6 @@
    "council": false,
    "conditionText": null,
    "number": 5058
-  },
-  {
-   "kind": "resource",
-   "id": "blank-writ",
-   "name": "Blank Writ",
-   "groups": [],
-   "quote": "“It says whatever they most want it to say. Once it said I was a duke.” — Hobby Trickgrin",
-   "art": null,
-   "value": 4,
-   "wand": false,
-   "council": false,
-   "conditionText": null,
-   "number": 5059
   },
   {
    "kind": "resource",
@@ -3621,7 +3148,9 @@
    "kind": "resource",
    "id": "yew-wand",
    "name": "Yew Wand",
-   "groups": [],
+   "groups": [
+    "Elf"
+   ],
    "quote": null,
    "art": null,
    "value": 4,
@@ -3650,7 +3179,9 @@
    "kind": "resource",
    "id": "key-to-the-wardens-hall",
    "name": "Key to the Wardens' Hall",
-   "groups": [],
+   "groups": [
+    "Warden"
+   ],
    "quote": "“Every Warden gets one. Nobody remembers who has the spare.”",
    "art": null,
    "value": 4,
@@ -3813,7 +3344,9 @@
    "kind": "resource",
    "id": "the-wardens-signet",
    "name": "The Warden's Signet",
-   "groups": [],
+   "groups": [
+    "Warden"
+   ],
    "quote": "“Press it into wax and every Warden in the Marches knows who sent the letter.”",
    "art": null,
    "value": 3,
@@ -3835,7 +3368,7 @@
    "value": 1,
    "wand": false,
    "council": false,
-   "conditionText": "Any goose companions get an additional +2 for this encounter.",
+   "conditionText": "All goose cards gain an additional +2 for this encounter.",
    "number": 5075
   },
   {
@@ -3852,6 +3385,97 @@
    "council": false,
    "conditionText": "When this card is revealed or played face up, if you lose the current encounter (your hero falls), the winner has -3 during the next encounter. It has +1 if your hero is Oskar.",
    "number": 5076
+  },
+  {
+   "kind": "resource",
+   "id": "rotten-apple",
+   "name": "Rotten Apple",
+   "groups": [
+    "Halfellow"
+   ],
+   "quote": null,
+   "art": null,
+   "value": -1,
+   "wand": false,
+   "council": false,
+   "conditionText": "When this card is revealed or played face up, place it in front of an opposing player. It's value becomes part of their bid.",
+   "number": 5081
+  },
+  {
+   "kind": "resource",
+   "id": "misdirecting-missive",
+   "name": "Misdirecting Missive",
+   "groups": [
+    "Elf"
+   ],
+   "quote": null,
+   "art": null,
+   "value": -2,
+   "wand": false,
+   "council": false,
+   "conditionText": "When this card is revealed or played face up, place it in front of an opposing player. It's value becomes part of their bid.",
+   "number": 5082
+  },
+  {
+   "kind": "resource",
+   "id": "grudge-marker",
+   "name": "Grudge Marker",
+   "groups": [
+    "Dwarf"
+   ],
+   "quote": null,
+   "art": null,
+   "value": -3,
+   "wand": false,
+   "council": false,
+   "conditionText": "When this card is revealed or played face up, place it in front of an opposing player. It's value becomes part of their bid.",
+   "number": 5077
+  },
+  {
+   "kind": "resource",
+   "id": "apprentices-exploding-wand",
+   "name": "Apprentice's Exploding Wand",
+   "groups": [
+    "Human",
+    "Collegium"
+   ],
+   "quote": null,
+   "art": null,
+   "value": -4,
+   "wand": false,
+   "council": false,
+   "conditionText": "When this card is revealed or played face up, place it in front of an opposing player. It's value becomes part of their bid.",
+   "number": 5078
+  },
+  {
+   "kind": "resource",
+   "id": "cursed-locket",
+   "name": "Cursed Locket",
+   "groups": [
+    "Undead"
+   ],
+   "quote": null,
+   "art": null,
+   "value": -5,
+   "wand": false,
+   "council": false,
+   "conditionText": "When this card is revealed or played face up, place it in front of an opposing player. It's value becomes part of their bid.",
+   "number": 5079
+  },
+  {
+   "kind": "resource",
+   "id": "marked-for-the-hunt",
+   "name": "Marked for the Hunt",
+   "groups": [
+    "Orc"
+   ],
+   "quote": null,
+   "art": null,
+   "value": -6,
+   "wand": false,
+   "council": false,
+   "conditionText": "When this card is revealed or played face up, place it in front of an opposing player. It's value becomes part of their bid.",
+   "number": 5080
   }
  ]
 }

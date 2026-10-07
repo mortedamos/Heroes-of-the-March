@@ -195,8 +195,15 @@ export function revealEncounter(ctx: Ctx): boolean {
   // An encounter found by a location's search (The Frostfells) is this turn's encounter.
   const found = t.chosenEncounter;
   t.chosenEncounter = null;
-  const card = found ?? ctx.take('encounter');
+  let card = found ?? ctx.take('encounter');
   if (!card) return false;
+  // Destiny the Frog: a Skarra encounter is drawn and becomes the encounter; Destiny becomes its minion.
+  let sidekick: CardId | null = null;
+  const fetch = abilityOf(ctx.defId(card))?.fetchesGroup;
+  if (fetch) {
+    const other = ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), fetch));
+    if (other) { sidekick = card; card = other; }
+  }
   t.encounter = card;
   ctx.emit({ type: 'encounterRevealed', card: ctx.ref(card) });
   fire(ctx, 'encounterEntered', { card, asMinion: false });
@@ -208,15 +215,13 @@ export function revealEncounter(ctx: Ctx): boolean {
     fire(ctx, 'encounterEntered', { card: m, asMinion: true });
     fire(ctx, 'minionDrawn', { card: m });
   };
-  for (let i = 0; i < def.minions.count; i++) {
+  if (sidekick) addMinion(sidekick);
+  for (let i = 0; i < (sidekick ? 0 : def.minions.count); i++) {
     const group = def.minions.group;
-    if (hasGroup(def, 'Skarra') && !group) {
-      const m = skarraMinion(ctx);
-      if (!m) break;
-      addMinion(m);
-      continue;
-    }
-    const m = group ? ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), group)) : ctx.take('encounter');
+    // Skarra's minion can be anyone but another Skarra.
+    const skarra = hasGroup(def, 'Skarra') && !group;
+    const m = group ? ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), group))
+      : skarra ? ctx.takeMatching('encounter', (c) => !hasGroup(ctx.def(c), 'Skarra')) : ctx.take('encounter');
     if (!m) break;
     addMinion(m);
   }
@@ -229,35 +234,10 @@ export function revealEncounter(ctx: Ctx): boolean {
   return true;
 }
 
-/**
- * Skarra's minion: look at the top 5 encounter cards. If one is Destiny the Frog she joins as the minion
- * (the rest stay on top); if not, they are discarded and a minion is drawn normally.
- */
-function skarraMinion(ctx: Ctx): CardId | null {
-  const top = peekTop(ctx, 'encounter', 5);
-  for (const c of top) ctx.emit({ type: 'cardShown', player: null, card: ctx.ref(c), reason: 'Skarra looks for Destiny' });
-  const pile = ctx.s.decks.encounter;
-  const hit = top.find((c) => ctx.defId(c) === 'destiny-the-frog');
-  if (hit) {
-    pile.splice(pile.indexOf(hit), 1);
-    return hit;
-  }
-  for (const c of top) {
-    pile.splice(pile.indexOf(c), 1);
-    ctx.discard('encounter', c);
-  }
-  return ctx.take('encounter');
-}
-
-/** End of an encounter: the main card and minions are discarded (Destiny, as a minion, goes back into the stack). */
+/** End of an encounter: the main card and minions are discarded. */
 function discardEncounterCards(ctx: Ctx, main: CardId | null, minions: CardId[]): void {
   if (main) ctx.discard('encounter', main);
-  const back: CardId[] = [];
-  for (const m of minions) {
-    if (abilityOf(ctx.defId(m))?.shuffleBackAsMinion) back.push(m);
-    else ctx.discard('encounter', m);
-  }
-  ctx.returnToDeck('encounter', back);
+  for (const m of minions) ctx.discard('encounter', m);
 }
 
 function announceChallenge(ctx: Ctx): void {
@@ -773,6 +753,7 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
       const bid = ctx.s.players.find((o) => o.id === pid)?.bids[Number(idx)];
       return Boolean(bid && !bid.visible);
     });
+    case 'curseTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p));
     case 'appleSwap': return keep((v) => ctx.s.players.some((o) => o.bids.some((b) => b.card === v && b.visible)));
     case 'gauntlet': return keep((v) => ctx.s.discards.companion.includes(v));
     default: return task.options;
@@ -982,6 +963,16 @@ export function applyChoice(
         // Urzha: swap this encounter for the next one, or shuffle the stack so nothing is remembered.
         if (pick === 'replace' && ctx.s.decks.encounter[ctx.s.decks.encounter.length - 1] === data['card']) replaceEncounter(ctx, 'Pick Your Fight');
         else ctx.shuffle('encounter');
+        break;
+      }
+      case 'curseTarget': {
+        const card = String(data['card']);
+        const from = ctx.s.players.find((o) => o.bids.some((b) => b.card === card));
+        const to = ctx.s.players.find((o) => o.id === pick && o !== from);
+        if (!from || !to) break;
+        const [bid] = from.bids.splice(from.bids.findIndex((b) => b.card === card), 1);
+        to.bids.push(bid!);
+        ctx.emit({ type: 'bidClaimed', from: from.id, to: to.id });
         break;
       }
       case 'appleSwap': {

@@ -54,10 +54,7 @@ export function difficultyFor(ctx: Ctx, p: PlayerState | null): DifficultyBreakd
   for (const m of t.minions) {
     const d = ctx.def(m);
     if (d.kind !== 'encounter') continue;
-    // Destiny the Frog: worth more as a minion of a Skarra encounter.
-    const special = abilityOf(d.id)?.minionValueWith;
-    const value = special && hasGroup(main, special.group) ? special.value : d.minionValue;
-    minions += value + locationBoost(ctx, m) + perMinion;
+    minions += d.minionValue + locationBoost(ctx, m) + perMinion;
   }
   // Companions pressed into service as minions (Iron Mites) add their stat for the challenge.
   const chStat = challengeStat(ctx, null) ?? ch.stat;

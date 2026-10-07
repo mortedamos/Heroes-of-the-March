@@ -6,6 +6,13 @@
 // The spreadsheet is treated as untrusted input: every field is type-checked,
 // strings are length-bounded, and anything malformed fails the build loudly.
 
+// Since the Google Sheet rework (Oct 2026) src/data/cards.json is edited directly (see the review sheet and
+// scripts/apply-sheet-rework.mjs); the xlsx is out of date. Rebuilding from it would undo that work.
+if (!process.argv.includes('--from-xlsx')) {
+  console.error('The xlsx is out of date: cards.json is now the source of truth. Pass --from-xlsx to rebuild from it anyway.');
+  process.exit(1);
+}
+
 import ExcelJS from 'exceljs';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';

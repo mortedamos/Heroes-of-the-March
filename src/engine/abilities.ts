@@ -117,10 +117,8 @@ export interface Ability {
   encounterBonus?: { def: string; amount: number };
   /** Hedda: once per turn, an opponent's ability that would affect one of your companions is cancelled. */
   holdTheLine?: boolean;
-  /** Encounter: worth `value` as a minion of an encounter in this group (Destiny with Skarra). */
-  minionValueWith?: { group: string; value: number };
-  /** Encounter: shuffled back into the encounter stack when it ends its turn as a minion (Destiny). */
-  shuffleBackAsMinion?: boolean;
+  /** Encounter: when it comes into play as the encounter, an encounter of this group is drawn instead and this card becomes its minion (Destiny). */
+  fetchesGroup?: string;
   /** Encounter: its difficulty when the challenge is on these stats (the Runeforged Titan). */
   difficultyByStat?: Partial<Record<Stat, number>>;
   /** Encounter: when defeated (someone survived), with the survivors. */
@@ -174,29 +172,6 @@ const firstForcedStat = (key: string) => (ctx: Ctx, self: Source) => {
   drawFor(ctx, self);
 };
 
-/**
- * A location or encounter that searches the top of the encounter stack (The Frostfells, Wreck of the Skyship
- * Gallant): look at the top 5; a card in `group` becomes this turn's encounter, otherwise they are all discarded.
- */
-function searchForEncounter(ctx: Ctx, group: string): void {
-  const t = ctx.s.turn;
-  if (t.encounter) return; // the encounter is already out: nothing to find
-  if (t.chosenEncounter) { ctx.s.decks.encounter.push(t.chosenEncounter); t.chosenEncounter = null; } // an earlier find goes back
-  const top = peekTop(ctx, 'encounter', 5);
-  for (const c of top) ctx.emit({ type: 'cardShown', player: null, card: ctx.ref(c), reason: nameOf(ctx, ctx.s.turn.location ?? top[0]!) });
-  const hit = top.find((c) => hasGroup(ctx.def(c), group));
-  const pile = ctx.s.decks.encounter;
-  if (hit) {
-    pile.splice(pile.indexOf(hit), 1);
-    t.chosenEncounter = hit;
-    return;
-  }
-  for (const c of top) {
-    pile.splice(pile.indexOf(c), 1);
-    ctx.discard('encounter', c);
-  }
-}
-
 /** A location drawing a resource per companion of one kingdom in each player's party (the capitals). */
 const drawPerKin = (kingdom: string): Ability => drawPerOwn((ctx, p) => p.companions.filter((c) => kingdomsOf(ctx.def(c)).includes(kingdom)).length);
 
@@ -243,6 +218,20 @@ function statChange(stat: Stat): Ability {
     },
   };
 }
+
+/** A curse resource: revealed or played face up, its owner places it in front of an opposing player, where its negative value counts toward that player's bid. */
+const curse = (): Ability => ({
+  status: 'full',
+  onReveal: (ctx, self) => {
+    const targets = ctx.s.players.filter((p) => p.id !== self.owner);
+    if (!targets.length) return;
+    ctx.queue({
+      t: 'choose', purpose: 'curseTarget', player: self.owner!, source: nameOf(ctx, self.card),
+      prompt: `${nameOf(ctx, self.card)}: place it in front of an opposing player. Its value counts toward their bid.`,
+      options: targets.map((p) => ({ value: p.id, label: p.name })), min: 1, max: 1, data: { card: self.card },
+    });
+  },
+});
 
 const others = (ctx: Ctx, self: OwnedSource) => ctx.s.players.filter((p) => p.id !== self.owner);
 
@@ -377,7 +366,7 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'thorgar-twice-buried': { status: 'full', flatBonus: 1, failSave: 4, on: { locationWon: (ctx, self, e) => { if (e.margin <= 3) drawFor(ctx, self); } } },
+  'thorgar-twice-buried': { status: 'full', failSave: 5, on: { encounterEntered: encounterEntered('Undead') } },
   'aelthir-moonveil': {
     status: 'full',
     on: { challengeFaced: onChallenge('G') },
@@ -394,7 +383,7 @@ export const ABILITIES: Record<string, Ability> = {
   },
   'lord-vaelis-nightbloom': {
     status: 'full',
-    on: { heroFell: (ctx, self) => drawFor(ctx, self, 2) },
+    on: { heroFell: (ctx, self) => drawFor(ctx, self, 3) },
     activations: [{
       id: 'shadowsteeds', label: 'Draw the next encounter; its minion bonus goes to all your stats', windows: ['beforeBidding'], per: 'turn',
       canUse: (ctx) => ctx.s.decks.encounter.length + ctx.s.discards.encounter.length > 0,
@@ -412,7 +401,7 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full', claimSwapsCard: true,
     on: { locationReplaced: (ctx, self) => drawFor(ctx, self) },
     activations: [{
-      id: 'pockets', label: "Claim another player's face-down bid", windows: ['bidding'], turn: 'others', per: 'turn',
+      id: 'pockets', label: "Claim another player's face-down bid", windows: ['bidding'], per: 'turn',
       canUse: (ctx, self) => others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
       use: (ctx, self) => {
         const options = others(ctx, self).flatMap((p) => p.bids.flatMap((b, i) => (b.visible ? [] : [{
@@ -426,7 +415,7 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   'kazra-emberdeep': { status: 'full', ignorePositiveMinionBonus: true, on: { encounterEntered: encounterEntered('Ironbound') } },
-  'ysolde-of-the-wellspring': { status: 'full', maxCompanions: 3, on: { challengeFaced: onChallenge('M') } },
+  'ysolde-of-the-wellspring': { status: 'full', maxCompanions: 3, on: { encounterEntered: encounterEntered('Beast') } },
   'mayor-hobby-trickgrin': {
     status: 'full', mayBidFaceDown: true,
     note: 'Face-down cards still reveal in the normal reveal step.',
@@ -464,7 +453,7 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'archmage-corvin-varro': { status: 'full', extraDrawOnDraw: 'ownTurn', on: { encounterEntered: encounterEntered('Undead') } },
+  'archmage-corvin-varro': { status: 'full', extraDrawOnDraw: 'ownTurn', on: { challengeFaced: onChallenge('M') } },
   'professor-barnaby-pickwort': {
     status: 'full',
     on: { locationEntered: locationEntered('Accord') },
@@ -740,27 +729,24 @@ export const ABILITIES: Record<string, Ability> = {
   'grumma-ladlejaw-camp-cook': forceHero('P', 'own'),
 
   // Locations
-  'the-waystone-inn-rivermeet': {
+  'the-goose-and-kettle': {
     status: 'full',
     onEnter: (ctx, self) => {
       if (ctx.s.decks.companion.length + ctx.s.discards.companion.length === 0) return;
       for (const p of ctx.clockwise()) {
         ctx.queue({
           t: 'choose', purpose: 'waystoneDraw', player: p.id, source: nameOf(ctx, self.card),
-          prompt: 'The Waystone Inn: draw a companion into play (then discard one of your companions)?',
+          prompt: 'The Goose & Kettle: draw a companion into play (then discard one of your companions)?',
           options: [{ value: 'draw', label: 'Draw a companion' }, { value: 'skip', label: 'No thanks' }], min: 1, max: 1,
         });
       }
     },
   },
-  'the-frostfells': { status: 'full', groupBoost: { group: 'Frostborn', amount: 2 }, onEnter: (ctx) => searchForEncounter(ctx, 'Frostborn') },
   'the-barrowlands': groupBoost('Undead'),
-  'the-heart-of-the-marchstone': groupBoost('Oathbreaker'),
   'the-mirror-marches': groupBoost('Ironbound'),
-  'wreck-of-the-skyship-gallant': { status: 'full', groupBoost: { group: 'Gargoyle', amount: 2 }, onEnter: (ctx) => searchForEncounter(ctx, 'Gargoyle') },
   'tomb-of-the-first-wardens': { status: 'full', challengeStat: 'G' },
   'the-silverwood-hunt': { status: 'full', challengeStat: 'P' },
-  'the-memory-of-the-heartwood': { status: 'full', challengeStat: 'M' },
+  'the-sealed-archive': { status: 'full', challengeStat: 'M' },
   'the-speaking-stones': { status: 'full', minionBonus: 1 },
   'the-old-quarry': { status: 'full' }, // "All" group handled by hasGroup()
   'the-storybook-glade': {
@@ -792,7 +778,6 @@ export const ABILITIES: Record<string, Ability> = {
     (hasGroup(ctx.def(p.hero), 'Warden') ? 1 : 0) + p.companions.filter((c) => hasGroup(ctx.def(c), 'Warden')).length),
   'the-mage-college-vaults': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Collegium')).length),
   'marchguard-keep': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Marchguard')).length),
-  'the-goose-and-kettle': drawPerOwn((ctx, p) => p.companions.filter((c) => ctx.defId(c) === 'goldie-trickgrin-keeper-of-the-goose-and-kettle').length),
   'the-hollow-hills': { status: 'full', hidesFaceDown: true }, // Fog of the Fey
   'parting-strand': {
     status: 'full',
@@ -805,12 +790,12 @@ export const ABILITIES: Record<string, Ability> = {
       },
     },
   },
-  'the-last-field': {
+  'the-hollow-between': {
     status: 'full',
     onEnter: (ctx, self) => {
       for (const p of ctx.clockwise()) {
         if (p.hand.length === 0) continue;
-        ctx.queue({ t: 'choose', purpose: 'discardResource', player: p.id, prompt: 'The Last Field: discard a resource card', options: p.hand.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        ctx.queue({ t: 'choose', purpose: 'discardResource', player: p.id, prompt: 'The Hollow Between: discard a resource card', options: p.hand.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
       }
     },
   },
@@ -828,7 +813,7 @@ export const ABILITIES: Record<string, Ability> = {
       for (const pid of survivors) drawResources(ctx, pid, 1, nameOf(ctx, self.card));
     },
   },
-  'destiny-the-frog': { status: 'full', minionValueWith: { group: 'Skarra', value: 3 }, shuffleBackAsMinion: true },
+  'destiny-the-frog': { status: 'full', fetchesGroup: 'Skarra' },
   'runeforged-titan': { status: 'full', difficultyByStat: { M: 10, G: 10 } },
   'iron-mites': {
     status: 'full',
@@ -893,7 +878,6 @@ export const ABILITIES: Record<string, Ability> = {
       for (const p of ctx.clockwise()) if (p.bids.length > 0) councilHeroes(ctx, p.id, 1, nameOf(ctx, self.card));
     },
   },
-  'torch-and-tinder': valueAgainst(['Wicker'], 5),
   'gold-filings': valueAgainst(['Ironbound'], 5),
   'rune-of-unmaking': valueAgainst(['Construct', 'Ironbound'], 5),
   'warding-nail': valueAgainst(['Ironbound'], 5),
@@ -919,7 +903,7 @@ export const ABILITIES: Record<string, Ability> = {
   // The Golden Egg: +1, and +2 for every Goose in play anywhere this encounter.
   'the-golden-egg': {
     status: 'full',
-    resourceValue: (ctx, _owner, base) => base + 2 * companionsInPlay(ctx).filter((c) => hasGroup(ctx.def(c.card), 'Goose')).length,
+    resourceValue: (ctx, _owner, base) => base + 2 * (companionsInPlay(ctx).map((c) => c.card).concat(ctx.s.turn.encounter ? [ctx.s.turn.encounter] : [], ctx.s.turn.minions)).filter((c) => hasGroup(ctx.def(c), 'Goose')).length,
   },
   'the-rosepearl': {
     status: 'full',
@@ -943,6 +927,8 @@ export const ABILITIES: Record<string, Ability> = {
     resourceValue: (ctx, owner, base) => base + (owner.hero && ctx.defId(owner.hero) === 'loremaster-oskar-grimgate' ? 1 : 0),
   },
   'skarras-hexwand': { status: 'full' },
+  'rotten-apple': curse(), 'misdirecting-missive': curse(), 'grudge-marker': curse(),
+  'apprentices-exploding-wand': curse(), 'cursed-locket': curse(), 'marked-for-the-hunt': curse(),
   'wrens-silver-wand': { status: 'full' },
 };
 

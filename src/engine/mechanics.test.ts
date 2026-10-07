@@ -6,12 +6,17 @@ import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
 import { companionEnters, discardCompanion, fire, maxCompanions, replaceLocation } from './effects';
 import { difficultyFor, totalFor } from './totals';
+import { abilityOf } from './abilities';
 import { getDef } from './cards';
 import { createGame } from './setup';
 import type { HouseRules } from './rules';
 import { checkInvariants, seats, seed } from './testUtils';
 import type { CardId, Command, Decision, DeckName, GameEvent, GameState, PlayerId } from './types';
 import { redactEvents, viewFor } from './view';
+
+// Two plain stand-ins for the retired Iron Beetles (Ironbound, Mental 10, minion 3) and The Grave-Hunger (Undead, Mental 15, minion 2): same numbers, so these tests keep their arithmetic.
+Object.assign(getDef('ironbound-vanguard'), { stat: 'M', difficulty: 10, minionValue: 3 });
+Object.assign(getDef('crawling-remnant'), { stat: 'M', difficulty: 15, minionValue: 2 });
 
 // --- rigging helpers -------------------------------------------------------------
 
@@ -27,6 +32,10 @@ function detach(s: GameState, id: CardId): void {
     const i = pile.indexOf(id);
     if (i >= 0) pile.splice(i, 1);
   }
+  // The rig starts partway through turn 1: a card already out as that turn's encounter or minion is taken from there too.
+  if (s.turn.encounter === id) s.turn.encounter = null;
+  s.turn.minions = s.turn.minions.filter((c) => c !== id);
+  s.turn.setAside = s.turn.setAside.filter((c) => c !== id);
   for (const p of s.players) {
     for (const k of ['companions', 'inactiveCompanions', 'resting', 'hand', 'claimed', 'councilHeroes'] as const) {
       p[k] = p[k].filter((c) => c !== id);
@@ -173,7 +182,7 @@ function standard(g: Game, a: { hero?: string; companions?: string[]; hand?: str
   give(g.s, g.A, { hero: 'archmage-corvin-varro', companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'], ...a });
   give(g.s, g.B, { hero: 'queen-maren-ashcroft', companions: ['sergeant-waddle', 'tobin-quill-goose-keeper'], hand: ['feathered-cap'], ...b });
   onTop(g.s, 'location', ['the-silverwood-hunt', 'kingsford', 'clover-hollow', 'the-hollow-between']);
-  onTop(g.s, 'encounter', ['iron-beetles', 'wyrmkin-warband', 'bridge-trolls']);
+  onTop(g.s, 'encounter', ['ironbound-vanguard', 'wyrmkin-warband', 'bridge-trolls']);
 }
 
 // --- sabotage ----------------------------------------------------------------------
@@ -250,14 +259,14 @@ describe('forced stats', () => {
   it('forced hero stat (Brisa: Physical)', () => {
     const g = newGame();
     standard(g, { companions: ['brisa-blastcap-bombardier', 'pell-quillon-collegium-prodigy'] }, { hero: 'professor-barnaby-pickwort' });
-    onTop(g.s, 'location', ['tomb-of-the-first-wardens']); // Guile challenge; Barnaby G10 -> P2
+    onTop(g.s, 'location', ['tomb-of-the-first-wardens']); // Guile challenge; Barnaby G8 -> P4
     restart(g);
     until(g, bidFor(g.A));
     const before = total(g, g.A, g.B);
     use(g, 'brisa-blastcap-bombardier', 'force');
     // Only one opponent: a single forced option resolves without asking.
     expect(g.s.pending?.kind).toBe('bid');
-    expect(total(g, g.A, g.B)).toBe(before - 6); // Barnaby G10 -> P4
+    expect(total(g, g.A, g.B)).toBe(before - 4); // Barnaby G8 -> P4
   });
 });
 
@@ -294,7 +303,7 @@ describe('silence, steal, negate, swap', () => {
 
   it('face-down cards are turned up one per player, taking turns', () => {
     const g = newGame();
-    standard(g, { hand: ['honey-biscuit', 'tin-whistle', 'sprig-of-heather'] }, { hand: ['feathered-cap', 'jesters-cap', 'bag-of-toffees'] });
+    standard(g, { hand: ['honey-biscuit', 'patchwork-coat', 'sprig-of-heather'] }, { hand: ['feathered-cap', 'jesters-cap', 'bag-of-toffees'] });
     restart(g);
     const n = g.events.length;
     until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve', (_s, d) => {
@@ -311,7 +320,7 @@ describe('silence, steal, negate, swap', () => {
     const g = newGame();
     // Kazra P7 + Waddle 4 = 11 against Maren P4 + Cobra 4 + a 3-point resource = 11.
     standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: ['scrying-lenses'] });
-    onTop(g.s, 'encounter', ['iron-beetles']);
+    onTop(g.s, 'encounter', ['ironbound-vanguard']);
     restart(g);
     until(g, bidFor(g.B));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'scrying-lenses') });
@@ -664,7 +673,7 @@ describe('challenge and encounter control', () => {
   it('Vaelis sets aside an encounter and adds its minion bonus to every stat', () => {
     const g = newGame();
     standard(g, { hero: 'lord-vaelis-nightbloom' });
-    onTop(g.s, 'encounter', ['iron-beetles', 'bone-colossus']); // Bone Colossus minion value 4
+    onTop(g.s, 'encounter', ['ironbound-vanguard', 'bone-colossus']); // Bone Colossus minion value 4
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
     const before = total(g, g.A, g.A);
@@ -760,10 +769,10 @@ describe('companion movement', () => {
     expect(player(g, g.A).companions).toContain(gnash);
   });
 
-  it('The Waystone Inn lets everyone swap a companion', () => {
+  it('The Goose & Kettle lets everyone swap a companion', () => {
     const g = newGame();
     standard(g, {});
-    onTop(g.s, 'location', ['the-waystone-inn-rivermeet']);
+    onTop(g.s, 'location', ['the-goose-and-kettle']);
     restart(g);
     until(g, (_s, d) => d.kind === 'choose' && d.purpose === 'waystoneDraw' && d.player === g.A);
     pick(g, 'draw');
@@ -1056,7 +1065,7 @@ describe('house rules: falling costs', () => {
 describe('hand model', () => {
   it('steady: the current player draws 2 and everyone else 1, never past the hand limit', () => {
     const g = newGame(3, 1, { handModel: 'steady', activeDraw: 2, othersDraw: 1, handLimit: 4 });
-    standard(g, { hero: 'thorgar-twice-buried', hand: ['honey-biscuit'] }, { hand: ['feathered-cap', 'jesters-cap', 'tin-whistle', 'sprig-of-heather'] });
+    standard(g, { hero: 'thorgar-twice-buried', hand: ['honey-biscuit'] }, { hand: ['feathered-cap', 'jesters-cap', 'patchwork-coat', 'sprig-of-heather'] });
     give(g.s, g.C!, { hand: ['bag-of-toffees'] });
     const before = g.events.length;
     restart(g);
@@ -1115,19 +1124,19 @@ describe('revised heroes (data/balance.json)', () => {
     expect(total(g, g.A, g.B)).toBe(before);
   });
 
-  it('Thorgar gains 1 to his total', () => {
+  it('Thorgar has no flat bonus; he saves himself with a 5 instead', () => {
     const g = newGame();
     standard(g, { hero: 'thorgar-twice-buried', hand: [] });
     restart(g);
     until(g, bidFor(g.A));
     const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.bonus).toBe(1);
-    expect(tb.total).toBe(tb.hero + tb.companions.reduce((a, c) => a + c.value, 0) + 1);
+    expect(tb.bonus).toBe(0);
+    expect(abilityOf('thorgar-twice-buried')?.failSave).toBe(5);
   });
 
   it('revised cards say so and carry the new stats; Kazra is unchanged', () => {
     const barnaby = getDef('professor-barnaby-pickwort');
-    expect(barnaby.kind === 'hero' && barnaby.stats.P).toBe(5);
+    expect(barnaby.kind === 'hero' && barnaby.stats.P).toBe(4);
     expect(barnaby.revision).toMatch(/Physical 2/);
     expect(getDef('kazra-emberdeep').revision).toMatch(/Ironbound/);
   });
@@ -1280,9 +1289,9 @@ describe('bots and Tova', () => {
   });
 
   it('rests when one card makes up for her; keeps her when only weak cards are held', () => {
-    // Corvin P2 + Tova 3 + Osric 4 = 9 against 10: without Tova 6, a gap of 4.
-    expect(tovaAnswer('archmage-corvin-varro', ['sir-osric-vane-marshal-of-the-old-guard'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'])).toBe('rest');
-    expect(tovaAnswer('archmage-corvin-varro', ['sir-osric-vane-marshal-of-the-old-guard'], ['feathered-cap', 'honey-biscuit', 'sprig-of-heather'])).toBe('ability.done');
+    // Corvin P2 + Tova 3 + Waddle 4 = 9 against 10: without Tova 6, a gap of 4.
+    expect(tovaAnswer('archmage-corvin-varro', ['sergeant-waddle'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'])).toBe('rest');
+    expect(tovaAnswer('archmage-corvin-varro', ['sergeant-waddle'], ['feathered-cap', 'honey-biscuit', 'sprig-of-heather'])).toBe('ability.done');
   });
 
   it('keeps her when sitting out would hand a valuable location to a stronger rival', () => {
@@ -1599,7 +1608,7 @@ describe('Activated abilities of the redesign', () => {
     const g = newGame();
     standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: [] },
       { hero: 'warchief-grukka-ironjaw', companions: ['gnash-the-butcher-of-bloodmire', 'kesh-the-bog-huntress'] });
-    onTop(g.s, 'encounter', ['the-grave-hunger']);
+    onTop(g.s, 'encounter', ['crawling-remnant']);
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
     use(g, 'loremaster-oskar-grimgate', 'grudge'); // the only opponent is named without asking
@@ -1616,7 +1625,7 @@ describe('Activated abilities of the redesign', () => {
     const g = newGame();
     standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: ['the-book-of-grudges'] },
       { hero: 'warchief-grukka-ironjaw', companions: ['gnash-the-butcher-of-bloodmire', 'kesh-the-bog-huntress'] });
-    onTop(g.s, 'encounter', ['the-grave-hunger']);
+    onTop(g.s, 'encounter', ['crawling-remnant']);
     restart(g);
     until(g, bidFor(g.A));
     expect(viewFor(g.s, g.A).hand.find((h) => h.card.def === 'the-book-of-grudges')?.value).toBe(4);
@@ -1631,63 +1640,95 @@ describe('Activated abilities of the redesign', () => {
   });
 });
 
-describe('Encounters and locations of the redesign', () => {
-  it('Skarra looks at the top 5 encounters: Destiny joins as her minion (worth 3), the rest stay', () => {
-    const g = newGame();
-    standard(g, {});
-    onTop(g.s, 'encounter', ['skarra-ironjaw-the-bog-mother', 'iron-beetles', 'basilisk', 'the-barrow-legion', 'destiny-the-frog', 'bone-colossus']);
+describe('Curses', () => {
+  it('a curse played face up goes in front of the chosen opponent, where its negative value counts against them', () => {
+    const g = newGame(3);
+    standard(g, { hand: ['cursed-locket', 'honey-biscuit'] });
     restart(g);
     until(g, bidFor(g.A));
-    expect(g.s.turn.minions).toEqual([card(g, 'destiny-the-frog')]);
-    const ctx = new Ctx(g.s);
-    expect(difficultyFor(ctx, null)!.minions).toBe(3);
-    expect(g.s.decks.encounter).toContain(card(g, 'iron-beetles')); // the other cards were only looked at
+    const before = total(g, g.A, g.C!);
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'cursed-locket') });
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'curseTarget' && d.player === g.A).toBe(true);
+    expect(d.kind === 'choose' && d.options.map((o) => o.value).sort()).toEqual([g.B, g.C].sort());
+    pick(g, g.C!);
+    expect(player(g, g.A).bids).toHaveLength(0);
+    expect(player(g, g.C!).bids.map((b) => b.card)).toEqual([card(g, 'cursed-locket')]);
+    expect(total(g, g.A, g.C!)).toBe(before - 5);
+  });
+
+  it('with a single opponent the curse lands on them without asking', () => {
+    const g = newGame();
+    standard(g, { hand: ['rotten-apple'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'rotten-apple') });
+    expect(player(g, g.B).bids.map((b) => b.card)).toEqual([card(g, 'rotten-apple')]);
+    expect(g.s.pending?.kind).not.toBe('choose');
+  });
+
+  it('a face-down curse lands when it is revealed', () => {
+    const g = newGame();
+    standard(g, { hand: ['honey-biscuit', 'marked-for-the-hunt'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'marked-for-the-hunt') });
+    expect(player(g, g.A).bids).toHaveLength(2); // still hidden, still A's
     finishTurn(g);
-    // As a minion she goes back into the stack, not the discard.
-    expect(g.s.discards.encounter).not.toContain(card(g, 'destiny-the-frog'));
-    expect(g.s.decks.encounter).toContain(card(g, 'destiny-the-frog'));
+    expect(g.events.some((e) => e.type === 'bidClaimed' && e.from === g.A && e.to === g.B)).toBe(true);
+    expect(g.s.discards.resource).toContain(card(g, 'marked-for-the-hunt')); // discarded with the rest
   });
+});
 
-  it('with no Destiny in the top 5, Skarra discards them and draws a minion normally', () => {
+describe('Curses and the Golden Egg: later rulings', () => {
+  it('the bot plays a curse at a rival who is ahead of it', () => {
     const g = newGame();
-    standard(g, {});
-    onTop(g.s, 'encounter', ['skarra-ironjaw-the-bog-mother', 'iron-beetles', 'basilisk', 'the-barrow-legion', 'skeleton-host', 'bone-colossus', 'iron-mites']);
+    standard(g, { hero: 'archmage-corvin-varro', hand: ['marked-for-the-hunt'] }, { hero: 'warchief-grukka-ironjaw', companions: ['gnash-the-butcher-of-bloodmire', 'kesh-the-bog-huntress'] });
     restart(g);
     until(g, bidFor(g.A));
-    for (const d of ['iron-beetles', 'basilisk', 'the-barrow-legion', 'skeleton-host', 'bone-colossus']) expect(g.s.discards.encounter).toContain(card(g, d));
-    expect(g.s.turn.minions).toEqual([card(g, 'iron-mites')]);
+    const cmd = botDecide(viewFor(g.s, g.A), 'normal', () => 0.9);
+    expect(cmd?.type === 'bid.play' && cmd.card).toBe(card(g, 'marked-for-the-hunt'));
   });
 
-  it('Destiny faced as the main encounter is simply discarded', () => {
+  it('the Golden Egg counts goose encounters as well as goose companions', () => {
     const g = newGame();
-    standard(g, {});
-    onTop(g.s, 'encounter', ['destiny-the-frog']);
+    standard(g, { hand: ['the-golden-egg'] });
+    onTop(g.s, 'encounter', ['the-barrow-legion']); // Gorathaxus, Goose of the Void
     restart(g);
     until(g, bidFor(g.A));
+    const egg = () => viewFor(g.s, g.A).hand.find((h) => h.card.def === 'the-golden-egg')!.value;
+    const geeseInPlay = [...player(g, g.A).companions, ...player(g, g.B).companions].filter((c) => getDef(g.s.cards[c]!).groups.includes('Goose')).length;
+    expect(egg()).toBe(1 + 2 * (geeseInPlay + 1));
+  });
+});
+
+describe('Encounters and locations of the redesign', () => {
+  it('Skarra draws a minion that is never another Skarra', () => {
+    const g = newGame();
+    standard(g, {});
+    onTop(g.s, 'encounter', ['skarra-ironjaw-the-bog-mother', 'skarra-crowned-she-says', 'skarra-mistress-of-wisps', 'basilisk']);
+    restart(g);
+    until(g, bidFor(g.A));
+    expect(g.s.turn.encounter).toBe(card(g, 'skarra-ironjaw-the-bog-mother'));
+    expect(g.s.turn.minions).toEqual([card(g, 'basilisk')]);
+    expect(g.s.decks.encounter).toContain(card(g, 'skarra-crowned-she-says')); // the other Skarras stay where they were
+  });
+
+  it('Destiny drawn as the encounter fetches a Skarra: the Skarra is the encounter, Destiny its minion', () => {
+    const g = newGame();
+    standard(g, {});
+    onTop(g.s, 'encounter', ['destiny-the-frog', 'basilisk', 'skarra-ironjaw-the-bog-mother']);
+    restart(g);
+    until(g, bidFor(g.A));
+    expect(g.s.turn.encounter).toBe(card(g, 'skarra-ironjaw-the-bog-mother'));
+    expect(g.s.turn.minions).toEqual([card(g, 'destiny-the-frog')]); // she stands in for Skarra's minion draw
+    expect(difficultyFor(new Ctx(g.s), null)!.minions).toBe(1);
+    expect(g.s.decks.encounter).toContain(card(g, 'basilisk'));
     finishTurn(g);
     expect(g.s.discards.encounter).toContain(card(g, 'destiny-the-frog'));
-  });
-
-  it('The Frostfells searches the top 5 for a Frostborn encounter; The Wreck for a Gargoyle', () => {
-    for (const [loc, found] of [['the-frostfells', 'rimeguard-of-the-frostfells'], ['wreck-of-the-skyship-gallant', 'wardhouse-gargoyles']] as const) {
-      const g = newGame();
-      standard(g, {});
-      onTop(g.s, 'location', [loc]);
-      onTop(g.s, 'encounter', ['iron-beetles', 'basilisk', found, 'the-barrow-legion', 'skeleton-host', 'bone-colossus']);
-      restart(g);
-      until(g, bidFor(g.A));
-      expect(g.s.turn.encounter).toBe(card(g, found));
-      expect(g.s.decks.encounter).toContain(card(g, 'the-barrow-legion')); // the cards after it were only looked at
-    }
-    // No Frostborn in the top 5: all five are discarded and the next card is the encounter.
-    const g = newGame();
-    standard(g, {});
-    onTop(g.s, 'location', ['the-frostfells']);
-    onTop(g.s, 'encounter', ['iron-beetles', 'basilisk', 'the-barrow-legion', 'skeleton-host', 'bone-colossus', 'iron-mites']);
-    restart(g);
-    until(g, bidFor(g.A));
-    expect(g.s.discards.encounter).toContain(card(g, 'iron-beetles'));
-    expect(g.s.turn.encounter).toBe(card(g, 'iron-mites'));
+    expect(g.s.discards.encounter).toContain(card(g, 'skarra-ironjaw-the-bog-mother'));
   });
 
   it('The Runeforged Titan is Physical 18, but only 10 if the challenge is changed to Mental or Guile', () => {
@@ -1701,7 +1742,7 @@ describe('Encounters and locations of the redesign', () => {
       return viewFor(g.s, g.A).turn.challenge!.difficulty.base;
     };
     expect(base('the-silverwood-hunt')).toBe(18); // Physical
-    expect(base('the-memory-of-the-heartwood')).toBe(10); // Mental
+    expect(base('the-sealed-archive')).toBe(10); // Mental
     expect(base('tomb-of-the-first-wardens')).toBe(10); // Guile
   });
 
@@ -1718,7 +1759,7 @@ describe('Encounters and locations of the redesign', () => {
     const afterEnter = player(g, g.B).hand.length;
     until(g, (s) => s.turn.step === 'turnEnd' || s.turn.step === 'resolve' || s.turn.number > 1);
     finishTurn(g);
-    expect(g.events.filter((e) => e.type === 'drew' && e.reason === 'The Treasure Trow').length).toBeGreaterThanOrEqual(3);
+    expect(g.events.filter((e) => e.type === 'drew' && e.reason === 'Treasure Trow').length).toBeGreaterThanOrEqual(3);
     expect(afterEnter).toBeGreaterThan(handB);
   });
 

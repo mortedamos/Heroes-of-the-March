@@ -152,9 +152,11 @@ describe('information hiding', () => {
       ids.push(...p.bids.filter((b) => !b.visible).map((b) => b.card));
     }
     for (const pile of Object.values(s.decks)) ids.push(...pile);
+    // A card named in the public result of the last turn (a hero that fell and went back into the stack) is known by name already.
+    const shown = JSON.stringify(s.turn.result ?? null);
     ids.push(...s.turn.extraLocations);
     if (s.pending?.kind === 'companion.place' && s.pending.player !== viewer) ids.push(s.pending.drawn);
-    return ids;
+    return ids.filter((id) => !shown.includes(`"${id}"`));
   }
 
   it('views never contain hidden card ids, the RNG state or the card map', () => {
