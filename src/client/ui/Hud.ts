@@ -162,6 +162,9 @@ export class Hud {
   /** Last pointer position, to place the preview away from it and to re-find the hovered card. */
   private pointer = { x: -1, y: -1, mouse: false };
   private plateEls = new Map<string, HTMLElement>();
+  /** The player whose detail card is open (click a name plate), and the card itself. */
+  private detailFor: string | null = null;
+  private readonly detailEl = h('div', { class: 'plate-detail hidden' });
   /** The total each plate last showed for real, and the (older) one still shown while a revealed card lands. */
   private plateTotal = new Map<string, number>();
   private plateHeld = new Map<string, number>();
@@ -172,11 +175,18 @@ export class Hud {
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
     this.setLogOpen(false); // the log starts hidden; the Log button in the top bar opens it
     append(this.dock, this.prompt, this.hand);
-    append(root, this.top, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal);
+    append(root, this.top, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { this.unpin(); this.closeModal(); }
+      if (e.key === 'Escape') { this.unpin(); this.closeModal(); this.closeDetail(); }
     });
     window.addEventListener('resize', () => this.fitHand());
+    // Clicking anywhere outside the detail card closes it (a click on a name plate is handled by the plate).
+    window.addEventListener('pointerdown', (e) => {
+      if (!this.detailFor) return;
+      const t = e.target as Node;
+      if (this.detailEl.contains(t) || this.plateEls.get(this.detailFor)?.contains(t)) return;
+      this.closeDetail();
+    }, true);
     // Every button click gets a small click.
     root.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('button.btn, .modal-close')) sfx.play('click'); });
     const track = (e: PointerEvent) => { this.pointer = { x: e.clientX, y: e.clientY, mouse: e.pointerType !== 'touch' }; };
@@ -266,12 +276,14 @@ export class Hud {
       const p = beside
         ? this.deps.project(seat.x + seat.rowWidth / 2 + 0.3, 0, seat.z)
         : this.deps.project(seat.x, 0, seat.z - 0.72 * seat.scale * 1.4 - 0.1);
+      // The value circles sit on the cards' upper corners; keep opponents' plates clear above them.
       const w = el.offsetWidth;
       const ht = el.offsetHeight;
       const left = Math.max(4, Math.min(vw - w - 4, beside ? p.x : p.x - w / 2));
-      const top = Math.max(46, beside ? p.y - ht / 2 : p.y - ht);
+      const top = Math.max(46, beside ? p.y - ht / 2 : p.y - ht - 18);
       el.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
     }
+    this.placeDetail();
     // The challenge sits below the location and encounter; in portrait, above them
     // (the strip under the opponents is free, and below would cover your plate).
     const enc = this.layout.center.encounter;
@@ -369,7 +381,10 @@ export class Hud {
       this.impactFor.delete(p.id);
       let el = this.plateEls.get(p.id);
       if (!el) {
-        el = h('div', { class: 'plate' });
+        el = h('div', { class: 'plate', role: 'button', tabindex: 0, title: 'Click for details' });
+        const id = p.id;
+        el.addEventListener('click', () => this.toggleDetail(id));
+        el.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.toggleDetail(id); } });
         this.plates.appendChild(el);
         this.plateEls.set(p.id, el);
       }
@@ -378,26 +393,18 @@ export class Hud {
     }
     for (const [id, el] of this.plateEls) if (!keep.has(id)) { el.remove(); this.plateEls.delete(id); }
     this.crowned = new Set([...this.leaders(v), ...this.fallers(v)]);
+    this.renderDetail();
   }
 
   /**
-   * A player's plate: name, Renown, hand size, current total and effects.
-   * Whose decision it is shows as the plate's glow (the dock says what they're doing),
-   * and the hero is the card on the table, so neither is repeated here.
+   * A player's plate: just the name, Renown and current power. Whose decision it is shows as the plate's glow,
+   * and everything else (hand, bids, penalties, effects) is in the detail card a click opens.
    */
   private plateContent(v: GameView, p: PlayerPublicView): (HTMLElement | string)[] {
     const proj = p.projection;
-    const total = proj ? h('span', { class: `plate-total ${proj.total >= proj.difficulty ? 'ok' : 'low'}`, title: 'Current total vs difficulty (hidden bids not counted)' },
+    const power = proj ? h('span', { class: `plate-total ${proj.total >= proj.difficulty ? 'ok' : 'low'}`, title: 'Current power against this encounter (hidden bids not counted)' },
       h('span', { class: 'stat-chip', style: { '--accent': STAT_COLORS[proj.stat] } }, proj.stat),
-      ' ', h('span', { class: 'tot-num' }, String(this.plateHeld.get(p.id) ?? proj.total)), proj.hiddenBids ? `+${proj.hiddenBids}?` : '',
-      h('span', { class: 'plate-vs' }, ` vs ${proj.difficulty}`)) : null;
-    const effects = v.turn.effects.filter((e) => e.active && e.targetPlayer === p.id);
-    const chips = effects.length
-      ? h('div', { class: 'plate-effects' }, ...effects.map((e) => h('span', {
-        class: `effect-chip ${e.owner === p.id ? 'boon' : 'hex'}`,
-        title: `${getDef(e.source.def).name}`,
-      }, effectTag(e))))
-      : '';
+      ' ', h('span', { class: 'tot-num' }, String(this.plateHeld.get(p.id) ?? proj.total)), proj.hiddenBids ? `+${proj.hiddenBids}?` : '') : null;
     const you = p.id === v.you;
     return [
       this.fallers(v).has(p.id)
@@ -405,12 +412,82 @@ export class Hud {
         : this.leaders(v).has(p.id) ? h('span', { class: `plate-crown${this.crowned.has(p.id) ? ' still' : ''}`, title: 'Highest total so far' }, '👑') : '',
       h('div', { class: 'plate-head' },
         h('strong', { class: 'plate-name', title: p.hero ? getDef(p.hero.def).name : '' }, p.name, you ? h('span', { class: 'plate-you' }, ' (you)') : ''),
-        h('span', { class: 'plate-renown', title: `Renown (${v.rules.renownToWin} wins)` }, `★ ${p.renown}`, h('span', { class: 'plate-goal' }, `/${v.rules.renownToWin}`))),
-      h('div', { class: 'plate-sub' },
-        h('span', { class: 'plate-hand', title: 'Resource cards in hand' }, `🂠 ${p.handCount}`),
-        total ?? ''),
-      chips,
+        h('span', { class: 'plate-renown', title: `Renown (${v.rules.renownToWin} wins)` }, `★ ${p.renown}`, h('span', { class: 'plate-goal' }, `/${v.rules.renownToWin}`)),
+        power ?? ''),
     ];
+  }
+
+  // --- plate detail ------------------------------------------------------------------
+
+  private toggleDetail(id: string): void {
+    if (this.detailFor === id) { this.closeDetail(); return; }
+    this.detailFor = id;
+    this.renderDetail();
+    this.placeDetail();
+  }
+
+  closeDetail(): void {
+    this.detailFor = null;
+    this.detailEl.classList.add('hidden');
+  }
+
+  /** The detail card: hero, Renown, power against the encounter, hand, bids, and what is affecting the player. */
+  private renderDetail(): void {
+    const v = this.view;
+    const p = v?.players.find((x) => x.id === this.detailFor);
+    if (!v || !p) { this.closeDetail(); return; }
+    const proj = p.projection;
+    const row = (label: string, ...value: (HTMLElement | string)[]) => h('div', { class: 'pd-row' }, h('span', { class: 'pd-label' }, label), h('span', { class: 'pd-value' }, ...value));
+
+    const known = p.bids.flatMap((b) => (b.hidden ? [] : [b]));
+    const unknown = p.bids.length - known.length;
+    const bidLine: (HTMLElement | string)[] = [];
+    if (!p.bids.length) bidLine.push('None yet');
+    else {
+      const names = known.map((b) => {
+        const d = getDef(b.card.def) as { name: string; value?: number };
+        return `${d.name}${d.value !== undefined ? ` (+${d.value})` : ''}${b.faceUp ? '' : ', face down'}`;
+      });
+      bidLine.push(`${p.bids.length} card${p.bids.length === 1 ? '' : 's'}`);
+      if (names.length) bidLine.push(h('div', { class: 'pd-sub' }, names.join(' · ')));
+      if (unknown) bidLine.push(h('div', { class: 'pd-sub' }, `${unknown} unknown value`));
+    }
+
+    const conds: HTMLElement[] = [];
+    if (p.penalty > 0) conds.push(h('div', { class: 'pd-cond hex' }, `−${p.penalty} to their total this encounter`));
+    if (p.penaltyNext > 0) conds.push(h('div', { class: 'pd-cond hex' }, `−${p.penaltyNext} to their total next encounter`));
+    if (p.statOverride) conds.push(h('div', { class: 'pd-cond hex' }, `Their hero is forced to ${STAT_NAMES[p.statOverride]}`));
+    for (const e of v.turn.effects.filter((x) => x.active && x.targetPlayer === p.id)) {
+      conds.push(h('div', { class: `pd-cond ${e.owner === p.id ? 'boon' : 'hex'}` }, effectTag(e), h('span', { class: 'pd-from' }, ` (${getDef(e.source.def).name})`)));
+    }
+
+    replace(this.detailEl,
+      h('div', { class: 'pd-head' },
+        h('strong', {}, p.name, p.id === v.you ? ' (you)' : ''),
+        p.hero ? h('span', { class: 'pd-hero' }, getDef(p.hero.def).name) : ''),
+      row('Renown', `★ ${p.renown} / ${v.rules.renownToWin}`),
+      row('Power', proj
+        ? h('span', { class: proj.total >= proj.difficulty ? 'pd-ok' : 'pd-low' }, `${STAT_NAMES[proj.stat]} ${proj.total}${proj.hiddenBids ? ` + ${proj.hiddenBids} unknown` : ''} vs ${proj.difficulty}`)
+        : '—'),
+      row('Hand', `${p.handCount} resource card${p.handCount === 1 ? '' : 's'}`),
+      row('Bid', ...bidLine),
+      row('Conditions', ...(conds.length ? conds : ['None'])),
+    );
+    this.detailEl.classList.remove('hidden');
+  }
+
+  /** Keep the detail card beside its plate: below it (above if there is no room), on screen. */
+  private placeDetail(): void {
+    if (!this.detailFor || this.detailEl.classList.contains('hidden')) return;
+    const plate = this.plateEls.get(this.detailFor);
+    if (!plate) return;
+    const r = plate.getBoundingClientRect();
+    const w = this.detailEl.offsetWidth;
+    const ht = this.detailEl.offsetHeight;
+    const left = Math.max(6, Math.min(window.innerWidth - w - 6, r.left + r.width / 2 - w / 2));
+    const below = r.bottom + 8;
+    const top = below + ht > window.innerHeight - 6 ? Math.max(48, r.top - ht - 8) : below;
+    this.detailEl.style.transform = `translate(${Math.round(left)}px, ${Math.round(top)}px)`;
   }
 
   private renderChallenge(v: GameView): void {

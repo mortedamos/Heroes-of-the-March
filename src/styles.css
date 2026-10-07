@@ -74,15 +74,17 @@ body.touch .top-actions .btn { min-height: 36px; }
 .plate {
   position: absolute; left: 0; top: 0; width: 196px; padding: 7px 9px; font-size: 12.5px;
   background: var(--panel); border: 1px solid var(--line); border-radius: 9px; box-shadow: 0 4px 16px rgba(0,0,0,0.45);
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s; pointer-events: auto; cursor: pointer;
 }
+.plate:hover { border-color: #cfa24e; }
+.plate:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
 .plate.active { border-color: #b8893a; }
 .plate.deciding { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 0 18px rgba(229, 185, 90, 0.45); }
-.plate-head { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.plate-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 10px; align-items: baseline; }
 .plate-name { font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .plate-renown { color: var(--gold); white-space: nowrap; }
 .plate-sub { display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 4px 10px; align-items: center; margin-top: 3px; color: var(--ink-dim); }
-.plate:not(.you) { width: auto; min-width: 128px; max-width: 190px; padding: 5px 8px; }
+.plate:not(.you) { width: auto; min-width: 128px; max-width: 250px; padding: 4px 8px; }
 .plate-total { font-weight: bold; }
 .tot-num { display: inline-block; transform-origin: 50% 60%; }
 /* A revealed card lands on the total: the number is struck, swells with the size of the change and tilts a few degrees either way. */
@@ -701,3 +703,23 @@ body.looking .plate, body.looking .challenge, body.looking .card-chips { opacity
 @keyframes place-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes place-pulse { 50% { opacity: 0.45; } }
 @media (prefers-reduced-motion: reduce) { .place > * { animation-duration: 0.01s; } }
+
+/* The detail card a name plate opens. */
+.plate-detail {
+  position: absolute; left: 0; top: 0; z-index: 6; width: min(300px, calc(100vw - 12px)); padding: 10px 12px; font-size: 13px;
+  background: var(--panel); border: 1px solid var(--gold); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+}
+.plate-detail.hidden { display: none; }
+.pd-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid var(--line); }
+.pd-head strong { font-size: 15px; color: var(--gold); }
+.pd-hero { color: var(--ink-dim); font-size: 12px; text-align: right; }
+.pd-row { display: grid; grid-template-columns: 78px 1fr; gap: 8px; padding: 3px 0; align-items: baseline; }
+.pd-label { color: var(--ink-dim); }
+.pd-sub { color: var(--ink-dim); font-size: 12px; margin-top: 1px; }
+.pd-ok { color: var(--good); font-weight: bold; }
+.pd-low { color: var(--bad); font-weight: bold; }
+.pd-cond { padding: 1px 0; }
+.pd-cond.hex { color: #ff9a8a; }
+.pd-cond.boon { color: #9be0a8; }
+.pd-from { color: var(--ink-dim); font-size: 12px; }
+body.establishing .plate-detail { display: none; }
