@@ -1,10 +1,20 @@
-// A ground that moves: rolling waves (the harbor) or rolling clouds (the skyship). It patches the floor's
-// standard material, so light, shadow and fog still apply: the vertices swell, the normals follow (so the light
-// rolls over the swell), crests brighten, and the texture slides past itself in two layers so it never settles.
+// A ground that is not a flat, still plane. It patches the floor's standard material, so light, shadow and fog
+// still apply. Three kinds:
+//   waves  - the harbor: the vertices swell, the normals follow (so the light rolls over the swell), crests brighten
+//            and the texture slides past itself in two layers so it never settles.
+//   clouds - the same, slower and softer, for the skyship.
+//   rock   - the forge: uneven, jagged stone. Jittered, ridged heights, shaded in flat facets; calmer round the table
+//            so the foot of the anvil sits in it.
 
 import * as THREE from 'three';
 
-export type SwellKind = 'waves' | 'clouds';
+export type GroundKind = 'waves' | 'clouds' | 'rock';
+
+/** What every moving ground shares: the clock, and the table's footprint (half width, half depth, centre z). */
+export interface GroundUniforms {
+  time: { value: number };
+  table: { value: THREE.Vector4 };
+}
 
 interface Wave {
   /** Which way the crests travel (across the ground plane). */
@@ -26,7 +36,7 @@ interface Swell {
   foam: number;
 }
 
-const SWELLS: Record<SwellKind, Swell> = {
+const SWELLS: Record<'waves' | 'clouds', Swell> = {
   waves: {
     waves: [
       { dir: [1, 0.3], len: 14, speed: 1.0, amp: 0.2 },
@@ -51,8 +61,14 @@ const SWELLS: Record<SwellKind, Swell> = {
 
 const f = (n: number): string => n.toFixed(4);
 
-/** Make `mat` (a ground material) roll. `time` is shared, so every swelling material moves together. */
-export function swellMaterial(mat: THREE.MeshStandardMaterial, kind: SwellKind, time: { value: number }): void {
+/** Make `mat` (a ground material) move or break up as `kind` says. */
+export function groundMaterial(mat: THREE.MeshStandardMaterial, kind: GroundKind, u: GroundUniforms): void {
+  if (kind === 'rock') rock(mat, u);
+  else swell(mat, kind, u);
+  mat.customProgramCacheKey = () => `ground:${kind}`;
+}
+
+function swell(mat: THREE.MeshStandardMaterial, kind: 'waves' | 'clouds', u: GroundUniforms): void {
   const s = SWELLS[kind];
   const total = s.waves.reduce((a, w) => a + w.amp, 0);
 
@@ -64,7 +80,7 @@ export function swellMaterial(mat: THREE.MeshStandardMaterial, kind: SwellKind, 
   }).join('\n');
 
   mat.onBeforeCompile = (shader) => {
-    shader.uniforms.uTime = time;
+    shader.uniforms.uTime = u.time;
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nuniform float uTime;\nvarying float vSwell;')
       // The plane lies in local x/y with z up (it is turned flat by its mesh), so the swell lifts local z.
@@ -91,5 +107,32 @@ export function swellMaterial(mat: THREE.MeshStandardMaterial, kind: SwellKind, 
         diffuseColor.rgb *= 1.0 + vSwell * ${f(s.shade)};
         diffuseColor.rgb = mix( diffuseColor.rgb, vec3( 1.0 ), smoothstep( 0.55, 1.0, vSwell ) * ${f(s.foam)} );`);
   };
-  mat.customProgramCacheKey = () => `swell:${kind}`;
+}
+
+function rock(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
+  // Flat facets, not smooth shading: the ground is broken, jagged stone.
+  mat.flatShading = true;
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uTable = u.table;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>
+        uniform vec4 uTable;
+        float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+        float gNoise(vec2 p) {
+          vec2 i = floor(p); vec2 fr = fract(p); fr = fr * fr * (3.0 - 2.0 * fr);
+          return mix(mix(gHash(i), gHash(i + vec2(1.0, 0.0)), fr.x), mix(gHash(i + vec2(0.0, 1.0)), gHash(i + vec2(1.0, 1.0)), fr.x), fr.y);
+        }
+        float gRidge(vec2 p) { return 1.0 - abs(2.0 * gNoise(p) - 1.0); }`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        // The plane's local y is the world's -z. Ridged noise makes sharp crests; a jitter keeps the facets off a grid.
+        vec2 gp = position.xy;
+        vec2 jit = (vec2(gNoise(gp * 0.9), gNoise(gp * 0.9 + 17.0)) - 0.5) * 1.6;
+        vec2 gq = gp + jit;
+        float gh = gRidge(gq / 7.0) + gRidge(gq / 3.1 + 11.0) * 0.55 + gNoise(gq / 1.3) * 0.25 - 0.9;
+        // Calmer under and beside the table, and flat again far away.
+        vec2 gd = max(abs(vec2(gp.x, gp.y + uTable.z)) - uTable.xy, 0.0);
+        float gCalm = mix(0.15, 1.0, smoothstep(2.0, 9.0, length(gd))) * (1.0 - smoothstep(90.0, 150.0, length(gp)));
+        transformed.xy += jit * gCalm;
+        transformed.z += gh * 1.15 * gCalm;`);
+  };
 }

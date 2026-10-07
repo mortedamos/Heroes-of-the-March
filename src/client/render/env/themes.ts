@@ -2,7 +2,7 @@
 // data; Environment turns it into a 3D scene and blends between themes.
 
 import type { SkylineKind, SurfaceSpec } from './surfaces';
-import type { SwellKind } from './swell';
+import type { GroundKind } from './ground';
 
 export type ThemeId = 'felt' | 'tavern' | 'harbor' | 'snow' | 'crypt' | 'forge' | 'forest' | 'fortress' | 'archive' | 'plains' | 'sky';
 export type FxKind = 'embers' | 'sparks' | 'snow' | 'fireflies' | 'motes' | 'wisps' | 'leaves';
@@ -57,8 +57,10 @@ export interface Theme {
   /** Drifting mist: colour, count, strength. */
   mist: { color: string; n: number; strength: number } | null;
   table: TableSpec;
-  /** The ground moves: rolling waves or rolling clouds. */
-  floorMotion?: SwellKind;
+  /** The ground is not a flat plane: rolling waves, rolling clouds, or jagged rock. */
+  floorShape?: GroundKind;
+  /** The sea and sky rock gently round the table, as if it were bobbing on the water: the peak tilt, in degrees. */
+  sway?: number;
   /** The panorama slides round the sky in a loop, this many turns per second. */
   skyScroll?: number;
   skyline: { kind: SkylineKind; far: string; near: string } | null;
@@ -90,7 +92,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     top: { kind: 'planks', a: '#58381f', b: '#76502d', tile: 5, rough: 0.75, opts: { rows: 4 } },
     floor: { kind: 'planks', a: '#2e1d10', b: '#4a2e19', tile: 5, rough: 0.8 },
     fx: [{ kind: 'motes', n: 90, color: '#ffd9a0', size: 0.14, additive: true }],
-    beams: { color: '#ffd9a0', n: 2, strength: 0.1 }, mist: null, table: { kind: 'tavern', height: 3.1 },
+    beams: { color: '#ffd9a0', n: 2, strength: 0.1 }, mist: null, table: { kind: 'tavern', height: 5.2 },
     skyline: { kind: 'arches', far: '#1a110a', near: '#120b06' },
   },
 
@@ -105,7 +107,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     top: { kind: 'planks', a: '#5b5146', b: '#857662', tile: 6, rough: 0.8, opts: { rows: 5, nails: true } },
     floor: { kind: 'soft', a: '#1b3a47', b: '#4f8296', tile: 14, rough: 0.25, metal: 0.1, opts: { blobs: 60, r: [30, 70] } },
     fx: [], beams: { color: '#000000', n: 0, strength: 0 }, mist: { color: '#c9d8e2', n: 7, strength: 0.22 },
-    table: { kind: 'ship', height: 1.7 }, floorMotion: 'waves', skyScroll: 1 / 600,
+    table: { kind: 'ship', height: 1.7 }, floorShape: 'waves', sway: 1.1, skyScroll: 1 / 600,
     skyline: { kind: 'town', far: '#46535c', near: '#2a343b' },
   },
 
@@ -121,7 +123,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     floor: { kind: 'soft', a: '#b8c8d8', b: '#eef5fb', tile: 14, rough: 0.95, opts: { sparkle: true } },
     fx: [{ kind: 'snow', n: 200, color: '#ffffff', size: 0.16, additive: false }],
     beams: { color: '#cfe8ff', n: 2, strength: 0.08 }, mist: { color: '#e6f0fa', n: 6, strength: 0.2 },
-    table: { kind: 'altar', height: 3.6, cover: 'snow' },
+    table: { kind: 'altar', height: 5, cover: 'snow' },
     skyline: { kind: 'peaks', far: '#7f98b4', near: '#5d7490' },
   },
 
@@ -137,7 +139,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     floor: { kind: 'flagstone', a: '#1a1e1c', b: '#2a302d', tile: 5, rough: 0.95, opts: { moss: true } },
     fx: [{ kind: 'wisps', n: 36, color: '#7dffc4', size: 0.5, additive: true }],
     beams: { color: '#c8f5e6', n: 2, strength: 0.07 }, mist: { color: '#4fa08a', n: 7, strength: 0.2 },
-    table: { kind: 'vault', height: 2.8 },
+    table: { kind: 'vault', height: 4.6 },
     skyline: { kind: 'graves', far: '#16211d', near: '#0a100e' },
   },
 
@@ -150,10 +152,10 @@ export const THEMES: Record<ThemeId, Theme> = {
       accents: [{ color: '#ff5a1e', i: 30, pos: [-9, 2.5, -6], flicker: 0.5 }, { color: '#ff7a2e', i: 26, pos: [9, 2.5, -4], flicker: 0.5 }],
     },
     top: { kind: 'steel', a: '#50545d', b: '#868c98', tile: 6, rough: 0.5, metal: 0.2 },
-    floor: { kind: 'lava', a: '#1a1614', b: '#2a2420', glow: '#ff5a1e', tile: 6, rough: 0.9 },
+    floor: { kind: 'magma', a: '#171413', b: '#38322d', glow: '#ff5a1e', tile: 16, rough: 0.95 },
     fx: [{ kind: 'sparks', n: 120, color: '#ffb057', size: 0.12, additive: true }],
     beams: { color: '#000000', n: 0, strength: 0 }, mist: { color: '#3b2a22', n: 6, strength: 0.22 },
-    table: { kind: 'anvil', height: 5 },
+    table: { kind: 'anvil', height: 5 }, floorShape: 'rock',
     skyline: { kind: 'stacks', far: '#2a1410', near: '#0d0605' },
   },
 
@@ -172,7 +174,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       { kind: 'leaves', n: 36, color: '#b0c860', size: 0.24, additive: false },
     ],
     beams: { color: '#fff1b8', n: 4, strength: 0.12 }, mist: { color: '#9fd6b0', n: 6, strength: 0.16 },
-    table: { kind: 'altar', height: 3.6, cover: 'moss' },
+    table: { kind: 'altar', height: 5, cover: 'moss' },
     skyline: { kind: 'pines', far: '#1e3a2a', near: '#0f2218' },
   },
 
@@ -188,7 +190,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     floor: { kind: 'flagstone', a: '#3a3a37', b: '#524f4a', tile: 5, rough: 0.95 },
     fx: [{ kind: 'motes', n: 70, color: '#fff0c8', size: 0.12, additive: true }],
     beams: { color: '#fff1c4', n: 3, strength: 0.12 }, mist: { color: '#dfe6ee', n: 4, strength: 0.1 },
-    table: { kind: 'hall', height: 4.2 },
+    table: { kind: 'hall', height: 6 },
     skyline: { kind: 'castle', far: '#7686a0', near: '#3c4658' },
   },
 
@@ -203,7 +205,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     top: { kind: 'planks', a: '#2d1b12', b: '#4c321f', tile: 5, rough: 0.35, opts: { rows: 5 } },
     floor: { kind: 'planks', a: '#20150f', b: '#33231a', tile: 5, rough: 0.7 },
     fx: [{ kind: 'motes', n: 110, color: '#d8c8ff', size: 0.13, additive: true }],
-    beams: { color: '#cfc2ff', n: 2, strength: 0.1 }, mist: null, table: { kind: 'study', height: 3.9 },
+    beams: { color: '#cfc2ff', n: 2, strength: 0.1 }, mist: null, table: { kind: 'study', height: 5.6 },
     skyline: { kind: 'arches', far: '#17122a', near: '#0c0914' },
   },
 
@@ -221,7 +223,7 @@ export const THEMES: Record<ThemeId, Theme> = {
       { kind: 'leaves', n: 20, color: '#d8c070', size: 0.2, additive: false },
     ],
     beams: { color: '#ffe9b0', n: 3, strength: 0.12 }, mist: { color: '#f0d9a8', n: 4, strength: 0.1 },
-    table: { kind: 'altar', height: 3.6, cover: 'moss' },
+    table: { kind: 'altar', height: 5, cover: 'moss' },
     skyline: { kind: 'hills', far: '#8c9a70', near: '#5f7048' },
   },
 
@@ -236,7 +238,7 @@ export const THEMES: Record<ThemeId, Theme> = {
     floor: { kind: 'soft', a: '#b9cde6', b: '#ffffff', tile: 16, rough: 1, opts: { blobs: 50, r: [40, 90] } },
     fx: [{ kind: 'motes', n: 50, color: '#ffffff', size: 0.1, additive: true }],
     beams: { color: '#fff7d8', n: 3, strength: 0.12 }, mist: { color: '#ffffff', n: 8, strength: 0.28 },
-    table: { kind: 'skyship', height: 2.9 }, floorMotion: 'clouds', skyScroll: 1 / 420,
+    table: { kind: 'skyship', height: 2.9 }, floorShape: 'clouds', skyScroll: 1 / 420,
     skyline: { kind: 'clouds', far: '#dbe9f7', near: '#f3f8fd' },
   },
 };

@@ -36,10 +36,22 @@ describe('location themes', () => {
     expect(THEMES.plains.table.cover).toBe('moss');
   });
 
-  it('moves the ground and slides the sky only where there is water or cloud to pass by', () => {
-    expect(THEMES.harbor.floorMotion).toBe('waves');
-    expect(THEMES.sky.floorMotion).toBe('clouds');
-    expect(Object.entries(THEMES).filter(([, t]) => t.floorMotion).map(([id]) => id).sort()).toEqual(['harbor', 'sky']);
+  it('shapes the ground only where it is water, cloud or broken rock', () => {
+    expect(THEMES.harbor.floorShape).toBe('waves');
+    expect(THEMES.sky.floorShape).toBe('clouds');
+    expect(THEMES.forge.floorShape).toBe('rock');
+    expect(Object.entries(THEMES).filter(([, t]) => t.floorShape).map(([id]) => id).sort()).toEqual(['forge', 'harbor', 'sky']);
+  });
+
+  it('slides the sky where there is water or cloud to pass by, and rocks it only on the water', () => {
     expect(Object.entries(THEMES).filter(([, t]) => t.skyScroll).map(([id]) => id).sort()).toEqual(['harbor', 'sky']);
+    expect(Object.entries(THEMES).filter(([, t]) => t.sway).map(([id]) => id)).toEqual(['harbor']);
+  });
+
+  it('stands every table on legs, a block or a base tall enough to look raised', () => {
+    // A 19-unit-wide table with 3-unit legs looks like it lies on the floor.
+    for (const id of ['tavern', 'fortress', 'archive', 'snow', 'forest', 'plains', 'crypt', 'forge'] as const) {
+      expect(THEMES[id].table.height, id).toBeGreaterThanOrEqual(4.5);
+    }
   });
 });

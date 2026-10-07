@@ -11,8 +11,8 @@ import type { Layout } from '../render/layout';
 import { nameOf } from '../describe';
 import { isTouch, onLongPress } from '../viewport';
 import { append, clear, h, replace } from './dom';
-import { toggleMusicMenu } from './MusicMenu';
-import { toggleDebugMenu, type DebugApi } from './DebugMenu';
+import { closeGameMenu, toggleGameMenu, type MenuApi } from './GameMenu';
+import type { DebugApi } from './DebugMenu';
 import { attentionOf } from '../attention';
 import { abilityBox } from '../render/cardFaces';
 import { sfx } from '../audio/Sfx';
@@ -34,6 +34,8 @@ export interface HudDeps {
   send(cmd: Command): void;
   /** The debug panel's controls (dev builds and ?debug only). */
   debug?: DebugApi;
+  /** The menu's step-back camera: pulled back to show the whole place until turned off. */
+  stepBack: { get(): boolean; set(on: boolean): void };
   /** Skip a usable ability for now (the Skip button on its card). */
   skipAbility(cardId: string, ability: string): void;
   newGame(): void;
@@ -112,7 +114,13 @@ export function cardThumb(def: string, width: number, cls = 'thumb', cssSized = 
 }
 
 export class Hud {
-  private readonly top = h('header', { class: 'topbar' });
+  /** The menu button, upper left: it opens the game menu (game, sound, graphics). */
+  private readonly menuBtn = h('button', {
+    class: 'menu-btn', title: 'Menu', aria: { label: 'Menu', haspopup: 'dialog', expanded: 'false' },
+    on: { click: () => { sfx.play('click'); toggleGameMenu(this.menuBtn, this.menuApi()); } },
+  }, h('span', { class: 'menu-bars' }));
+  /** One line on the game now, shown at the top of the menu. */
+  private turnText = '';
   private readonly plates = h('div', { class: 'plates' });
   /** Stat chips on the table's hero and companion cards (what each adds to the challenge now). */
   private readonly chips = h('div', { class: 'card-chips' });
@@ -173,9 +181,9 @@ export class Hud {
 
   constructor(private readonly root: HTMLElement, private readonly deps: HudDeps) {
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
-    this.setLogOpen(false); // the log starts hidden; the Log button in the top bar opens it
+    this.setLogOpen(false); // the log starts hidden; the Log item in the menu opens it
     append(this.dock, this.prompt, this.hand);
-    append(root, this.top, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal);
+    append(root, this.menuBtn, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { this.unpin(); this.closeModal(); }
     });
@@ -285,21 +293,23 @@ export class Hud {
     this.challenge.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cp.y)}px) translate(-50%, ${above ? '-100%' : '0'})`;
   }
 
+  /** What the menu shows and does. */
+  private menuApi(): MenuApi {
+    return {
+      status: () => this.turnText,
+      rules: () => this.showRules(),
+      log: () => this.setLogOpen(this.logPanel.classList.contains('collapsed')),
+      newGame: () => this.confirmNewGame(),
+      stepBack: this.deps.stepBack,
+      ...(this.deps.debug ? { debug: this.deps.debug } : {}),
+    };
+  }
+
   private renderTop(v: GameView): void {
     const active = nameOf(v, v.turn.active);
-    replace(this.top,
-      h('div', { class: 'brand' }, 'Heroes of the March'),
-      h('div', { class: 'turn' },
-        v.turn.number ? `Turn ${v.turn.number} · ${active}${v.turn.active === v.you ? '' : "'s turn"} · ${STEP_LABEL[v.turn.step] ?? v.turn.step}` : 'Setting up…'),
-      h('nav', { class: 'top-actions' },
-        h('button', { class: 'btn ghost', on: { click: (e) => toggleMusicMenu(e.currentTarget as HTMLElement) } }, '♫ Music'),
-        this.deps.debug ? h('button', { class: 'btn ghost', on: { click: (e) => toggleDebugMenu(e.currentTarget as HTMLElement, this.deps.debug!) } }, 'Debug') : '',
-        h('button', { class: 'btn ghost', on: { click: () => this.showRules() } }, 'Rules'),
-        h('button', { class: 'btn ghost', on: { click: () => this.setLogOpen(this.logPanel.classList.contains('collapsed')) } }, 'Log'),
-        h('button', { class: 'btn ghost', on: { click: () => this.confirmNewGame() } },
-          h('span', { class: 'lbl-long' }, 'New game'), h('span', { class: 'lbl-short' }, 'New')),
-      ),
-    );
+    this.turnText = v.turn.number
+      ? `Turn ${v.turn.number} · ${active}${v.turn.active === v.you ? '' : "'s turn"} · ${STEP_LABEL[v.turn.step] ?? v.turn.step}`
+      : 'Setting up…';
   }
 
   /**
@@ -1531,6 +1541,7 @@ export class Hud {
   }
 
   dispose(): void {
+    closeGameMenu();
     document.body.classList.remove('log-open', 'notice-open');
     const w = this.noticeWaiters;
     this.noticeWaiters = [];

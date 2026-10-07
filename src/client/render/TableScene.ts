@@ -30,9 +30,12 @@ export class TableScene {
   private disposed = false;
   /** 0 = the play camera, 1 = the establishing view toward the horizon. */
   private shot = 0;
-  /** Look-around and zoom: where the camera is now, and where the wheel and mouse want it. */
-  private readonly view = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
-  private readonly want = { amt: 0, yaw: 0, pitch: 0, zoom: 1 };
+  /**
+   * Look-around and zoom: where the camera is now, and where the wheel and mouse want it. `back` is the menu's
+   * "step back" camera (0 = the play camera, 1 = the whole place in view): the same pose as the place reveal, held.
+   */
+  private readonly view = { amt: 0, yaw: 0, pitch: 0, zoom: 1, back: 0 };
+  private readonly want = { amt: 0, yaw: 0, pitch: 0, zoom: 1, back: 0 };
   private lastFrame = 0;
   /** The fitted play camera of the compact (phone) layouts, kept so the establishing shot can lift from it. */
   private fitPose: { pos: THREE.Vector3; target: THREE.Vector3; fov: number; dist: number; ox: number; oy: number; w: number; h: number } | null = null;
@@ -150,10 +153,11 @@ export class TableScene {
         this.want.amt = 0;
         this.want.yaw = 0;
         this.want.pitch = 0;
+        this.setStepBack(false);
       }
     };
     const move = (e: PointerEvent) => {
-      if (this.want.amt <= 0.02) return;
+      if (Math.max(this.want.amt, this.want.back) <= 0.02) return;
       const r = el.getBoundingClientRect();
       const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
       const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
@@ -175,39 +179,56 @@ export class TableScene {
     const w = this.want;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     let moved = false;
-    for (const k of ['amt', 'yaw', 'pitch', 'zoom'] as const) {
+    for (const k of ['amt', 'yaw', 'pitch', 'zoom', 'back'] as const) {
       if (v[k] === w[k]) continue;
-      // Snapping back is quick; looking out and zooming are smooth.
-      const rate = still ? 60 : k === 'amt' && w.amt < v.amt ? 16 : 7;
+      // Snapping back is quick; looking out, stepping back and zooming are smooth.
+      const rate = still ? 60 : k === 'amt' && w.amt < v.amt ? 16 : k === 'back' ? 4 : 7;
       const next = v[k] + (w[k] - v[k]) * (1 - Math.exp(-dt * rate));
       v[k] = Math.abs(next - w[k]) < 1e-4 ? w[k] : next;
       moved = true;
     }
     if (!moved) return;
-    document.body.classList.toggle('looking', v.amt > 0.15);
-    if (this.shape === 'wide' && this.frame) this.environment.setCameraDistance(this.poseWide());
+    document.body.classList.toggle('looking', Math.max(v.amt, v.back) > 0.15);
+    if (this.frame) this.environment.setCameraDistance(this.shape === 'wide' ? this.poseWide() : this.poseFit());
+  }
+
+  /**
+   * The menu's "step back" camera: the camera lifts to look across the whole place, the same pose as the place reveal,
+   * and stays there until it is turned off. Works on every screen (the wheel look-around is desktop only).
+   */
+  setStepBack(on: boolean): void {
+    this.want.back = on ? 1 : 0;
+    document.body.classList.toggle('stepped-back', on);
+    if (!on && this.want.amt <= 0.02) { this.want.yaw = 0; this.want.pitch = 0; }
+  }
+
+  get steppedBack(): boolean {
+    return this.want.back > 0.5;
   }
 
   /** The play camera, lifted toward a low look across the table (by the establishing shot or the player), then turned and zoomed. Returns the camera distance. */
   private poseWide(): number {
     const smooth = (t: number) => t * t * (3 - 2 * t);
-    const e = Math.max(smooth(this.shot), smooth(this.view.amt) * 0.7);
+    const e = Math.max(smooth(this.shot), smooth(this.view.amt) * 0.7, smooth(this.view.back));
+    const look = Math.max(this.view.amt, this.view.back);
     const L = THREE.MathUtils.lerp;
     // Frame the play area (about 16 x 11 units): back off on narrow screens.
     const dist = Math.max(12.8, 21.5 / Math.max(0.55, this.camera.aspect));
     const angle = THREE.MathUtils.degToRad(56);
-    const target = new THREE.Vector3(0, L(0, 3.4, e), L(1.25, -12, e));
-    this.camera.position.set(0, L(Math.sin(angle) * dist, 2.4, e), L(Math.cos(angle) * dist + 0.6, dist * 1.2 + 2, e));
+    // Lifted, the camera sits back and looks a few degrees below the horizon, so the foot of a tall table (or a block of
+    // stone) and the floor it stands on stay in the picture, with the sky above.
+    const target = new THREE.Vector3(0, L(0, -0.9, e), L(1.25, -12, e));
+    this.camera.position.set(0, L(Math.sin(angle) * dist, 3.4, e), L(Math.cos(angle) * dist + 0.6, dist * 1.2 + 7.7, e));
     this.camera.position.sub(target).multiplyScalar(this.view.zoom).add(target);
     // Aim low so the play area sits above the HTML dock at the bottom of the screen.
     this.camera.lookAt(target);
     if (this.view.yaw || this.view.pitch) {
-      this.camera.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), this.view.yaw * Math.min(1, this.view.amt * 2));
-      this.camera.rotateX(this.view.pitch * Math.min(1, this.view.amt * 2));
+      this.camera.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), this.view.yaw * Math.min(1, look * 2));
+      this.camera.rotateX(this.view.pitch * Math.min(1, look * 2));
     }
     this.camera.fov = L(40, 54, e);
     this.camera.updateProjectionMatrix();
-    return L(dist, dist * 1.2 + 8, e) * this.view.zoom;
+    return L(dist, dist * 1.2 + 13.7, e) * this.view.zoom;
   }
 
   /**
@@ -229,9 +250,9 @@ export class TableScene {
     document.body.classList.remove('establishing');
   }
 
-  /** How far the camera is from the play view, 0..1: the establishing shot or the player lifting it to look across the table. */
+  /** How far the camera is from the play view, 0..1: the establishing shot, the step-back camera, or the player lifting it to look across the table. */
   get lookOut(): number {
-    return Math.max(this.shot, this.shape === 'wide' ? this.view.amt : 0);
+    return Math.max(this.shot, this.view.back, this.shape === 'wide' ? this.view.amt : 0);
   }
 
   private setShot(k: number): void {
@@ -281,24 +302,30 @@ export class TableScene {
     const oy = (b.top + b.bottom) / 2 - h / 2;
     cam.setViewOffset(w, h, ox, oy, w, h);
     this.fitPose = { pos: cam.position.clone(), target: new THREE.Vector3(cx, 0, cz), fov: cam.fov, dist: hi, ox, oy, w, h };
-    return this.shot > 0 ? this.poseFit() : hi;
+    return this.lift > 0 ? this.poseFit() : hi;
+  }
+
+  /** How far the compact layouts' camera is lifted: by the establishing shot or the step-back camera. */
+  private get lift(): number {
+    return Math.max(this.shot, this.view.back);
   }
 
   /** The compact layouts' version of the establishing shot: from the fitted camera to a low look down the table. Returns the distance. */
   private poseFit(): number {
     const f = this.fitPose;
     if (!f) return 21;
-    const e = this.shot * this.shot * (3 - 2 * this.shot);
+    const e = this.lift * this.lift * (3 - 2 * this.lift);
     const L = THREE.MathUtils.lerp;
     const cam = this.camera;
-    const low = new THREE.Vector3(f.target.x, 2.6, f.target.z + f.dist * 0.55 + 3);
-    const aim = new THREE.Vector3(f.target.x, 3.4, f.target.z - 14);
+    // A little back and aimed a little below the horizon, so the foot of a tall table stays in the picture.
+    const low = new THREE.Vector3(f.target.x, 3.6, f.target.z + f.dist * 0.8 + 8);
+    const aim = new THREE.Vector3(f.target.x, -2, f.target.z - 14);
     cam.position.lerpVectors(f.pos, low, e);
     cam.lookAt(new THREE.Vector3().lerpVectors(f.target, aim, e));
     cam.fov = L(f.fov, 62, e);
     cam.setViewOffset(f.w, f.h, f.ox * (1 - e), f.oy * (1 - e), f.w, f.h);
     cam.updateProjectionMatrix();
-    return L(f.dist, f.dist * 0.55 + 8, e);
+    return L(f.dist, f.dist * 0.8 + 13, e);
   }
 
   /** First intersected object among `objects` under a client-space point. */
@@ -327,7 +354,7 @@ export class TableScene {
 
   dispose(): void {
     this.disposed = true;
-    document.body.classList.remove('establishing', 'looking');
+    document.body.classList.remove('establishing', 'looking', 'stepped-back');
     this.unbindLook();
     this.environment.dispose();
     this.scene.traverse((o) => {

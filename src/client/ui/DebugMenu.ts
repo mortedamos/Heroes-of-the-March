@@ -2,6 +2,7 @@
 // Settings are remembered in this browser so a reload keeps them.
 
 import { h, replace } from './dom';
+import { FOG_DEFAULT, HAZE_DEFAULT } from '../render/env/Environment';
 
 /** What the panel can change; GameClient wires it to the table's Environment. */
 export interface DebugApi {
@@ -24,7 +25,7 @@ export interface DebugApi {
 const STORE = 'hotm.debug';
 
 export interface DebugPrefs { fog: number; haze: number; pinned: string | null }
-export const DEBUG_DEFAULTS: DebugPrefs = { fog: 1, haze: 1, pinned: null };
+export const DEBUG_DEFAULTS: DebugPrefs = { fog: FOG_DEFAULT, haze: HAZE_DEFAULT, pinned: null };
 
 export function debugEnabled(): boolean {
   try { return import.meta.env.DEV || new URLSearchParams(location.search).has('debug'); } catch { return false; }
@@ -34,7 +35,7 @@ export function loadDebugPrefs(): DebugPrefs {
   try {
     const v = JSON.parse(localStorage.getItem(STORE) ?? '{}') as Partial<DebugPrefs>;
     const num = (x: unknown, d: number) => (typeof x === 'number' && x >= 0 && x <= 5 ? x : d);
-    return { fog: num(v.fog, 1), haze: num(v.haze, 1), pinned: typeof v.pinned === 'string' ? v.pinned : null };
+    return { fog: num(v.fog, DEBUG_DEFAULTS.fog), haze: num(v.haze, DEBUG_DEFAULTS.haze), pinned: typeof v.pinned === 'string' ? v.pinned : null };
   } catch { return { ...DEBUG_DEFAULTS }; }
 }
 
@@ -70,11 +71,11 @@ function render(api: DebugApi): void {
     h('div', { class: 'music-title' }, 'Debug'),
     h('label', { class: 'debug-row' }, h('span', { class: 'debug-label' }, 'Location look'), pick,
       h('span', { class: 'debug-hint' }, 'Hold one place on the table, whatever the game reveals.')),
-    slider('Fog level', '0 = none, 1 = as designed, higher = thicker. Moves how near the fog starts.', api.fog(), 4, (v) => { api.setFog(v); savePrefs(api); }),
-    slider('Horizon haze', '0 = the panorama runs to the ground, 1 = as designed, higher = more mist at the horizon.', api.haze(), 3, (v) => { api.setHaze(v); savePrefs(api); }),
+    slider('Fog level', '0 = none, 0.5 = default, 1 = as each place was designed, higher = thicker. Moves how near the fog starts.', api.fog(), 4, (v) => { api.setFog(v); savePrefs(api); }),
+    slider('Horizon haze', '0 = the panorama runs to the ground, 0.5 = default, 1 = as designed, higher = more mist at the horizon.', api.haze(), 3, (v) => { api.setHaze(v); savePrefs(api); }),
     h('div', { class: 'music-buttons' },
       h('button', { class: 'btn', title: 'Play one of this look\'s place sounds now', on: { click: (e) => { const b = e.currentTarget as HTMLButtonElement; b.textContent = api.playAmbience() ? 'Playing…' : 'No sound for this look'; setTimeout(() => { b.textContent = 'Play a place sound'; }, 1800); } } }, 'Play a place sound'),
-      h('button', { class: 'btn', on: { click: () => { api.pin(null); api.setFog(1); api.setHaze(1); savePrefs(api); render(api); } } }, 'Reset')),
+      h('button', { class: 'btn', on: { click: () => { api.pin(null); api.setFog(DEBUG_DEFAULTS.fog); api.setHaze(DEBUG_DEFAULTS.haze); savePrefs(api); render(api); } } }, 'Reset')),
     h('div', { class: 'debug-hint' }, 'Tip: scroll down on the table to lift the camera and look at the horizon.'),
   );
 }
@@ -83,7 +84,8 @@ function place(): void {
   if (!anchor) return;
   const r = anchor.getBoundingClientRect();
   panel.style.top = `${Math.round(r.bottom + 6)}px`;
-  panel.style.right = `${Math.max(8, Math.round(window.innerWidth - r.right))}px`;
+  panel.style.left = `${Math.max(8, Math.round(r.left))}px`;
+  panel.style.right = 'auto';
 }
 
 function mount(): void {
@@ -95,6 +97,10 @@ function mount(): void {
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') panel.classList.add('hidden'); });
   window.addEventListener('resize', place);
+}
+
+export function closeDebugMenu(): void {
+  panel.classList.add('hidden');
 }
 
 export function toggleDebugMenu(button: HTMLElement, api: DebugApi): void {

@@ -166,6 +166,7 @@ export class GameClient {
       skipAbility: (cardId, ability) => this.skipAbility(cardId, ability),
       ...(debugEnabled() ? { debug: this.debugApi() } : {}),
       newGame: onNewGame,
+      stepBack: { get: () => this.scene.steppedBack, set: (on) => this.scene.setStepBack(on) },
       project: (x, y, z) => this.scene.project(x, y, z),
     });
     this.unhook.push(this.scene.onFrame(() => this.hud.reposition()));
@@ -397,7 +398,7 @@ export class GameClient {
           await this.revealPlace(e.card.def, e.reason === 'Turn' && view.turn.number > 1, boardDone);
           break;
         case 'turnStarted':
-          // Other players' turns show in the top bar and on their plate; yours gets a banner.
+          // Other players' turns show on their plate and in the menu's status line; yours gets a banner.
           if (e.player === view.you) this.hud.banner('Your turn', 'turn');
           break;
         case 'encounterRevealed':

@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 
-export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'slab' | 'steel' | 'soft' | 'moss' | 'dirt' | 'lava' | 'leather';
+export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'slab' | 'steel' | 'soft' | 'moss' | 'dirt' | 'magma' | 'leather';
 
 export interface SurfaceSpec {
   kind: SurfaceKind;
@@ -14,7 +14,7 @@ export interface SurfaceSpec {
   tile: number;
   rough?: number;
   metal?: number;
-  /** Lava: the colour of the glowing cracks (also the emissive tint). */
+  /** Magma: the colour of the glowing cracks (also the emissive tint). */
   glow?: string;
   opts?: { moss?: boolean; lichen?: boolean; sparkle?: boolean; nails?: boolean; rows?: number; blobs?: number; r?: [number, number] };
 }
@@ -297,42 +297,31 @@ function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasEle
       break;
     }
 
-    case 'lava': {
-      // Dark crust plates; the seams between them glow.
-      const rows = o.rows ?? 5;
-      const h = SIZE / rows;
+    case 'magma': {
+      // Dark, broken rock. Here and there a crack runs hot.
       let gg: CanvasRenderingContext2D;
       [glow, gg] = canvas(SIZE, SIZE);
-      gg.fillStyle = spec.glow ?? '#ff6a1e';
+      gg.fillStyle = '#000000';
       gg.fillRect(0, 0, SIZE, SIZE);
-      g.fillStyle = '#050302';
-      g.fillRect(0, 0, SIZE, SIZE);
-      for (let r = 0; r < rows; r++) {
-        const cuts = Array.from({ length: 2 + Math.floor(rnd() * 3) }, () => rnd()).sort();
-        const xs = [0, ...cuts.map((c) => c * SIZE), SIZE];
-        for (let i = 0; i < xs.length - 1; i++) {
-          const x0 = xs[i]!;
-          const x1 = xs[i + 1]!;
-          if (x1 - x0 < 14) continue;
-          // Each plate sits a little differently, so the seams wander instead of forming a grid.
-          const top = r * h + 3 + rnd() * 5;
-          const bottom = (r + 1) * h - 3 - rnd() * 5;
-          g.fillStyle = mixHex(spec.a, spec.b, rnd());
-          g.fillRect(x0 + 3, top, x1 - x0 - 6, bottom - top);
-          gg.fillStyle = '#000000';
-          gg.fillRect(x0 + 6, top + 3, x1 - x0 - 12, bottom - top - 6);
-          // A few plates run hotter, with a crack across them.
-          if (rnd() < 0.3) {
-            g.strokeStyle = rgba('#050302', 0.8);
-            gg.strokeStyle = spec.glow ?? '#ff6a1e';
-            g.lineWidth = 3; gg.lineWidth = 1.6;
-            const pts = [[x0 + 10 + rnd() * (x1 - x0 - 20), top + 4], [x0 + 10 + rnd() * (x1 - x0 - 20), (top + bottom) / 2], [x0 + 10 + rnd() * (x1 - x0 - 20), bottom - 4]] as [number, number][];
-            g.beginPath(); pts.forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke();
-            gg.beginPath(); pts.forEach(([x, y], k) => (k ? gg.lineTo(x, y) : gg.moveTo(x, y))); gg.stroke();
-          }
-        }
+      for (let i = 0; i < 60; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 16 + rnd() * 50, spec.b, 0.28);
+      for (let i = 0; i < 50; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 14 + rnd() * 40, '#050403', 0.3);
+      g.strokeStyle = rgba('#000000', 0.5);
+      g.lineWidth = 1.4;
+      for (let i = 0; i < 16; i++) wrapStroke(g, crack(rnd));
+      const hot = spec.glow ?? '#ff5a1e';
+      for (let i = 0; i < 4; i++) {
+        const pts = crack(rnd);
+        g.strokeStyle = rgba('#000000', 0.8);
+        g.lineWidth = 6;
+        wrapStroke(g, pts);
+        gg.strokeStyle = rgba(hot, 0.3);
+        gg.lineWidth = 12;
+        wrapStroke(gg, pts);
+        gg.strokeStyle = hot;
+        gg.lineWidth = 3.4;
+        wrapStroke(gg, pts);
       }
-      speckle(g, 12, rnd);
+      speckle(g, 16, rnd);
       break;
     }
 

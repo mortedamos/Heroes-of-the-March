@@ -85,7 +85,7 @@ Prefix every prompt with: *"Top-down seamless tileable game texture, flat even l
 
 ## Later: moving the camera
 
-The playing surface is the top of a real 3D table (a tavern table, a ship's deck, a stone altar, a vault, an anvil: see `tables.ts`) standing on a ground plane under a sky dome. The harbor ground rolls like waves and the sky ground like clouds (`swell.ts`).
+The playing surface is the top of a real 3D table (a tavern table, a ship's deck, a stone altar, a vault, an anvil: see `tables.ts`) standing on a ground plane under a sky dome. The harbor ground rolls like waves, the skyship ground like clouds, and the forge ground is jagged broken rock with magma cracks (`ground.ts`). The harbor's sea and sky also rock gently round the table.
 `TableScene.establish()` already swings the camera low to show the surroundings when the place changes
 (and is skipped for reduced-motion users and the portrait layout). Any other camera work can reuse the same pose code
 in `TableScene.poseWide()`.

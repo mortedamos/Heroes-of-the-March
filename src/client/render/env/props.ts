@@ -105,6 +105,7 @@ export class ThemeScene {
     });
     for (const { m } of this.mats) {
       (m as THREE.MeshStandardMaterial).map?.dispose();
+      (m as THREE.MeshBasicMaterial).alphaMap?.dispose();
       m.dispose();
     }
   }
