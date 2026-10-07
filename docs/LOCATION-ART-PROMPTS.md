@@ -1,13 +1,13 @@
 # Location art (optional)
 
 Every location already has a procedural 3D look (see `src/client/render/env/themes.ts`): table surface, ground,
-scenery, light, fog and weather. You can replace the **table top** and **ground** textures of any theme with
-hand-made art. Nothing else changes; the props, lights and weather stay real 3D.
+table, light, fog and weather. You can replace the **table top** and **ground** textures of any theme with
+hand-made art. Nothing else changes; the table itself, the lights and the weather stay real 3D.
 
 ## Skyboxes (recommended first)
 
 Each theme can also have a **panorama for the sky dome**. It blends with the procedural look: the dome crossfades to it
-when the place changes, and the 3D props, flags, light shafts, mist and particles stay live in front of it.
+when the place changes, and the 3D table, light shafts, mist and particles stay live in front of it. Harbor and sky panoramas also slide slowly round the sky in a loop (see `skyScroll` in `themes.ts`), so keep their left and right edges seamless.
 
 ```json
 {
@@ -23,7 +23,7 @@ when the place changes, and the 3D props, flags, light shafts, mist and particle
 - `keepSkyline`: by default a panorama replaces the procedural skyline ring. Set true to keep the ring in front of it.
 - The left and right edges must wrap without a seam.
 - Keep it **darker and calmer than the card art**; no bright sun disc low on the horizon (the light shafts add the sun feel).
-- No ground or table, no people, no text. The game draws the table, ground and props.
+- No ground or table, no people, no text. The game draws the table and the ground.
 
 Skybox prompt prefix: *"Equirectangular 360 degree panorama, 2:1, seamless left and right edges, painterly stylised fantasy, no ground plane, no characters, no text,"*
 
@@ -85,7 +85,7 @@ Prefix every prompt with: *"Top-down seamless tileable game texture, flat even l
 
 ## Later: moving the camera
 
-The table is a real 3D slab standing on a ground plane under a sky dome, with a skyline ring and props around it.
+The playing surface is the top of a real 3D table (a tavern table, a ship's deck, a stone altar, a vault, an anvil: see `tables.ts`) standing on a ground plane under a sky dome. The harbor ground rolls like waves and the sky ground like clouds (`swell.ts`).
 `TableScene.establish()` already swings the camera low to show the surroundings when the place changes
 (and is skipped for reduced-motion users and the portrait layout). Any other camera work can reuse the same pose code
 in `TableScene.poseWide()`.

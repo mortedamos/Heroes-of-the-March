@@ -95,7 +95,8 @@ export class TableScene {
     key.castShadow = true;
     key.shadow.mapSize.set(shadowSize, shadowSize);
     const sc = key.shadow.camera;
-    sc.left = -12; sc.right = 12; sc.top = 12; sc.bottom = -12; sc.near = 1; sc.far = 40;
+    // Wide enough for the legs, hull or stone under the table to throw their shadows on the ground.
+    sc.left = -16; sc.right = 16; sc.top = 16; sc.bottom = -16; sc.near = 1; sc.far = 48;
     key.shadow.bias = -0.0004;
     key.shadow.radius = 3;
     this.scene.add(key);
