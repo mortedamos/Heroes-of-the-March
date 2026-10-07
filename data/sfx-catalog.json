@@ -1,5 +1,5 @@
 {
-  "_about": "Every sound effect the game could use. `npm run sfx` checks public/sounds against this list, writes public/sounds/manifest.json (what the game may load: no manifest entry, no request, no 404) and docs/SFX-TRACKER.md. A sound can have up to 3 variants: name.mp3, or name_1.mp3, name_2.mp3, name_3.mp3 (.ogg/.wav/.webm also work). `wired` says whether the game plays it yet.",
+  "_about": "Every sound effect the game could use. `npm run sfx` checks public/sounds against this list, writes public/sounds/manifest.json (what the game may load: no manifest entry, no request, no 404) and docs/SFX-TRACKER.md. A sound can have up to 3 variants: name.mp3, or name_1.mp3, name_2.mp3, name_3.mp3 (.ogg/.wav/.webm also work). `wired` says whether the game plays it yet. Entries with \"ambience\": true are place sounds: one slot per look, `<look>-background` with up to three variants (fortress-background_1.mp3 to _3), in public/ambience (not public/sounds). `npm run sfx` writes public/ambience/manifest.json for them.",
   "sounds": [
     {
       "name": "shuffle",
@@ -288,6 +288,127 @@
       "wired": false,
       "plays": "The music panel, rules or log opens",
       "search": "ui open, short whoosh"
+    },
+    {
+      "name": "tavern-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "tavern",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (patrons murmuring, laughter, mugs clinking, a fire settling); one drifts in now and then while the camera is lifted away from the board",
+      "search": "tavern ambience, pub crowd murmur, tankard clink"
+    },
+    {
+      "name": "harbor-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "harbor",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (gulls, a bell buoy, ship timbers creaking, water lapping); one drifts in now and then while the camera is lifted away from the board",
+      "search": "harbour ambience, seagulls, ship creak, bell buoy"
+    },
+    {
+      "name": "snow-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "snow",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (a cold gust, ice creaking, a far-off wolf); one drifts in now and then while the camera is lifted away from the board",
+      "search": "arctic wind gust, ice creak, distant wolf howl"
+    },
+    {
+      "name": "crypt-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "crypt",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (a faint moan, water dripping, an iron gate creaking, a raven); one drifts in now and then while the camera is lifted away from the board",
+      "search": "crypt ambience, ghost moan distant, cave drip, raven caw"
+    },
+    {
+      "name": "forge-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "forge",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (a hammer on an anvil far off, bellows, iron hissing in water); one drifts in now and then while the camera is lifted away from the board",
+      "search": "blacksmith anvil distant, forge bellows, quench hiss"
+    },
+    {
+      "name": "forest-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "forest",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (birdsong, wind in leaves, an owl, a creaking branch); one drifts in now and then while the camera is lifted away from the board",
+      "search": "forest birdsong, wind in trees, owl hoot"
+    },
+    {
+      "name": "fortress-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "fortress",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (a distant blacksmith, townsfolk and carts, a watch horn, soldiers drilling, a tower bell); one drifts in now and then while the camera is lifted away from the board",
+      "search": "medieval city ambience, distant blacksmith, castle horn, crowd walla"
+    },
+    {
+      "name": "archive-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "archive",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (pages turning, a quill scratching, a slow clock, hushed voices); one drifts in now and then while the camera is lifted away from the board",
+      "search": "library ambience, page turn, quill scratch, clock tick"
+    },
+    {
+      "name": "plains-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "plains",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (wind in long grass, sheep or cattle far off, a windmill creaking, a skylark); one drifts in now and then while the camera is lifted away from the board",
+      "search": "meadow ambience, wind grass, distant sheep, windmill creak, skylark"
+    },
+    {
+      "name": "sky-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "sky",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (wind rushing by, an airship's frame creaking, canvas and rope snapping, far thunder); one drifts in now and then while the camera is lifted away from the board",
+      "search": "high altitude wind, ship creak, sail flap, distant thunder"
+    },
+    {
+      "name": "any-background",
+      "group": "Place sounds",
+      "ambience": true,
+      "look": "any",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of this place (a far-off bell, a soft wind. Heard in every place, as well as that place's own); one drifts in now and then while the camera is lifted away from the board",
+      "search": "distant church bell, soft wind ambience"
     }
   ]
 }

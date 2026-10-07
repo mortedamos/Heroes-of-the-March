@@ -11,9 +11,9 @@ import type { Layout } from '../render/layout';
 import { nameOf } from '../describe';
 import { isTouch, onLongPress } from '../viewport';
 import { append, clear, h, replace } from './dom';
-import { toggleMusicMenu } from './MusicMenu';
+import { closeGameMenu, toggleGameMenu, type MenuApi } from './GameMenu';
+import type { DebugApi } from './DebugMenu';
 import { attentionOf } from '../attention';
-import { abilityBox } from '../render/cardFaces';
 import { sfx } from '../audio/Sfx';
 import { tiltOnPointer } from './tilt';
 import { PALETTE, RUNES, type Theme } from './themes';
@@ -31,6 +31,14 @@ function thumbSizes(): { hand: number; option: number; drawn: number } {
 
 export interface HudDeps {
   send(cmd: Command): void;
+  /** The debug panel's controls (dev builds and ?debug only). */
+  debug?: DebugApi;
+  /** The menu's step-back camera: pulled back to show the whole place until turned off. */
+  stepBack: { get(): boolean; set(on: boolean): void };
+  /** A table card's rectangle on screen (for flying its picture up to the middle and back), or null. */
+  cardRect(key: string): { x: number; y: number; w: number; h: number } | null;
+  /** Hide or show a table card while its picture is flown up (each hide needs a matching show). */
+  hideCard(key: string, hidden: boolean): void;
   /** Skip a usable ability for now (the Skip button on its card). */
   skipAbility(cardId: string, ability: string): void;
   newGame(): void;
@@ -109,7 +117,13 @@ export function cardThumb(def: string, width: number, cls = 'thumb', cssSized = 
 }
 
 export class Hud {
-  private readonly top = h('header', { class: 'topbar' });
+  /** The menu button, upper left: it opens the game menu (game, sound, graphics). */
+  private readonly menuBtn = h('button', {
+    class: 'menu-btn', title: 'Menu', aria: { label: 'Menu', haspopup: 'dialog', expanded: 'false' },
+    on: { click: () => { sfx.play('click'); toggleGameMenu(this.menuBtn, this.menuApi()); } },
+  }, h('span', { class: 'menu-bars' }));
+  /** One line on the game now, shown at the top of the menu. */
+  private turnText = '';
   private readonly plates = h('div', { class: 'plates' });
   /** Stat chips on the table's hero and companion cards (what each adds to the challenge now). */
   private readonly chips = h('div', { class: 'card-chips' });
@@ -148,9 +162,13 @@ export class Hud {
   private faceDown = false;
   private pinned: string | null = null;
   private pinnedActions: InspectAction[] = [];
-  /** The OK buttons on the open card view, with the card they sit on. */
-  private abilityOk: { def: string; buttons: HTMLElement[]; img: HTMLCanvasElement } | null = null;
-  private abilityRaf: number | null = null;
+  /** A ready ability's card, flown up to the middle with OK and Skip floating either side of it. */
+  private abilityView: {
+    layer: HTMLElement; cardEl: HTMLElement; key: string; from: { x: number; y: number; w: number; h: number } | null;
+    slot: (r: { x: number; y: number; w: number; h: number } | null) => string;
+  } | null = null;
+  /** The ability view is closing because OK was pressed (the ability's own showcase flies the card up next). */
+  private abilityUsed = false;
   /** The table card (instance) the pinned view was opened from, if any. */
   private pinnedCardId: string | null = null;
   /** Touch: the card tapped once (shown with its action); a second tap confirms. */
@@ -173,9 +191,9 @@ export class Hud {
 
   constructor(private readonly root: HTMLElement, private readonly deps: HudDeps) {
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
-    this.setLogOpen(false); // the log starts hidden; the Log button in the top bar opens it
+    this.setLogOpen(false); // the log starts hidden; the Log item in the menu opens it
     append(this.dock, this.prompt, this.hand);
-    append(root, this.top, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
+    append(root, this.menuBtn, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { this.unpin(); this.closeModal(); this.closeDetail(); }
     });
@@ -201,24 +219,30 @@ export class Hud {
 
   /**
    * A click on a table card: pin it (click again to close). If the card has an ability the engine is offering
-   * now, the card view shows a Use button next to its ability text.
+   * now, the card flies up to the middle of the screen with OK and Skip floating either side of it.
    */
   openCard(def: string | null, cardId: string | null): void {
     if (!def || (def === this.pinned && cardId === this.pinnedCardId)) { this.pinnedCardId = null; this.inspect(def && def === this.pinned ? null : def, true); return; }
     const v = this.view;
     const ready = v && cardId ? attentionOf(v).filter((a) => a.cardId === cardId) : [];
     const name = (getDef(def) as { abilityName?: string }).abilityName ?? '';
-    // Each ability gets an OK and a Skip button, in that order (placeAbilityButtons relies on the pairs).
+    // Each ability gets an OK and a Skip button.
     const actions: InspectAction[] = ready.flatMap((a) => {
       const ability = { name: ready.length > 1 || !name ? a.label : name };
       return [
-        { label: 'OK', primary: true, ability, run: () => { this.unpin(); this.deps.send({ type: 'ability.use', decision: a.decision, source: a.cardId, ability: a.ability }); } },
+        { label: 'OK', primary: true, ability, run: () => { this.abilityUsed = true; this.unpin(); this.deps.send({ type: 'ability.use', decision: a.decision, source: a.cardId, ability: a.ability }); } },
         { label: 'Skip', ability, run: () => { this.unpin(); this.deps.skipAbility(a.cardId, a.ability); } },
       ];
     });
     this.pinnedCardId = cardId;
+    if (ready.length && cardId) {
+      this.pinned = def;
+      this.pinnedActions = actions;
+      this.pinnedFor = ready[0]!.decision;
+      this.showAbility(def, cardId, actions);
+      return;
+    }
     this.inspect(def, true, actions);
-    if (ready.length) this.pinnedFor = ready[0]!.decision;
   }
 
   // --- top-level render -----------------------------------------------------------
@@ -294,20 +318,23 @@ export class Hud {
     this.challenge.style.transform = `translate(${Math.round(cx)}px, ${Math.round(cp.y)}px) translate(-50%, ${above ? '-100%' : '0'})`;
   }
 
+  /** What the menu shows and does. */
+  private menuApi(): MenuApi {
+    return {
+      status: () => this.turnText,
+      rules: () => this.showRules(),
+      log: () => this.setLogOpen(this.logPanel.classList.contains('collapsed')),
+      newGame: () => this.confirmNewGame(),
+      stepBack: this.deps.stepBack,
+      ...(this.deps.debug ? { debug: this.deps.debug } : {}),
+    };
+  }
+
   private renderTop(v: GameView): void {
     const active = nameOf(v, v.turn.active);
-    replace(this.top,
-      h('div', { class: 'brand' }, 'Heroes of the March'),
-      h('div', { class: 'turn' },
-        v.turn.number ? `Turn ${v.turn.number} · ${active}${v.turn.active === v.you ? '' : "'s turn"} · ${STEP_LABEL[v.turn.step] ?? v.turn.step}` : 'Setting up…'),
-      h('nav', { class: 'top-actions' },
-        h('button', { class: 'btn ghost', on: { click: (e) => toggleMusicMenu(e.currentTarget as HTMLElement) } }, '♫ Music'),
-        h('button', { class: 'btn ghost', on: { click: () => this.showRules() } }, 'Rules'),
-        h('button', { class: 'btn ghost', on: { click: () => this.setLogOpen(this.logPanel.classList.contains('collapsed')) } }, 'Log'),
-        h('button', { class: 'btn ghost', on: { click: () => this.confirmNewGame() } },
-          h('span', { class: 'lbl-long' }, 'New game'), h('span', { class: 'lbl-short' }, 'New')),
-      ),
-    );
+    this.turnText = v.turn.number
+      ? `Turn ${v.turn.number} · ${active}${v.turn.active === v.you ? '' : "'s turn"} · ${STEP_LABEL[v.turn.step] ?? v.turn.step}`
+      : 'Setting up…';
   }
 
   /**
@@ -958,7 +985,7 @@ export class Hud {
    * be read (long abilities are printed smaller, so this depends on the card).
    */
   inspect(def: string | null, pin = false, actions: InspectAction[] = []): void {
-    // A card open with an ability waiting (its OK button) stays put: passing the mouse over other cards
+    // A card open with an ability waiting (its OK and Skip buttons) stays put: passing the mouse over other cards
     // doesn't replace it. Close it with the × button, Esc or a click outside the card.
     if (!pin && this.pinned && this.pinnedActions.some((a) => a.ability)) return;
     if (pin) {
@@ -968,7 +995,7 @@ export class Hud {
     }
     const show = def ?? this.pinned;
     if (!show) {
-      this.abilityOk = null;
+      this.closeAbility();
       this.inspector.classList.add('hidden');
       this.inspector.classList.remove('pinned');
       this.shownKey = '';
@@ -976,35 +1003,23 @@ export class Hud {
     }
     const isPinned = show === this.pinned;
     const acts = isPinned ? this.pinnedActions : [];
-    const key = `${show}|${isPinned}|${acts.map((a) => `${a.label}:${a.ability?.name ?? ''}`).join('/')}`;
-    const abilityActs = acts.filter((a) => a.ability);
-    const otherActs = acts.filter((a) => !a.ability);
+    const key = `${show}|${isPinned}|${acts.map((a) => a.label).join('/')}`;
     if (key === this.shownKey) return;
     this.shownKey = key;
 
     const d = getDef(show);
-    const text: HTMLElement[] = [h('h3', { class: 'inspect-name' }, d.name)];
-    if (d.kind === 'hero' || d.kind === 'companion') {
-      if (d.abilityName) text.push(h('p', {}, h('strong', {}, d.abilityName), d.abilityText ? ` ${d.abilityText}` : ''));
-      if (d.kind === 'hero' && d.triggerText) text.push(h('p', { class: 'trigger' }, `⚡ ${d.triggerText}`));
-      if (d.kind === 'hero' && d.kinText) text.push(h('p', { class: 'trigger' }, `◆ ${d.kinText}`));
-    } else if (d.conditionText) text.push(h('p', {}, d.conditionText));
     const img = cardThumb(show, 400, 'inspect-img', true);
     tiltOnPointer(img); // leans a few degrees toward the mouse
     replace(this.inspector,
       img,
       h('div', { class: 'inspect-body' },
-        h('div', { class: 'inspect-text' }, ...text),
+        h('div', { class: 'inspect-text' }, ...this.cardText(d)),
         // Not printed on the card: why the web edition changed it.
         d.revision ? h('p', { class: 'revised' }, `Revised for the web edition: ${d.revision}`) : '',
-        otherActs.length ? h('div', { class: 'inspect-actions' },
-          ...otherActs.map((a) => h('button', { class: `btn${a.primary ? ' primary' : ''}`, on: { click: a.run } }, a.label)),
+        acts.length ? h('div', { class: 'inspect-actions' },
+          ...acts.map((a) => h('button', { class: `btn${a.primary ? ' primary' : ''}`, on: { click: a.run } }, a.label)),
           h('button', { class: 'btn', on: { click: () => this.disarmAndRender() } }, 'Cancel')) : ''),
-      isPinned ? h('button', { class: 'inspector-close', aria: { label: 'Close card' }, on: { click: () => this.disarmAndRender() } }, '×') : '',
-      // OK buttons for usable abilities sit on the card face itself, beside the ability text.
-      ...abilityActs.map((a) => h('button', { class: `ability-ok${a.label === 'Skip' ? ' skip' : ''}`, title: a.ability!.name, on: { click: a.run } }, a.label)));
-    this.abilityOk = abilityActs.length ? { def: show, buttons: [...this.inspector.querySelectorAll<HTMLElement>('.ability-ok')], img } : null;
-    if (abilityActs.length) img.dataset['tilt'] = '0'; // a leaning card would slide away from its button
+      isPinned ? h('button', { class: 'inspector-close', aria: { label: 'Close card' }, on: { click: () => this.disarmAndRender() } }, '×') : '');
     this.inspector.classList.toggle('pinned', isPinned);
     // Open on the side away from the mouse, so the card being pointed at stays visible.
     this.inspector.classList.toggle('on-right', this.pointer.x >= 0 && this.pointer.x < window.innerWidth / 2);
@@ -1014,44 +1029,125 @@ export class Hud {
     const r = img.getBoundingClientRect();
     const shownWidth = Math.min(r.width, (r.height * CARD_W) / CARD_H);
     if ((rulesTextSize(show) * shownWidth) / CARD_W < READABLE_PX) this.inspector.classList.remove('card-only');
-    this.placeAbilityButtons();
-    if (this.abilityOk && this.abilityRaf === null) this.abilityRaf = requestAnimationFrame(() => this.trackAbilityButtons());
   }
 
-  /** Put each OK / Skip pair on the card face, at the right end of the ability name (or just under the ability text). */
-  private placeAbilityButtons(): void {
-    const o = this.abilityOk;
-    if (!o || !o.img.isConnected) return;
-    const box = abilityBox(o.def);
-    const r = o.img.getBoundingClientRect();
-    if (!box || r.width === 0) return;
-    const cs = getComputedStyle(o.img);
-    const contain = cs.objectFit === 'contain';
-    const scale = contain ? Math.min(r.width / CARD_W, r.height / CARD_H) : r.width / CARD_W;
-    const left = r.left + (contain ? (r.width - CARD_W * scale) / 2 : 0);
-    const posY = Number.parseFloat(cs.objectPosition.split(' ')[1] ?? '50');
-    const top = r.top + (contain ? ((r.height - CARD_H * scale) * (Number.isFinite(posY) ? posY : 50)) / 100 : 0);
-    // OK and Skip side by side, one row per ability.
-    const btnW = 70, gap = 6, btnH = Math.max(box.nameH + 8, 30);
-    const onNameLine = box.nameW + btnW * 2 + gap + 14 <= box.w;
-    o.buttons.forEach((b, i) => {
-      const row = Math.floor(i / 2), col = i % 2;
-      const y = (onNameLine ? box.nameY - 4 : box.textBottom + 2) + row * (btnH + 4);
-      const x = box.x + box.w - (btnW * 2 + gap) + col * (btnW + gap);
-      b.style.left = `${left + x * scale}px`;
-      b.style.top = `${top + y * scale}px`;
-      b.style.width = `${btnW * scale}px`;
-      b.style.height = `${btnH * scale}px`;
-      b.style.fontSize = `${Math.max(11, 20 * scale)}px`;
+  /** A card's name and rules as plain text (the copy shown when the printed text would be too small to read). */
+  private cardText(d: ReturnType<typeof getDef>): HTMLElement[] {
+    const text: HTMLElement[] = [h('h3', { class: 'inspect-name' }, d.name)];
+    if (d.kind === 'hero' || d.kind === 'companion') {
+      if (d.abilityName) text.push(h('p', {}, h('strong', {}, d.abilityName), d.abilityText ? ` ${d.abilityText}` : ''));
+      if (d.kind === 'hero' && d.triggerText) text.push(h('p', { class: 'trigger' }, `⚡ ${d.triggerText}`));
+      if (d.kind === 'hero' && d.kinText) text.push(h('p', { class: 'trigger' }, `◆ ${d.kinText}`));
+    } else if (d.conditionText) text.push(h('p', {}, d.conditionText));
+    return text;
+  }
+
+  /**
+   * A card with a usable ability: its picture flies up from the table to the middle of the screen and leans toward
+   * the pointer. A green OK button floats to its left and a red Skip to its right, solid rounded shapes that lean
+   * toward the pointer too. Clicking outside, Esc or × sends the card back.
+   */
+  private showAbility(def: string, cardId: string, actions: InspectAction[]): void {
+    this.closeAbility(true);
+    // The hover preview (and any pinned sheet) gives way to this view.
+    this.inspector.classList.add('hidden');
+    this.inspector.classList.remove('pinned');
+    this.shownKey = '';
+
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const btnW = vw < 600 ? 64 : 120;
+    const gap = vw < 600 ? 10 : 26;
+    const W = Math.round(Math.max(150, Math.min(420, vw - 2 * (btnW + gap) - 24, (vh - 120) / (CARD_H / CARD_W))));
+    const H = (W * CARD_H) / CARD_W;
+    const oks = actions.filter((a) => a.label === 'OK');
+    const skips = actions.filter((a) => a.label === 'Skip');
+    const many = oks.length > 1;
+
+    const thumb = cardThumb(def, W, 'thumb', false, true); // the ability sentence in bold
+    const face = h('div', { class: 'case-face' }, thumb);
+    tiltOnPointer(face);
+    const cardEl = h('div', { class: 'case-card' }, face,
+      h('button', { class: 'ability-close', aria: { label: 'Close card' }, title: 'Close', on: { click: () => this.unpin() } }, '×'));
+    cardEl.style.width = `${W}px`;
+    cardEl.style.height = `${H}px`;
+
+    const side = (cls: 'left' | 'right', acts: InspectAction[]): HTMLElement =>
+      h('div', { class: `ability-side ${cls}` }, ...acts.map((a) => this.floatButton(a, many)));
+    const row = h('div', { class: 'ability-row' }, side('left', oks), cardEl, side('right', skips));
+    const layer = h('div', { class: 'ability-layer' }, row);
+    layer.style.setProperty('--ab-w', `${btnW}px`);
+    layer.style.setProperty('--ab-gap', `${gap}px`);
+    layer.style.setProperty('--fb-h', `${vw < 600 ? 44 : 54}px`);
+    // Small cards cannot be read: repeat the card's text under them.
+    if ((rulesTextSize(def) * W) / CARD_W < READABLE_PX) layer.appendChild(h('div', { class: 'ability-text' }, ...this.cardText(getDef(def))));
+    layer.addEventListener('click', (e) => {
+      if (!(e.target as HTMLElement).closest('.fb-btn, .case-card, .ability-text')) this.unpin();
+    });
+    this.root.appendChild(layer);
+
+    // Fly up from the card's place on the table (FLIP): start over it, end at the middle.
+    const from = this.deps.cardRect(cardId);
+    this.deps.hideCard(cardId, true);
+    const target = cardEl.getBoundingClientRect();
+    const slot = (r: { x: number; y: number; w: number; h: number } | null): string => r
+      ? `translate(${r.x - (target.left + target.width / 2)}px, ${r.y - (target.top + target.height / 2)}px) scale(${r.w / W})`
+      : 'translateY(120px) scale(0.4)';
+    this.abilityView = { layer, cardEl, key: cardId, from, slot };
+    layer.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 240, fill: 'both' });
+    cardEl.animate([{ transform: slot(from), opacity: 0.6 }, { transform: 'none', opacity: 1 }], { duration: 520, easing: 'cubic-bezier(.2,.8,.2,1)', fill: 'both' });
+    // The buttons float out from behind the card as it settles.
+    layer.querySelectorAll<HTMLElement>('.fb-wrap').forEach((wrap, i) => {
+      const dir = wrap.classList.contains('ok') ? -1 : 1;
+      wrap.animate(
+        [{ opacity: 0, transform: `translateX(${-dir * 60}px) scale(0.5)` }, { opacity: 1, transform: 'none' }],
+        { duration: 380, delay: 340 + i * 60, easing: 'cubic-bezier(.2,1.3,.4,1)', fill: 'both' });
     });
   }
 
-  /** Keep the buttons on the card while it is open (the layout can change under it: resize, fonts, art loading). */
-  private trackAbilityButtons(): void {
-    this.abilityRaf = null;
-    if (!this.abilityOk) return;
-    this.placeAbilityButtons();
-    this.abilityRaf = requestAnimationFrame(() => this.trackAbilityButtons());
+  /**
+   * One floating button: a solid capsule (a face over a stack of darker slices, so it has thickness) that leans toward
+   * the pointer, with a highlight that follows it. OK is green, Skip red.
+   */
+  private floatButton(a: InspectAction, caption: boolean): HTMLElement {
+    const skip = a.label === 'Skip';
+    const slices = Array.from({ length: 8 }, (_, i) => {
+      const slice = h('span', { class: 'fb-slab' });
+      slice.style.setProperty('--i', String(i + 1));
+      return slice;
+    });
+    const body = h('span', { class: 'fb-body' }, ...slices, h('span', { class: 'fb-face' }, a.label));
+    tiltOnPointer(body, 18);
+    const name = a.ability?.name ?? '';
+    const btn = h('button', { class: 'fb-btn', title: name, aria: { label: name ? `${a.label}: ${name}` : a.label }, on: { click: () => { sfx.play('click'); a.run(); } } }, body);
+    return h('div', { class: `fb-wrap ${skip ? 'skip' : 'ok'}` }, h('span', { class: 'fb-shadow' }), btn, caption && name ? h('span', { class: 'fb-caption' }, name) : null);
+  }
+
+  /** Send the ability view away: back to the table, or (OK pressed) straight out, as the ability's own showcase flies the card up next. */
+  private closeAbility(instant = false): void {
+    const v = this.abilityView;
+    if (!v) return;
+    this.abilityView = null;
+    const used = this.abilityUsed;
+    this.abilityUsed = false;
+    let released = false;
+    const release = (): void => {
+      if (released) return;
+      released = true;
+      v.layer.remove();
+      this.deps.hideCard(v.key, false);
+    };
+    if (instant) { release(); return; }
+    if (used) {
+      // Keep the table card hidden a little longer, so it does not blink back before the showcase takes it.
+      const fade = v.layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 160, fill: 'both' });
+      fade.finished.then(() => v.layer.remove(), () => v.layer.remove());
+      window.setTimeout(release, 650);
+      return;
+    }
+    const back = v.cardEl.animate([{ transform: 'none', opacity: 1 }, { transform: v.slot(v.from), opacity: 0.85 }], { duration: 420, easing: 'ease-in', fill: 'both' });
+    v.layer.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 420, fill: 'both' });
+    back.finished.then(release, release);
+    window.setTimeout(release, 900); // in case frames stop
   }
 
   /** Close the pinned card and, if it was armed, un-highlight it in the dock. */
@@ -1604,6 +1700,8 @@ export class Hud {
   }
 
   dispose(): void {
+    closeGameMenu();
+    this.closeAbility(true);
     document.body.classList.remove('log-open', 'notice-open');
     const w = this.noticeWaiters;
     this.noticeWaiters = [];

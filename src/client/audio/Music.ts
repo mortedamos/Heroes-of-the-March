@@ -47,6 +47,8 @@ class MusicPlayer {
   muted: boolean;
   /** 0..1 multiplier used to fade tracks out and in. */
   private fadeLevel = 1;
+  /** 0..1 multiplier while the camera is lifted away from the board (the place's own sounds come forward). */
+  private duck = 1;
   private fadeTimer: ReturnType<typeof setInterval> | null = null;
   /** Bumped by every track change so an older fade can tell it was superseded. */
   private changeId = 0;
@@ -210,8 +212,16 @@ class MusicPlayer {
   }
   setMuted(m: boolean): void { this.muted = m; this.applyVolume(); this.save(); this.emit(); }
 
+  /** Turn the music down (or back up) without touching the player's volume setting: 1 = as set. */
+  setDuck(level: number): void {
+    const d = Math.min(1, Math.max(0, level));
+    if (Math.abs(d - this.duck) < 0.002) return;
+    this.duck = d;
+    this.applyVolume();
+  }
+
   private applyVolume(): void {
-    this.audio.volume = this.muted ? 0 : this.volume * this.fadeLevel;
+    this.audio.volume = this.muted ? 0 : this.volume * this.fadeLevel * this.duck;
   }
   private save(): void {
     try { localStorage.setItem(STORE, JSON.stringify({ volume: this.volume, muted: this.muted })); } catch { /* private mode */ }

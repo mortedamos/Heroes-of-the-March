@@ -10,6 +10,7 @@ import ExcelJS from 'exceljs';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { applyCardNumbers } from './cardNumbers.ts';
 import type {
   CardDatabase, CompanionDef, EncounterDef, HeroDef, LocationDef, ResourceDef, Stat,
 } from '../src/engine/cardTypes.ts';
@@ -290,6 +291,8 @@ if (problems.length) {
 }
 
 const db: CardDatabase = { version: 'v0.3', heroes, companions, locations, encounters, resources };
+const numbered = applyCardNumbers(db);
+if (numbered) console.log(`gave ${numbered} new card(s) a number (data/card-numbers.json)`);
 mkdirSync(dirname(OUT), { recursive: true });
 writeFileSync(OUT, JSON.stringify(db, null, 1) + '\n');
 const withArt = [...heroes, ...companions, ...locations, ...encounters, ...resources].filter((c) => c.art).length;

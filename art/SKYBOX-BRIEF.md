@@ -18,7 +18,7 @@ swings low to look across it, seeing the horizon and the sky just above it. So:
 - Painterly, stylised fantasy, matching illustrated card art. Darker and calmer than the card art so cards stay readable. No text, no characters, no table, no ground plane, no UI.
 - Do not paint a bright sun disc low on the horizon (the game adds its own light shafts).
 
-Interiors (tavern, archive) are real interiors: walls, arches, rafters and ceiling in the panorama; the 3D table and props stand in front of it.
+Interiors (tavern, archive) are real interiors: walls, arches, rafters and ceiling in the panorama; the 3D table stands in front of it.
 
 ## Prompt prefix (prepend to every theme prompt)
 

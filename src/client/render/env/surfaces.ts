@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 
-export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'soft' | 'moss' | 'dirt' | 'lava' | 'leather';
+export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'slab' | 'steel' | 'soft' | 'moss' | 'dirt' | 'magma' | 'leather';
 
 export interface SurfaceSpec {
   kind: SurfaceKind;
@@ -14,9 +14,9 @@ export interface SurfaceSpec {
   tile: number;
   rough?: number;
   metal?: number;
-  /** Lava: the colour of the glowing cracks (also the emissive tint). */
+  /** Magma: the colour of the glowing cracks (also the emissive tint). */
   glow?: string;
-  opts?: { moss?: boolean; sparkle?: boolean; rows?: number; blobs?: number; r?: [number, number] };
+  opts?: { moss?: boolean; lichen?: boolean; sparkle?: boolean; nails?: boolean; rows?: number; blobs?: number; r?: [number, number] };
 }
 
 export type SkylineKind = 'castle' | 'pines' | 'peaks' | 'graves' | 'town' | 'stacks' | 'hills' | 'arches' | 'clouds';
@@ -146,7 +146,17 @@ function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasEle
         }
         g.fillStyle = rgba('#000000', 0.6);
         g.fillRect(0, r * h + h - 2, SIZE, 2);
-        g.fillRect(rnd() * SIZE, r * h, 2, h);
+        const joint = rnd() * SIZE;
+        g.fillRect(joint, r * h, 2, h);
+        if (o.nails) {
+          // A nail near each end of the board, either side of the butt joint.
+          for (const x of [joint - 14, joint + 16]) for (const y of [r * h + h * 0.28, r * h + h * 0.72]) {
+            g.fillStyle = rgba('#0b0805', 0.7);
+            g.beginPath(); g.arc(x, y, 2.4, 0, Math.PI * 2); g.fill();
+            g.fillStyle = rgba('#ffffff', 0.18);
+            g.fillRect(x - 1, y - 1.5, 1.5, 1);
+          }
+        }
       }
       speckle(g, 10, rnd);
       break;
@@ -174,6 +184,71 @@ function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasEle
       g.lineWidth = 1.5;
       for (let i = 0; i < 5; i++) wrapStroke(g, crack(rnd));
       if (o.moss) for (let i = 0; i < 40; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 12 + rnd() * 26, '#3f6b3a', 0.32);
+      speckle(g, 14, rnd);
+      break;
+    }
+
+    case 'slab': {
+      // Big weathered blocks: soft mottling, a few deep joints, hairline cracks, and whatever grows or settles on them.
+      for (let i = 0; i < 80; i++) {
+        blob(g, rnd() * SIZE, rnd() * SIZE, 30 + rnd() * 70, rnd() < 0.5 ? spec.b : mixHex(spec.a, '#000000', 0.55), 0.1 + rnd() * 0.16);
+      }
+      const rows = o.rows ?? 2;
+      const h = SIZE / rows;
+      for (let r = 0; r < rows; r++) {
+        g.fillStyle = rgba('#000000', 0.62);
+        g.fillRect(0, r * h, SIZE, 3);
+        g.fillStyle = rgba('#ffffff', 0.07);
+        g.fillRect(0, r * h + 3, SIZE, 1.5);
+        const x = rnd() * SIZE;
+        g.fillStyle = rgba('#000000', 0.62);
+        g.fillRect(x, r * h, 3, h);
+        g.fillStyle = rgba('#ffffff', 0.07);
+        g.fillRect(x + 3, r * h + 3, 1.5, h - 3);
+      }
+      g.strokeStyle = rgba('#000000', 0.42);
+      g.lineWidth = 1.2;
+      for (let i = 0; i < 7; i++) wrapStroke(g, crack(rnd));
+      if (o.moss) for (let i = 0; i < 46; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 10 + rnd() * 26, rnd() < 0.7 ? '#3f6b3a' : '#59803a', 0.34);
+      if (o.lichen) {
+        // Crusty rosettes: a few overlapping dots each.
+        const hues = ['#a3ad7c', '#b7b88b', '#8f9f86', '#c2b97f'];
+        for (let i = 0; i < 34; i++) {
+          const cx = rnd() * SIZE;
+          const cy = rnd() * SIZE;
+          const col = hues[Math.floor(rnd() * hues.length)]!;
+          for (let k = 0; k < 7; k++) {
+            g.fillStyle = rgba(col, 0.22 + rnd() * 0.2);
+            g.beginPath(); g.arc(cx + (rnd() - 0.5) * 12, cy + (rnd() - 0.5) * 12, 1.2 + rnd() * 3.2, 0, Math.PI * 2); g.fill();
+          }
+        }
+      }
+      if (o.sparkle) {
+        for (let i = 0; i < 16; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 20 + rnd() * 50, '#f4f9ff', 0.2);
+        g.fillStyle = rgba('#ffffff', 0.8);
+        for (let i = 0; i < 160; i++) g.fillRect(rnd() * SIZE, rnd() * SIZE, 1 + rnd(), 1 + rnd());
+      }
+      speckle(g, 16, rnd);
+      break;
+    }
+
+    case 'steel': {
+      // Worn dark steel: brushed along its length, pitted with hammer dents, a few heat stains.
+      for (let i = 0; i < 380; i++) {
+        const x = rnd() * SIZE;
+        const y = rnd() * SIZE;
+        g.strokeStyle = rgba(rnd() < 0.5 ? '#ffffff' : '#000000', 0.04 + rnd() * 0.08);
+        g.lineWidth = 0.6 + rnd();
+        wrapStroke(g, [[x, y], [x + 50 + rnd() * 240, y + (rnd() - 0.5) * 3]]);
+      }
+      for (let i = 0; i < 9; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 40 + rnd() * 70, rnd() < 0.5 ? '#6a4a30' : '#2a3a52', 0.2);
+      for (let i = 0; i < 46; i++) {
+        const x = rnd() * SIZE;
+        const y = rnd() * SIZE;
+        const r = 4 + rnd() * 10;
+        blob(g, x, y, r, '#000000', 0.42);
+        blob(g, x - r * 0.35, y - r * 0.35, r * 0.6, '#ffffff', 0.12);
+      }
       speckle(g, 14, rnd);
       break;
     }
@@ -222,42 +297,31 @@ function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasEle
       break;
     }
 
-    case 'lava': {
-      // Dark crust plates; the seams between them glow.
-      const rows = o.rows ?? 5;
-      const h = SIZE / rows;
+    case 'magma': {
+      // Dark, broken rock. Here and there a crack runs hot.
       let gg: CanvasRenderingContext2D;
       [glow, gg] = canvas(SIZE, SIZE);
-      gg.fillStyle = spec.glow ?? '#ff6a1e';
+      gg.fillStyle = '#000000';
       gg.fillRect(0, 0, SIZE, SIZE);
-      g.fillStyle = '#050302';
-      g.fillRect(0, 0, SIZE, SIZE);
-      for (let r = 0; r < rows; r++) {
-        const cuts = Array.from({ length: 2 + Math.floor(rnd() * 3) }, () => rnd()).sort();
-        const xs = [0, ...cuts.map((c) => c * SIZE), SIZE];
-        for (let i = 0; i < xs.length - 1; i++) {
-          const x0 = xs[i]!;
-          const x1 = xs[i + 1]!;
-          if (x1 - x0 < 14) continue;
-          // Each plate sits a little differently, so the seams wander instead of forming a grid.
-          const top = r * h + 3 + rnd() * 5;
-          const bottom = (r + 1) * h - 3 - rnd() * 5;
-          g.fillStyle = mixHex(spec.a, spec.b, rnd());
-          g.fillRect(x0 + 3, top, x1 - x0 - 6, bottom - top);
-          gg.fillStyle = '#000000';
-          gg.fillRect(x0 + 6, top + 3, x1 - x0 - 12, bottom - top - 6);
-          // A few plates run hotter, with a crack across them.
-          if (rnd() < 0.3) {
-            g.strokeStyle = rgba('#050302', 0.8);
-            gg.strokeStyle = spec.glow ?? '#ff6a1e';
-            g.lineWidth = 3; gg.lineWidth = 1.6;
-            const pts = [[x0 + 10 + rnd() * (x1 - x0 - 20), top + 4], [x0 + 10 + rnd() * (x1 - x0 - 20), (top + bottom) / 2], [x0 + 10 + rnd() * (x1 - x0 - 20), bottom - 4]] as [number, number][];
-            g.beginPath(); pts.forEach(([x, y], k) => (k ? g.lineTo(x, y) : g.moveTo(x, y))); g.stroke();
-            gg.beginPath(); pts.forEach(([x, y], k) => (k ? gg.lineTo(x, y) : gg.moveTo(x, y))); gg.stroke();
-          }
-        }
+      for (let i = 0; i < 60; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 16 + rnd() * 50, spec.b, 0.28);
+      for (let i = 0; i < 50; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 14 + rnd() * 40, '#050403', 0.3);
+      g.strokeStyle = rgba('#000000', 0.5);
+      g.lineWidth = 1.4;
+      for (let i = 0; i < 16; i++) wrapStroke(g, crack(rnd));
+      const hot = spec.glow ?? '#ff5a1e';
+      for (let i = 0; i < 4; i++) {
+        const pts = crack(rnd);
+        g.strokeStyle = rgba('#000000', 0.8);
+        g.lineWidth = 6;
+        wrapStroke(g, pts);
+        gg.strokeStyle = rgba(hot, 0.3);
+        gg.lineWidth = 12;
+        wrapStroke(gg, pts);
+        gg.strokeStyle = hot;
+        gg.lineWidth = 3.4;
+        wrapStroke(gg, pts);
       }
-      speckle(g, 12, rnd);
+      speckle(g, 16, rnd);
       break;
     }
 
@@ -485,8 +549,6 @@ export function paintSkyline(kind: SkylineKind, color: string, seed: number): HT
 
 let dot: THREE.CanvasTexture | null = null;
 let beam: THREE.CanvasTexture | null = null;
-let flame: THREE.CanvasTexture | null = null;
-let books: THREE.CanvasTexture | null = null;
 
 /** A soft round dot (particles, fog banks). */
 export function dotTexture(): THREE.CanvasTexture {
@@ -515,49 +577,4 @@ export function beamTexture(): THREE.CanvasTexture {
   }
   g.putImageData(img, 0, 0);
   return (beam = new THREE.CanvasTexture(c));
-}
-
-/** A teardrop flame for braziers and candles. */
-export function flameTexture(): THREE.CanvasTexture {
-  if (flame) return flame;
-  const [c, g] = canvas(64, 128);
-  const gr = g.createRadialGradient(32, 84, 2, 32, 76, 46);
-  gr.addColorStop(0, 'rgba(255,248,200,1)');
-  gr.addColorStop(0.3, 'rgba(255,180,70,0.9)');
-  gr.addColorStop(0.7, 'rgba(255,90,20,0.35)');
-  gr.addColorStop(1, 'rgba(255,60,0,0)');
-  g.fillStyle = gr;
-  g.beginPath();
-  g.moveTo(32, 4);
-  g.bezierCurveTo(54, 50, 62, 70, 32, 124);
-  g.bezierCurveTo(2, 70, 10, 50, 32, 4);
-  g.fill();
-  return (flame = new THREE.CanvasTexture(c));
-}
-
-/** Rows of book spines, for the shelves. */
-export function bookTexture(): THREE.CanvasTexture {
-  if (books) return books;
-  const [c, g] = canvas(256, 256);
-  const rnd = rngOf(77);
-  g.fillStyle = '#1a100a';
-  g.fillRect(0, 0, 256, 256);
-  const cols = ['#6b1d1d', '#1d3a6b', '#2f5a2a', '#7a5a1d', '#4a1d5a', '#1d5a5a', '#8a4a1d', '#3a3a3a'];
-  for (let row = 0; row < 4; row++) {
-    let x = 4;
-    while (x < 250) {
-      const w = 6 + rnd() * 9;
-      const h = 40 + rnd() * 20;
-      g.fillStyle = cols[Math.floor(rnd() * cols.length)]!;
-      g.fillRect(x, row * 64 + 60 - h, w, h);
-      g.fillStyle = rgba('#d9b96a', 0.5);
-      g.fillRect(x + 1, row * 64 + 60 - h + 6, w - 2, 2);
-      x += w + 1;
-    }
-    g.fillStyle = '#3a2412';
-    g.fillRect(0, row * 64 + 60, 256, 4);
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  return (books = t);
 }

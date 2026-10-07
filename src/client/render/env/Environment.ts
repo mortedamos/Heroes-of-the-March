@@ -5,11 +5,25 @@
 import * as THREE from 'three';
 import { surfaceMaterial, type SurfaceSpec } from './surfaces';
 import { buildThemeScene, type ThemeScene } from './props';
+import { groundMaterial, type GroundUniforms } from './ground';
+import { TABLE_CORNER } from './tables';
 import { THEMES, themeFor, type Look, type ThemeId } from './themes';
 
-const FLOOR_Y = -0.9;
 const FADE_S = 1.8;
-const FLOOR_SIZE = 160;
+/** How thick the fog and the horizon haze are before the player changes them (1 = the full amount each place was designed with). */
+export const FOG_DEFAULT = 0.5;
+export const HAZE_DEFAULT = 0.5;
+/**
+ * The sky oval: semi-axes in world units (along the table, up, behind the table), and how far its middle is sunk below the
+ * ground. Sunk, the panorama's own horizon is hidden behind the ground, so the far edge of the ground meets the sky a little
+ * above it, in the part of the picture that fades into the ground's fog colour (see horizonColor). It moves with the ground.
+ */
+const DOME = { long: 125, tall: 125, short: 80, below: 3.1 };
+
+/** The ground reaches past the sky oval on every side, so no lower half of the panorama shows beyond its edge. */
+const FLOOR_SIZE = DOME.long * 2 + 40;
+/** The floor is cut into this many squares a side, so the swell of waves and clouds has vertices to move. */
+const FLOOR_CELLS = 160;
 
 export interface EnvLights { hemi: THREE.HemisphereLight; key: THREE.DirectionalLight; warm: THREE.PointLight }
 
@@ -89,12 +103,23 @@ export class Environment {
   private readonly table = new THREE.Group();
   private readonly fog: THREE.Fog;
   private readonly bg: THREE.Color;
+  private readonly fogRgb = { r: 0, g: 0, b: 0 };
+  /** Debug: 1 = the fog each place was designed with, 0 = none, higher = thicker. */
+  private fogLevel = FOG_DEFAULT;
+  /** Debug: a place held fixed whatever the game reveals. */
+  private pinnedTheme: ThemeId | null = null;
   private readonly dome: THREE.Mesh;
   private readonly blank = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
   private readonly domeUniforms = {
     top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() },
     skyFrom: { value: this.blank as THREE.Texture }, skyTo: { value: this.blank as THREE.Texture },
     wFrom: { value: 0 }, wTo: { value: 0 },
+    /** How far each panorama has slid round the sky (a fraction of a turn). */
+    offFrom: { value: 0 }, offTo: { value: 0 },
+    /** The fog colour as it is shown on screen (output colour space), for the sky to meet the ground. */
+    fogOut: { value: new THREE.Vector3() },
+    /** Scales how high the horizon haze reaches (1 = as designed; the debug panel changes it). */
+    haze: { value: HAZE_DEFAULT },
   };
   private readonly skies = new Map<ThemeId, THREE.Texture>();
   /** Horizon colour read from each loaded panorama, so the ground fades into the sky without a seam. */
@@ -104,7 +129,24 @@ export class Environment {
   private artReady: Promise<void> = Promise.resolve();
   private readonly accents: THREE.PointLight[];
   private readonly rimMat = new THREE.MeshStandardMaterial();
-  private readonly plinthMat = new THREE.MeshStandardMaterial({ roughness: 0.9 });
+  private readonly plinthMat = new THREE.MeshStandardMaterial({ roughness: 0.9, transparent: true });
+  private plinth: THREE.Mesh | null = null;
+  /** What every moving or broken ground shares: the clock and the table's footprint. */
+  private readonly groundU: GroundUniforms = { time: { value: 0 }, table: { value: new THREE.Vector4(9.5, 6.3, 0, 0) } };
+  /** The sea, the sky and the ground turned together, so the whole backdrop can rock round the table. */
+  private readonly backdrop = new THREE.Group();
+  /** How far the backdrop rocks now (peak degrees), and the amounts it is easing between. */
+  private sway = 0;
+  private swayFrom = 0;
+  private swayTo = 0;
+  /** The ground's height now, and the heights it is moving between (the table stands higher over some grounds than others). */
+  private ground = 0;
+  private groundFrom = 0;
+  private groundTo = 0;
+  /** How much of the plain felt slab (rim and plinth) is still showing: 1 for the felt, 0 for any place with a table of its own. */
+  private plain = 1;
+  private plainFrom = 1;
+  private plainTo = 1;
   private readonly topLayer: Layer;
   private readonly floorLayer: Layer;
   private readonly scenes = new Map<ThemeId, ThemeScene>();
@@ -141,24 +183,33 @@ export class Environment {
     });
 
     this.dome = new THREE.Mesh(
-      new THREE.SphereGeometry(100, 24, 12),
+      // A unit sphere with plenty of facets (a coarse one bends straight lines in the panorama into a "box"), stretched below.
+      new THREE.SphereGeometry(1, 96, 48),
       new THREE.ShaderMaterial({
         uniforms: this.domeUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
         vertexShader: 'varying vec3 vP; varying vec2 vUv; void main(){ vP = normalize(position); vUv = vec2(1.0 - uv.x, uv.y); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-        fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; varying vec3 vP; varying vec2 vUv;\nvoid main(){ float h = pow(clamp(vP.y, 0.0, 1.0), 0.55); vec3 c = mix(bottom, top, h);\nc = mix(c, texture2D(skyFrom, vUv).rgb, wFrom); c = mix(c, texture2D(skyTo, vUv).rgb, wTo); gl_FragColor = vec4(c, 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n}',
+        fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform vec3 fogOut; uniform float haze; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; uniform float offFrom; uniform float offTo; varying vec3 vP; varying vec2 vUv;\nvoid main(){ float h = pow(clamp(vP.y, 0.0, 1.0), mix(0.55, 1.4, max(wFrom, wTo))); vec3 c = mix(bottom, top, h);\nfloat vis = smoothstep(0.07 * haze, 0.32 * haze + 0.001, vP.y); c = mix(c, texture2D(skyFrom, vec2(vUv.x + offFrom, vUv.y)).rgb, wFrom * vis); c = mix(c, texture2D(skyTo, vec2(vUv.x + offTo, vUv.y)).rgb, wTo * vis); gl_FragColor = vec4(c, 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n// The ground fades into the fog colour, which is not tone mapped: so the sky meets it as exactly that colour, with no line.\ngl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * haze, 0.3 * haze + 0.001, vP.y));\n}',
       }),
     );
+    // An oval, not a ball: long across the table (x) and shallow behind it (z). The camera looks along the short axis,
+    // so what it sees is the long, gently curved side of the oval: a wide backdrop, not the inside of a box. The
+    // height matches the length so the panorama keeps its proportions where it is seen.
+    this.dome.scale.set(DOME.long, DOME.tall, DOME.short);
     this.dome.renderOrder = -2;
-    this.group.add(this.dome);
+    this.backdrop.add(this.dome);
+    this.group.add(this.backdrop);
 
     const first = THEMES.felt;
+    this.ground = this.groundFrom = this.groundTo = -first.table.height;
+    this.plain = this.plainFrom = this.plainTo = first.table.kind === 'plain' ? 1 : 0;
+    this.sway = this.swayFrom = this.swayTo = first.sway ?? 0;
     this.topLayer = this.makeLayer(first.top, 1 / first.top.tile, 0.004);
     this.floorLayer = this.makeLayer(first.floor, FLOOR_SIZE / first.floor.tile, 0.01);
-    this.floorLayer.base.geometry = this.floorLayer.fade.geometry = new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE);
-    for (const m of [this.floorLayer.base, this.floorLayer.fade]) { m.rotation.x = -Math.PI / 2; m.position.y = FLOOR_Y; }
-    this.floorLayer.fade.position.y += 0.01;
-    this.group.add(this.floorLayer.base, this.floorLayer.fade);
+    this.floorLayer.base.geometry = this.floorLayer.fade.geometry = new THREE.PlaneGeometry(FLOOR_SIZE, FLOOR_SIZE, FLOOR_CELLS, FLOOR_CELLS);
+    for (const m of [this.floorLayer.base, this.floorLayer.fade]) m.rotation.x = -Math.PI / 2;
+    this.backdrop.add(this.floorLayer.base, this.floorLayer.fade);
     this.table.add(this.topLayer.base, this.topLayer.fade);
+    this.placeGround();
 
     this.shown.set(first.look);
     this.from.copy(this.shown);
@@ -195,6 +246,8 @@ export class Environment {
     new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}locations/${file}`, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = this.aniso;
+      // So a panorama that slides round the sky wraps past its own edge.
+      tex.wrapS = THREE.RepeatWrapping;
       this.skies.set(id, tex);
       this.bindSkies();
       const fog = this.horizonColor(tex);
@@ -208,7 +261,7 @@ export class Environment {
     });
   }
 
-  /** The average colour of the band just around the panorama's horizon, a touch darker. */
+  /** The average colour of the band of the panorama where the far edge of the ground meets it (just above its horizon), a touch darker. */
   private horizonColor(tex: THREE.Texture): THREE.Color | null {
     try {
       const img = tex.image as CanvasImageSource;
@@ -216,7 +269,7 @@ export class Environment {
       c.width = 64; c.height = 32;
       const g = c.getContext('2d')!;
       g.drawImage(img, 0, 0, 64, 32);
-      const d = g.getImageData(0, 15, 64, 3).data;
+      const d = g.getImageData(0, 13, 64, 2).data;
       let r = 0, gr = 0, b = 0;
       const n = d.length / 4;
       for (let i = 0; i < d.length; i += 4) { r += d[i]!; gr += d[i + 1]!; b += d[i + 2]!; }
@@ -236,6 +289,8 @@ export class Environment {
     const spec = THEMES[theme][which];
     const repeat = which === 'top' ? 1 / spec.tile : FLOOR_SIZE / spec.tile;
     const mat = surfaceMaterial(spec, repeat, this.aniso);
+    const shape = THEMES[theme].floorShape;
+    if (which === 'floor' && shape) groundMaterial(mat, shape, this.groundU);
     const file = this.art[theme]?.[which];
     if (file) {
       const tile = this.art[theme]?.tile ?? spec.tile;
@@ -257,7 +312,32 @@ export class Environment {
 
   /** Follow the location on the table: null keeps whatever is showing. */
   setLocation(def: string | null | undefined): void {
-    if (def) this.setTheme(themeFor(def));
+    if (def && !this.pinnedTheme) this.setTheme(themeFor(def));
+  }
+
+  // --- debug controls ---------------------------------------------------------------
+
+  /** Every look the table can have. */
+  get themeIds(): ThemeId[] { return Object.keys(THEMES) as ThemeId[]; }
+  get pinned(): ThemeId | null { return this.pinnedTheme; }
+  /** Hold one look fixed (null: follow the game's locations again). */
+  pin(id: ThemeId | null): void {
+    this.pinnedTheme = id;
+    if (id) this.setTheme(id);
+  }
+  get fogAmount(): number { return this.fogLevel; }
+  /** 0 = no fog, 1 = as designed, higher = the fog starts nearer. */
+  setFogLevel(level: number): void {
+    this.fogLevel = Math.max(0, level);
+    this.setCameraDistance(this.camDist);
+  }
+  get hazeAmount(): number { return this.domeUniforms.haze.value; }
+  setHaze(level: number): void { this.domeUniforms.haze.value = Math.max(0, level); }
+
+  /** Where the fog starts and ends, from the look's own numbers and the debug fog level. */
+  private fogRange(n: { fogNear: number; fogFar: number }): { near: number; far: number } {
+    if (this.fogLevel <= 0.001) return { near: 1e5, far: 2e5 };
+    return { near: this.camDist + n.fogNear / this.fogLevel, far: this.camDist + n.fogFar / this.fogLevel };
   }
 
   setTheme(id: ThemeId, instant = false): void {
@@ -268,6 +348,13 @@ export class Environment {
     const th = THEMES[id];
     this.begin(this.topLayer, this.surface(id, 'top'), instant);
     this.begin(this.floorLayer, this.surface(id, 'floor'), instant);
+    // The ground and the felt slab ease to their new state along with the light.
+    this.groundFrom = this.ground;
+    this.groundTo = -th.table.height;
+    this.plainFrom = this.plain;
+    this.plainTo = th.table.kind === 'plain' ? 1 : 0;
+    this.swayFrom = this.sway;
+    this.swayTo = th.sway ?? 0;
     this.from.copy(this.shown);
     this.to.set(th.look);
     const auto = this.autoFog.get(id);
@@ -275,7 +362,13 @@ export class Environment {
     if (auto) this.to.sky.copy(auto);
     else if (fog) this.to.sky.set(fog);
     this.look = instant ? 1 : 0;
-    if (instant) this.shown.copy(this.to);
+    if (instant) {
+      this.shown.copy(this.to);
+      this.ground = this.groundTo;
+      this.plain = this.plainTo;
+      this.sway = this.swayTo;
+      this.placeGround();
+    }
     this.ensureScene(id);
     if (instant) this.scenes.get(id)?.setFade(1);
   }
@@ -292,9 +385,9 @@ export class Environment {
     let ts = this.scenes.get(id);
     if (ts) return ts;
     const th = THEMES[id];
-    if (th.props === 'none' && !th.fx.length && !th.skyline && !th.beams.n && !th.mist) return undefined;
+    if (th.table.kind === 'plain' && !th.fx.length && !th.skyline && !th.beams.n && !th.mist) return undefined;
     const art = this.art[id];
-    ts = buildThemeScene(th, { key: this.lights.key }, this.coarse, Object.keys(THEMES).indexOf(id) + 1, !!art?.sky && !art.keepSkyline);
+    ts = buildThemeScene(th, { key: this.lights.key, aniso: this.aniso }, this.coarse, Object.keys(THEMES).indexOf(id) + 1, !!art?.sky && !art.keepSkyline);
     ts.layout(this.dims.w, this.dims.d, this.dims.cz);
     this.group.add(ts.group);
     this.scenes.set(id, ts);
@@ -330,8 +423,9 @@ export class Environment {
   /** The distance from the camera to the table, so the fog stays behind it. */
   setCameraDistance(dist: number): void {
     this.camDist = dist;
-    this.fog.near = dist + this.shown.n.fogNear;
-    this.fog.far = dist + this.shown.n.fogFar;
+    const r = this.fogRange(this.shown.n);
+    this.fog.near = r.near;
+    this.fog.far = r.far;
   }
 
   /** (Re)build the slab the cards lie on: top, rim and plinth, `w` x `d` and centred on z = `cz`. */
@@ -340,6 +434,7 @@ export class Environment {
     if (key === this.tableKey) return;
     this.tableKey = key;
     this.dims = { w, d, cz };
+    this.groundU.table.value.set(w / 2, d / 2, cz, 0);
     for (const o of [...this.table.children]) {
       if (o === this.topLayer.base || o === this.topLayer.fade) continue;
       (o as THREE.Mesh).geometry.dispose();
@@ -347,7 +442,7 @@ export class Environment {
     }
     this.table.position.z = cz;
 
-    const r = 2.8;
+    const r = TABLE_CORNER;
     const shape = new THREE.Shape();
     shape.moveTo(-w / 2 + r, -d / 2);
     shape.lineTo(w / 2 - r, -d / 2);
@@ -376,14 +471,17 @@ export class Environment {
     rim.castShadow = rim.receiveShadow = true;
     this.table.add(rim);
 
-    // The slab the table top sits on, so it stands in the place instead of floating over it.
+    // The slab the plain felt top sits on, so it stands in the place instead of floating over it. (Every other
+    // table has a body of its own: see tables.ts.)
     const plinthGeo = new THREE.ExtrudeGeometry(shape, { depth: 0.9, bevelEnabled: false, curveSegments: 24 });
     plinthGeo.scale(0.985, 0.985, 1);
     const plinth = new THREE.Mesh(plinthGeo, this.plinthMat);
     plinth.rotation.x = -Math.PI / 2;
-    plinth.position.y = FLOOR_Y - 0.04;
+    plinth.position.y = -THEMES.felt.table.height - 0.04;
     plinth.castShadow = plinth.receiveShadow = true;
+    plinth.visible = this.plain > 0.002;
     this.table.add(plinth);
+    this.plinth = plinth;
 
     for (const ts of this.scenes.values()) ts.layout(w, d, cz);
   }
@@ -394,10 +492,16 @@ export class Environment {
     this.last = now;
     const motion = this.motionQuery?.matches ? 0.25 : 1;
     this.time += dt * motion;
+    this.groundU.time.value = this.time;
 
     if (this.look < 1) {
       this.look = Math.min(1, this.look + dt / FADE_S);
-      this.shown.lerp(this.from, this.to, smooth(this.look));
+      const k = smooth(this.look);
+      this.shown.lerp(this.from, this.to, k);
+      this.ground = this.groundFrom + (this.groundTo - this.groundFrom) * k;
+      this.plain = this.plainFrom + (this.plainTo - this.plainFrom) * k;
+      this.sway = this.swayFrom + (this.swayTo - this.swayFrom) * k;
+      this.placeGround();
     }
     for (const layer of [this.topLayer, this.floorLayer]) {
       if (!layer.active) continue;
@@ -418,8 +522,26 @@ export class Environment {
     const e = smooth(this.look);
     this.domeUniforms.wTo.value = this.skyTo && this.skies.has(this.skyTo) ? e : 0;
     this.domeUniforms.wFrom.value = this.skyFrom && this.skies.has(this.skyFrom) ? 1 - e : 0;
+    // Some panoramas slide slowly round the sky, so the ships (or the clouds) in them pass by.
+    this.domeUniforms.offTo.value = this.skyTo ? (this.time * (THEMES[this.skyTo].skyScroll ?? 0)) % 1 : 0;
+    this.domeUniforms.offFrom.value = this.skyFrom ? (this.time * (THEMES[this.skyFrom].skyScroll ?? 0)) % 1 : 0;
     this.pulseGlow();
+    this.rock(this.time);
     this.apply(this.time);
+  }
+
+  /** Rock the sea and the sky about the table, slowly and unevenly, as if it were bobbing on the water. */
+  private rock(t: number): void {
+    const a = (this.sway * Math.PI) / 180;
+    this.backdrop.rotation.z = a * (Math.sin(t * 0.9) * 0.7 + Math.sin(t * 0.47 + 1.3) * 0.3);
+    this.backdrop.rotation.x = a * 0.6 * (Math.sin(t * 0.71 + 0.8) * 0.7 + Math.sin(t * 1.23) * 0.3);
+  }
+
+  /** Put the ground, and the sky that is sunk below it, at the current ground height. */
+  private placeGround(): void {
+    this.floorLayer.base.position.y = this.ground;
+    this.floorLayer.fade.position.y = this.ground + 0.01;
+    this.dome.position.y = this.ground - DOME.below;
   }
 
   /** Lava cracks breathe. */
@@ -431,8 +553,8 @@ export class Environment {
     };
     set(this.topLayer.base.material, 0.5);
     set(this.topLayer.fade.material, 0.5);
-    set(this.floorLayer.base.material, 0.25);
-    set(this.floorLayer.fade.material, 0.25);
+    set(this.floorLayer.base.material, 0.8);
+    set(this.floorLayer.fade.material, 0.8);
   }
 
   /** Push the blended look onto the scene's lights, fog and sky. */
@@ -441,10 +563,13 @@ export class Environment {
     const n = s.n;
     this.bg.copy(s.sky);
     this.fog.color.copy(s.sky);
-    this.fog.near = this.camDist + n.fogNear;
-    this.fog.far = this.camDist + n.fogFar;
+    const r = this.fogRange(n);
+    this.fog.near = r.near;
+    this.fog.far = r.far;
     this.domeUniforms.top.value.copy(s.skyTop);
     this.domeUniforms.bottom.value.copy(s.sky);
+    this.fog.color.getRGB(this.fogRgb, this.renderer.outputColorSpace);
+    this.domeUniforms.fogOut.value.set(this.fogRgb.r, this.fogRgb.g, this.fogRgb.b);
     this.renderer.toneMappingExposure = n.exposure;
     const { hemi, key, warm } = this.lights;
     hemi.color.copy(s.hemiSky); hemi.groundColor.copy(s.hemiGround); hemi.intensity = n.hemi;
@@ -460,6 +585,8 @@ export class Environment {
     this.rimMat.roughness = n.rimRough;
     this.rimMat.metalness = n.rimMetal;
     this.plinthMat.color.copy(s.rim).multiplyScalar(0.7);
+    this.plinthMat.opacity = this.plain;
+    if (this.plinth) this.plinth.visible = this.plain > 0.002;
   }
 
   dispose(): void {

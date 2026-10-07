@@ -1,6 +1,6 @@
 // The music popover: play/pause, previous/next track, volume and mute.
-// One instance lives on the page for the whole session; the top bar button
-// just opens it under itself.
+// One instance lives on the page for the whole session; the game menu opens it
+// under the menu button.
 
 import { music } from '../audio/Music';
 import { sfx } from '../audio/Sfx';
@@ -38,7 +38,8 @@ function place(): void {
   if (!anchor) return;
   const r = anchor.getBoundingClientRect();
   panel.style.top = `${Math.round(r.bottom + 6)}px`;
-  panel.style.right = `${Math.max(8, Math.round(window.innerWidth - r.right))}px`;
+  panel.style.left = `${Math.max(8, Math.round(r.left))}px`;
+  panel.style.right = 'auto';
 }
 
 function mount(): void {
@@ -59,6 +60,10 @@ function mount(): void {
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') panel.classList.add('hidden'); });
   window.addEventListener('resize', place);
+}
+
+export function closeMusicMenu(): void {
+  panel.classList.add('hidden');
 }
 
 export function toggleMusicMenu(button: HTMLElement): void {
