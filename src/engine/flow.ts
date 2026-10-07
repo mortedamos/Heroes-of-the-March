@@ -4,7 +4,7 @@
 // Turn order:
 //   turnStart -> [turnStart window] -> companions -> location -> [afterLocation window]
 //   -> encounter -> challenge (the encounter's one stat is announced) -> [beforeBidding window] -> bidding
-//   (activated abilities may be used on your bidding decisions) -> reveal
+//   (activated abilities may be used on your bidding decisions) -> [beforeReveal window] -> reveal
 //   -> [endOfBidding window] -> resolve -> turnEnd
 
 import { abilityOf, peekTop, type OwnedSource } from './abilities';
@@ -374,8 +374,8 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     const t = ctx.s.turn;
     const n = ctx.s.players.length;
     if (t.passesInARow >= n) {
-      t.step = 'reveal';
       t.revealCursor = t.bidder; // the player who would have bid next
+      goTo(ctx, 'winBeforeReveal');
       return;
     }
     const p = ctx.s.players[t.bidder]!;
@@ -390,6 +390,8 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     const canFaceDown = faceUp && Boolean(playerHas(ctx, p, (a) => a.mayBidFaceDown));
     ctx.decide({ kind: 'bid', player: p.id, faceUp, canFaceDown, abilities });
   },
+
+  winBeforeReveal: (ctx) => runWindow(ctx, 'beforeReveal', 'reveal'),
 
   reveal(ctx) {
     const t = ctx.s.turn;

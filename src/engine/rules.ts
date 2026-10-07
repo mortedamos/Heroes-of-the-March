@@ -135,7 +135,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'mags', topic: 'Mags Tolliver',
     ruling: 'Used at the end of bidding; she is discarded at the end of the turn only if her ability was used.' },
   { id: 'hobby', topic: 'Mayor Hobby',
-    ruling: 'His first bid may be face down too. Face-down cards still reveal in the normal reveal step.' },
+    ruling: 'He may play every resource face down, not only the first. Face-down cards reveal in the normal reveal step.' },
   { id: 'pip', topic: 'Pip Wanderfoot',
     ruling: 'The claimed card becomes Pip\'s bid, stays face down until the reveal step, and Pip may look at it.' },
   { id: 'geese', topic: 'The geese',

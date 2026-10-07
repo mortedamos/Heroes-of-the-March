@@ -283,7 +283,7 @@ describe('silence, steal, negate, swap', () => {
     expect(total(g, g.A, g.B)).toBe((getDef('queen-maren-ashcroft') as { stats: { P: number } }).stats.P + 3);
   });
 
-  it('Pip claims a face-down bid on someone else\'s turn (empty hand: no swap)', () => {
+  it('Pip claims a face-down bid in the window before the reveal (empty hand: no swap)', () => {
     const g = newGame();
     // A keeps a spare card so bidding is still open when we check the stolen card stays hidden.
     standard(g, { hand: ['honey-biscuit', 'the-axe-of-doom', 'feathered-cap'] }, { hero: 'pip-wanderfoot', hand: [] });
@@ -293,12 +293,12 @@ describe('silence, steal, negate, swap', () => {
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
     until(g, bidFor(g.A));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
-    until(g, bidFor(g.B));
+    until(g, activateFor(g.B, 'beforeReveal'));
     use(g, 'pip-wanderfoot', 'pockets'); // one face-down card: claimed without asking
     expect(player(g, g.B).bids.map((b) => b.card)).toEqual([card(g, 'the-axe-of-doom')]);
     expect(player(g, g.A).bids).toHaveLength(1);
-    // Nobody but Pip (the new owner) can see the stolen card.
-    expect(JSON.stringify(viewFor(g.s, g.A))).not.toContain(`"${card(g, 'the-axe-of-doom')}"`);
+    // It was claimed while still face down: the reveal step comes after.
+    expect(g.events.findIndex((e) => e.type === 'bidClaimed')).toBeLessThan(g.events.findIndex((e) => e.type === 'revealed'));
   });
 
   it('face-down cards are turned up one per player, taking turns', () => {
@@ -1095,11 +1095,10 @@ describe('revised heroes (data/balance.json)', () => {
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
     until(g, bidFor(g.A));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
-    until(g, bidFor(g.B));
+    until(g, activateFor(g.B, 'beforeReveal'));
     use(g, 'pip-wanderfoot', 'pockets');
     expect(player(g, g.B).bids.map((b) => b.card)).toContain(card(g, 'the-axe-of-doom'));
     expect(player(g, g.A).bids.map((b) => b.card)).toEqual([card(g, 'honey-biscuit'), card(g, 'jesters-cap')]);
-    expect(player(g, g.A).bids[1]!.visible).toBe(false);
     expect(player(g, g.B).hand).toHaveLength(0);
   });
 

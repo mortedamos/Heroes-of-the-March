@@ -48,13 +48,13 @@ export interface HudDeps {
 const STEP_LABEL: Record<string, string> = {
   draft: 'Choosing heroes', companionDraft: 'Choosing companions', turnStart: 'Start of turn', winTurnStart: 'Start of turn', companions: 'Companion phase', location: 'Location',
   winAfterLocation: 'Location', encounter: 'Encounter', challenge: 'Encounter',
-  winBeforeBidding: 'Before bidding', bidding: 'Bidding', reveal: 'Revealing bids', winEndOfBidding: 'End of bidding',
+  winBeforeBidding: 'Before bidding', bidding: 'Bidding', winBeforeReveal: 'Before the reveal', reveal: 'Revealing bids', winEndOfBidding: 'End of bidding',
   resolve: 'Resolving', turnEnd: 'End of turn', gameOver: 'Game over',
 };
 
 const WINDOW_LABEL: Record<string, string> = {
   turnStart: 'Start of turn', afterLocation: 'Location revealed',
-  beforeBidding: 'Before bidding', bidding: 'Bidding', endOfBidding: 'End of bidding',
+  beforeBidding: 'Before bidding', bidding: 'Bidding', beforeReveal: 'Before the reveal', endOfBidding: 'End of bidding',
 };
 
 /** Smallest on-screen rules-text size (CSS px) we treat as readable without a text copy. */

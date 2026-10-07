@@ -89,7 +89,7 @@ export interface TurnEffect {
 }
 
 /** Points in the turn where players may use activated abilities. */
-export type AbilityWindow = 'turnStart' | 'afterLocation' | 'beforeBidding' | 'bidding' | 'endOfBidding';
+export type AbilityWindow = 'turnStart' | 'afterLocation' | 'beforeBidding' | 'bidding' | 'beforeReveal' | 'endOfBidding';
 
 /** Presentation checkpoints (see flow.ts). */
 export type HoldReason = 'location' | 'encounter' | 'reveal' | 'resolve';
@@ -106,6 +106,7 @@ export type Step =
   | 'challenge'
   | 'winBeforeBidding'
   | 'bidding'
+  | 'winBeforeReveal'
   | 'reveal'
   | 'winEndOfBidding'
   | 'resolve'

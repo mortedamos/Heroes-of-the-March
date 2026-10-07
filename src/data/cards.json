@@ -58,7 +58,7 @@
     "G": 9
    },
    "abilityName": "I Held the Torch",
-   "abilityText": "At the start of bidding on any turn, choose a companion of an opponent. That companion does not contribute any stats this turn.",
+   "abilityText": "Before bidding on any turn, choose a companion of an opponent. That companion does not contribute any stats this turn.",
    "kind": "hero",
    "triggerText": "When a Guile challenge is faced, draw a resource.",
    "revision": "Now chosen once the challenge is known; Physical 3 → 5 (was a 22% win rate). Trigger now keys off the encounter's stat (no more die).",
@@ -79,7 +79,7 @@
     "G": 10
    },
    "abilityName": "Master Manipulator",
-   "abilityText": "At the start of bidding you may draw the next card from the encounter stack and use its minion bonus this turn as a bonus to all of your stats.",
+   "abilityText": "Before bidding, you may draw the next card from the encounter stack and use its minion bonus this turn as a bonus to all of your stats.",
    "kind": "hero",
    "triggerText": "When a hero falls, draw 3 resources.",
    "revision": "Mental 6 -> 7, Guile 10 -> 11, and the trigger draws 2 (was a 0.61 win rate).",
@@ -101,7 +101,7 @@
     "G": 9
    },
    "abilityName": "Pockets Full of Everything",
-   "abilityText": "Before cards are revealed at the end of bidding, claim a face-down resource card from another player as your own. If you have resource cards, a random one of yours takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
+   "abilityText": "Before the reveal, claim a face-down resource card from another player as your own. If you have resource cards, a random one of yours takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
    "kind": "hero",
    "triggerText": "When a location is replaced, draw a resource.",
    "revision": "Trigger is now a replaced location (nothing in the story ties him to Ironbound).",
@@ -165,7 +165,7 @@
     "G": 10
    },
    "abilityName": "A Little Plan",
-   "abilityText": "You may bid all of your resource cards face down, revealing them at any time. Abilities of those resource cards take effect when revealed, not while face down.",
+   "abilityText": "You may bid all of your resource cards face down. Abilities of those resource cards take effect when revealed, not while face down.",
    "kind": "hero",
    "triggerText": "The first time each turn anyone is forced to use a different stat, draw a resource.",
    "kinText": "Kin: while an opponent controls a Halfellow companion, it gets -1 to all stats.",
@@ -186,7 +186,7 @@
     "G": 8
    },
    "abilityName": "Shield of the Dawn",
-   "abilityText": "You may counter or disable one ability of another player's heroes or companions.",
+   "abilityText": "During bidding, you may disable one ability of another player's heroes or companions. Once per turn, you may counter an ability of another player's heroes or companions as it is used.",
    "kind": "hero",
    "triggerText": "When a Marchguard location enters play, or a Marchguard companion enters play under your control, draw a resource.",
    "kinText": "Kin: your hero gets +1 to all stats for each Human companion you control.",
@@ -273,7 +273,7 @@
     "G": 8
    },
    "abilityName": "The Society's Maps",
-   "abilityText": "Once per turn, after the location is revealed, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
+   "abilityText": "Once per turn, at any time on your turn, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
    "kind": "hero",
    "triggerText": "When an Accord location enters play, draw a resource.",
    "revision": "Physical 2 → 4 (was a 25% win rate).",
@@ -317,7 +317,7 @@
     "G": 9
    },
    "abilityName": "Entered in the Book of Grudges",
-   "abilityText": "At the start of bidding, choose an opponent. If that opponent wins this encounter, they have -3 during the next encounter.",
+   "abilityText": "Before bidding, choose an opponent. If that opponent wins this encounter, they have -3 during the next encounter.",
    "kind": "hero",
    "triggerText": "When an Oathbreaker encounter enters play, draw a resource.",
    "revision": "Promoted from companion to hero; the old negate-a-bonus ability is gone (it won 1.41 of its fair share).",
@@ -340,7 +340,7 @@
     "G": 5
    },
    "abilityName": "Rumour Mill",
-   "abilityText": "Once per turn, look at a random face-down resource card that another player has bid. If Gimlet is already in play, you may play this card as a bonus companion above your companion limit.",
+   "abilityText": "During bidding, once per turn, look at a random face-down resource card that another player has bid. If Gimlet is already in play, you may play this card as a bonus companion above your companion limit.",
    "kind": "companion",
    "revision": "Was +2 to Wands (an innkeeper, not an enchanter).",
    "number": 2001
@@ -359,7 +359,7 @@
     "G": 5
    },
    "abilityName": "Waiting at the Door",
-   "abilityText": "At the beginning of bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
+   "abilityText": "Before bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
    "kind": "companion",
    "revision": "Now two extra cards on her return (was one); Physical 1 → 2 and Mental 3 → 4 (the ability alone didn't make up for resting).",
    "number": 2002
@@ -573,7 +573,7 @@
     "G": 3
    },
    "abilityName": "Too Clever by Half",
-   "abilityText": "You can force another player's companion to contribute their guile stat in place of another stat.",
+   "abilityText": "During bidding, you can force another player's companion to contribute their guile stat in place of another stat.",
    "kind": "companion",
    "number": 2013
   },
@@ -592,7 +592,7 @@
     "G": 4
    },
    "abilityName": "Mind of the Grove",
-   "abilityText": "You can force another player's companion to contribute their mental stat in place of another stat.",
+   "abilityText": "During bidding, you can force another player's companion to contribute their mental stat in place of another stat.",
    "kind": "companion",
    "number": 2014
   },
@@ -610,7 +610,7 @@
     "G": 4
    },
    "abilityName": "Call of the Hunt",
-   "abilityText": "You can force another player's companion to contribute their physical stat in place of another stat. When a Beast encounter enters play, draw a resource card.",
+   "abilityText": "During bidding, you can force another player's companion to contribute their physical stat in place of another stat. When a Beast encounter enters play, draw a resource card.",
    "kind": "companion",
    "number": 2015
   },
@@ -628,7 +628,7 @@
     "G": 4
    },
    "abilityName": "Queen for a Day",
-   "abilityText": "You may double your hero's stats. At the end of the encounter this card is discarded.",
+   "abilityText": "At the end of bidding, you may double your hero's stats. At the end of the encounter this card is discarded.",
    "kind": "companion",
    "number": 2016
   },
@@ -647,7 +647,7 @@
     "G": 4
    },
    "abilityName": "Well-Meaning Blunder",
-   "abilityText": "You may force another player to use their hero's guile stat in place of another stat.",
+   "abilityText": "During bidding, you may force another player to use their hero's guile stat in place of another stat.",
    "kind": "companion",
    "revision": "Was Sir Hugo Pellam (Human); now a Halfellow.",
    "number": 2017
@@ -666,7 +666,7 @@
     "G": 4
    },
    "abilityName": "Ulterior Motives",
-   "abilityText": "You may force another player to use their hero's mental stat in place of another stat.",
+   "abilityText": "During bidding, you may force another player to use their hero's mental stat in place of another stat.",
    "kind": "companion",
    "number": 2018
   },
@@ -685,7 +685,7 @@
     "G": 6
    },
    "abilityName": "Eternal Vigilance",
-   "abilityText": "You may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
+   "abilityText": "At any time on your turn, you may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
    "kind": "companion",
    "revision": "Was Wren Nightingale (Human); now an Elf.",
    "number": 2019
@@ -744,7 +744,7 @@
     "G": 3
    },
    "abilityName": "Loose Powder",
-   "abilityText": "You may force another player to use their hero's physical stat in place of another stat.",
+   "abilityText": "During bidding, you may force another player to use their hero's physical stat in place of another stat.",
    "kind": "companion",
    "number": 2022
   },
@@ -762,7 +762,7 @@
     "G": 4
    },
    "abilityName": "Grudge Paid in Full",
-   "abilityText": "You win the current encounter and automatically take the location. However, you must discard all resources and your hero falls. You may use this ability only once per game.",
+   "abilityText": "At the end of bidding, you win the current encounter and automatically take the location. However, you must discard all resources and your hero falls. You may use this ability only once per game.",
    "kind": "companion",
    "revision": "Was Mira Coldwater (Human); now a Dwarf grudge-bearer.",
    "number": 2023
@@ -939,7 +939,7 @@
     "G": 2
    },
    "abilityName": "Camp Stew",
-   "abilityText": "On your turn you may force another player to use their hero's physical stat in place of another stat.",
+   "abilityText": "During bidding on your turn, you may force another player to use their hero's physical stat in place of another stat.",
    "kind": "companion",
    "revision": "Was Clemence Fairbrook (Human); now an Orc.",
    "number": 2032
@@ -1016,7 +1016,7 @@
     "G": 3
    },
    "abilityName": "Fetch",
-   "abilityText": "Once per turn, you may swap a resource card from your hand with the top card of the resource discard stack. Gimlet gains +1 to all stats while Destiny the Frog is part of the current encounter. If Goldie is already in play, you may play this card as a bonus companion above your companion limit.",
+   "abilityText": "Before bidding, once per turn, you may swap a resource card from your hand with the top card of the resource discard stack. Gimlet gains +1 to all stats while Destiny the Frog is part of the current encounter. If Goldie is already in play, you may play this card as a bonus companion above your companion limit.",
    "kind": "companion",
    "number": 2036
   }

@@ -401,7 +401,7 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full', claimSwapsCard: true,
     on: { locationReplaced: (ctx, self) => drawFor(ctx, self) },
     activations: [{
-      id: 'pockets', label: "Claim another player's face-down bid", windows: ['bidding'], per: 'turn',
+      id: 'pockets', label: "Claim another player's face-down bid", windows: ['beforeReveal'], per: 'turn',
       canUse: (ctx, self) => others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
       use: (ctx, self) => {
         const options = others(ctx, self).flatMap((p) => p.bids.flatMap((b, i) => (b.visible ? [] : [{
@@ -647,7 +647,7 @@ export const ABILITIES: Record<string, Ability> = {
   'elowen-leafwatch-treetop-warden': {
     status: 'full',
     activations: [{
-      id: 'readAhead', label: 'Look at the top card of any stack; you may bottom it', windows: ['turnStart', 'afterLocation', 'beforeBidding', 'bidding'], per: 'turn',
+      id: 'readAhead', label: 'Look at the top card of any stack; you may bottom it', windows: ['turnStart', 'afterLocation', 'beforeBidding', 'bidding', 'beforeReveal', 'endOfBidding'], turn: 'own', per: 'turn',
       canUse: (ctx) => DECKS.some((d) => ctx.s.decks[d].length > 0),
       use: (ctx, self) => ctx.queueFirst({
         t: 'choose', purpose: 'wrenStack', player: self.owner, source: nameOf(ctx, self.card),
