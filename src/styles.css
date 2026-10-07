@@ -298,14 +298,58 @@ body.shape-short .card-btn.fan { transform: none; }
 .inspect-actions .btn { flex: 1 1 auto; }
 .inspect-actions .btn.primary { flex-grow: 3; }
 .inspector .trigger { font-style: italic; color: #e8cf94; }
-/* The OK button for a usable ability sits on the card face beside the ability text (Hud.placeAbilityButtons). */
-.ability-ok {
-  position: fixed; z-index: 4; padding: 0; border-radius: 8px; border: 2px solid #bfe4ff; background: #1d7fc4; color: #fff;
-  font-weight: bold; letter-spacing: 0.04em; cursor: pointer; box-shadow: 0 0 10px rgba(79, 184, 255, 0.75);
+/* A card with a usable ability: it flies up to the middle (Hud.showAbility) with OK and Skip floating either side. */
+.ability-layer {
+  position: fixed; inset: 0; z-index: 36; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  padding: 12px; background: rgba(6, 4, 2, 0.6); cursor: pointer; overflow-y: auto; overscroll-behavior: contain;
 }
-@media (hover: hover) { .ability-ok:hover { background: #2a97e6; } }
-.ability-ok.skip { background: #5b4a36; border-color: #d9c9a8; box-shadow: none; }
-@media (hover: hover) { .ability-ok.skip:hover { background: #75604a; } }
+.ability-row { display: flex; align-items: center; justify-content: center; gap: var(--ab-gap, 26px); flex: none; }
+.ability-layer .case-card { cursor: default; }
+.ability-side { display: flex; flex-direction: column; align-items: center; gap: 34px; width: var(--ab-w, 120px); flex: none; }
+.ability-close {
+  position: absolute; right: -10px; top: -10px; z-index: 2; width: 32px; height: 32px; border-radius: 16px; cursor: pointer;
+  border: 1px solid var(--line); background: rgba(0, 0, 0, 0.72); color: var(--ink); font-size: 22px; line-height: 1;
+}
+.ability-text {
+  max-width: min(420px, 94vw); padding: 10px 14px; cursor: default; flex: none; font-size: 13.5px; color: var(--ink);
+  background: rgba(20, 14, 6, 0.94); border: 1px solid var(--gold); border-radius: 10px; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.6);
+}
+.ability-text .inspect-name { margin: 0 0 4px; font-size: 16px; color: #fff; }
+.ability-text p { margin: 4px 0; line-height: 1.35; }
+.ability-text .trigger { font-style: italic; color: #e8cf94; }
+
+/* The floating buttons: a solid capsule. A face over a stack of darker slices gives it thickness; the whole body leans toward
+   the pointer (tilt.ts) and a highlight on its face follows the pointer (--nx, --ny: which way it lies, -1 to 1). */
+.fb-wrap { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px; width: var(--ab-w, 120px); }
+.fb-wrap.ok { --fb-hi: #86eb94; --fb-mid: #2fb24a; --fb-lo: #17702b; --fb-rim: #d2ffd8; --fb-side: #1c6a2e; --fb-glow: rgba(90, 235, 120, 0.55); }
+.fb-wrap.skip { --fb-hi: #f58a7e; --fb-mid: #d1372b; --fb-lo: #85180f; --fb-rim: #ffd6d0; --fb-side: #7a160e; --fb-glow: rgba(255, 100, 85, 0.5); }
+.fb-btn {
+  position: relative; width: 100%; height: var(--fb-h, 54px); padding: 0; border: 0; background: none; cursor: pointer; border-radius: 999px;
+  animation: fb-bob 3.4s ease-in-out infinite;
+}
+.fb-wrap.skip .fb-btn { animation-delay: -1.7s; }
+.fb-btn:focus-visible { outline: 3px solid #fff; outline-offset: 4px; }
+@keyframes fb-bob { 0%, 100% { transform: translateY(-5px); } 50% { transform: translateY(5px); } }
+.fb-body { position: absolute; inset: 0; display: block; }
+.fb-slab, .fb-face { position: absolute; inset: 0; display: block; border-radius: 999px; }
+.fb-slab { background: var(--fb-side); transform: translateZ(calc(var(--i) * -2px)); filter: brightness(calc(1.08 - var(--i) * 0.07)); }
+.fb-face {
+  display: flex; align-items: center; justify-content: center; color: #fff; font-weight: bold; font-size: calc(var(--fb-h, 54px) * 0.38); letter-spacing: 0.06em;
+  text-shadow: 0 2px 3px rgba(0, 0, 0, 0.55);
+  background:
+    radial-gradient(ellipse 70% 120% at calc(50% + var(--nx, 0) * 42%) calc(28% + var(--ny, 0) * 46%), rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 62%),
+    linear-gradient(180deg, var(--fb-hi) 0%, var(--fb-mid) 52%, var(--fb-lo) 100%);
+  box-shadow: inset 0 0 0 2px var(--fb-rim), inset 0 -7px 12px rgba(0, 0, 0, 0.3), inset 0 4px 7px rgba(255, 255, 255, 0.3), 0 0 22px var(--fb-glow);
+  transform: translateZ(0);
+}
+@media (hover: hover) { .fb-btn:hover .fb-face { filter: brightness(1.12); } }
+.fb-btn:active .fb-body { filter: brightness(0.92); }
+/* The soft shadow it casts on nothing in particular: it shrinks as the button rises. */
+.fb-shadow { position: absolute; left: 12%; right: 12%; bottom: 6px; height: 14px; border-radius: 50%; background: rgba(0, 0, 0, 0.55); filter: blur(7px); pointer-events: none; animation: fb-shade 3.4s ease-in-out infinite; }
+.fb-wrap.skip .fb-shadow { animation-delay: -1.7s; }
+@keyframes fb-shade { 0%, 100% { transform: scaleX(0.82); opacity: 0.35; } 50% { transform: scaleX(1); opacity: 0.6; } }
+.fb-caption { max-width: 100%; text-align: center; font-size: 12px; line-height: 1.25; color: var(--ink); text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8); }
+@media (prefers-reduced-motion: reduce) { .fb-btn, .fb-shadow { animation: none; } }
 
 /* Log */
 .log {

@@ -167,6 +167,8 @@ export class GameClient {
       ...(debugEnabled() ? { debug: this.debugApi() } : {}),
       newGame: onNewGame,
       stepBack: { get: () => this.scene.steppedBack, set: (on) => this.scene.setStepBack(on) },
+      cardRect: (key) => this.board.screenRect(key),
+      hideCard: (key, hidden) => this.board.setCardHidden(key, hidden),
       project: (x, y, z) => this.scene.project(x, y, z),
     });
     this.unhook.push(this.scene.onFrame(() => this.hud.reposition()));

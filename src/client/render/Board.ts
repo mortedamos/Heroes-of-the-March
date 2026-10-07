@@ -136,6 +136,8 @@ function randomYaw(): number {
 
 export class Board {
   private readonly cards = new Map<string, CardObj>();
+  /** How many things are hiding each table card (see setCardHidden). */
+  private readonly hiddenBy = new Map<string, number>();
   private attnDeadline: number | null = null;
   private readonly faceTextures = new Map<string, THREE.CanvasTexture>();
   private readonly backMaterials = new Map<DeckName, THREE.MeshStandardMaterial>();
@@ -410,10 +412,17 @@ export class Board {
     return this.t.project(o.base.x, o.base.y, o.base.z);
   }
 
-  /** Hide or show a table card (while it is being shown large above the field). */
+  /**
+   * Hide or show a table card (while it is being shown large above the field). Hiding is counted, so two things
+   * showing the same card at once (an ability view closing as its showcase opens) each hide it and each show it again:
+   * it comes back when the last of them lets go.
+   */
   setCardHidden(key: string, hidden: boolean): void {
+    const n = Math.max(0, (this.hiddenBy.get(key) ?? 0) + (hidden ? 1 : -1));
+    if (n) this.hiddenBy.set(key, n);
+    else this.hiddenBy.delete(key);
     const o = this.cards.get(key);
-    if (o) o.mesh.visible = !hidden;
+    if (o) o.mesh.visible = n === 0;
   }
 
   /** A table card's rectangle on screen (CSS px), for flying its picture out of and back into place. */
