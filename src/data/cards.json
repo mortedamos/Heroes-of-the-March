@@ -1784,7 +1784,7 @@
   {
    "kind": "encounter",
    "id": "iron-mites",
-   "name": "Infectous Zombie",
+   "name": "Infectious Zombie",
    "groups": [
     "Undead"
    ],

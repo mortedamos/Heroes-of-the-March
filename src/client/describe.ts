@@ -51,7 +51,7 @@ export function describe(e: ClientEvent, view: GameView): string | null {
     case 'gameOver': return `Game over. ${who(e.winner)} ${e.winner === view.you ? 'hold' : 'holds'} the Marches!`;
     case 'gameStarted': return 'The Marchstone has split. The heroes ride out.';
     case 'shuffled': case 'turnEnded': case 'effectCancelled': return null;
-    case 'companionMinion': return `${who(e.player)} ${e.player === view.you ? 'lose' : 'loses'} ${card(e.card.def)} to the Iron Mites: it joins the encounter as a minion.`;
+    case 'companionMinion': return `${who(e.player)} ${e.player === view.you ? 'lose' : 'loses'} ${card(e.card.def)} to the Infectious Zombie: it joins the encounter as a minion.`;
     case 'encounterReplaced': return `${e.reason}: ${card(e.from.def)} is driven off.`;
     case 'abilityZap': return null;
     case 'abilityIgnored': return `${who(e.player)}: ${short(e.by.def)} shrugs off ${short(e.source.def)}.`;

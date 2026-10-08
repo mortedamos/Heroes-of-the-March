@@ -149,7 +149,7 @@ export interface TurnState {
   extraLocations: CardId[];
   encounter: CardId | null;
   minions: CardId[];
-  /** Companions put into play as minions (Iron Mites). */
+  /** Companions put into play as minions (Infectious Zombie). */
   companionMinions: CardId[];
   /** Cards set aside by effects this turn, discarded at the end (Vaelis's encounter card). */
   setAside: CardId[];

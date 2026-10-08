@@ -651,7 +651,7 @@ describe('challenge and encounter control', () => {
     expect(player(g, g.A).hand.length).toBeGreaterThan(hand);
   });
 
-  it('Iron Mites takes a companion as a minion', () => {
+  it('Infectious Zombie takes a companion as a minion', () => {
     const g = newGame();
     standard(g, {});
     onTop(g.s, 'encounter', ['iron-mites']);
@@ -660,7 +660,7 @@ describe('challenge and encounter control', () => {
     until(g, (s) => s.turn.companionMinions.length > 0 || s.turn.step === 'bidding');
     expect(g.s.turn.companionMinions).toHaveLength(1);
     // No dice: each player with a companion turned up a resource card, and those cards were discarded.
-    const shown = g.events.filter((e) => e.type === 'cardShown' && e.reason === 'Iron Mites');
+    const shown = g.events.filter((e) => e.type === 'cardShown' && e.reason === 'Infectious Zombie');
     expect(shown.length).toBeGreaterThanOrEqual(2);
     for (const e of shown) if (e.type === 'cardShown') expect(g.s.discards.resource).toContain(e.card.id);
     const ctx = new Ctx(g.s);

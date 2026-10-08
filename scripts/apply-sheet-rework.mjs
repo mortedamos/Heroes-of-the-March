@@ -54,7 +54,7 @@ const EDITS = [
   [4046, null, ['Beast'], E('P', 15, 2, 0)],
   [4013, null, ['Oathbreaker', 'Elf'], E('G', 14, 2, 2, null, 'When this card comes into play draw two minions.')],
   [4038, null, ['Orc', 'Beast'], E('G', 14, 4, 0)],
-  [4020, 'Infectous Zombie', ['Undead'], E('G', 13, 4, 0, null, 'When this card comes into play as an encounter or a minion, each player with a companion turns up the top resource card. The player with the lowest value (ties turn up again) selects a companion to go into play as a minion, adding the relevant stat bonus to the selected challenge’s difficulty. The resource cards are then discarded.')],
+  [4020, 'Infectious Zombie', ['Undead'], E('G', 13, 4, 0, null, 'When this card comes into play as an encounter or a minion, each player with a companion turns up the top resource card. The player with the lowest value (ties turn up again) selects a companion to go into play as a minion, adding the relevant stat bonus to the selected challenge’s difficulty. The resource cards are then discarded.')],
   [4048, null, ['Ironbound', 'Undead'], E('P', 15, 4, 0)],
   [4011, null, ['Ironbound', 'Undead'], E('P', 15, 3, 0)],
   [4008, null, ['Oathbreaker', 'Human', 'Collegium'], E('G', 15, 3, 0)],

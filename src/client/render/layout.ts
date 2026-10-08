@@ -193,7 +193,7 @@ export function computeLayout(view: GameView, shape: Shape = 'wide'): Layout {
   }
   if (t.location) cards.push({ key: t.location.id, def: t.location.def, back: 'location', ...LOCATION_POS, y: CARD_Y + 0.01, scale: 1.2, faceUp: true, spawn: deckPos('location') });
   if (t.encounter) cards.push({ key: t.encounter.id, def: t.encounter.def, back: 'encounter', ...ENCOUNTER_POS, y: CARD_Y + 0.01, scale: 1.2, faceUp: true, spawn: deckPos('encounter') });
-  // Minions, companions taken as minions (Iron Mites), and cards set aside (Vaelis).
+  // Minions, companions taken as minions (Infectious Zombie), and cards set aside (Vaelis).
   const extras = [
     ...t.minions.map((m) => ({ ref: m, back: 'encounter' as DeckName, spawn: deckPos('encounter') })),
     ...t.companionMinions.map((m) => ({ ref: m, back: 'companion' as DeckName, spawn: deckPos('companion') })),

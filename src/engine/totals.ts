@@ -56,7 +56,7 @@ export function difficultyFor(ctx: Ctx, p: PlayerState | null): DifficultyBreakd
     if (d.kind !== 'encounter') continue;
     minions += d.minionValue + locationBoost(ctx, m) + perMinion;
   }
-  // Companions pressed into service as minions (Iron Mites) add their stat for the challenge.
+  // Companions pressed into service as minions (Infectious Zombie) add their stat for the challenge.
   const chStat = challengeStat(ctx, null) ?? ch.stat;
   for (const c of t.companionMinions) {
     const d = ctx.def(c);

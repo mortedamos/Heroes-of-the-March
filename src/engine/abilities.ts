@@ -843,7 +843,7 @@ export const ABILITIES: Record<string, Ability> = {
         let guard = 0;
         while (rollers.length > 1 && guard++ < 20) {
           const draws = rollers.map((p) => {
-            const c = revealTop(ctx, p.id, 'resource', 1, 'Iron Mites')[0] ?? null;
+            const c = revealTop(ctx, p.id, 'resource', 1, 'Infectious Zombie')[0] ?? null;
             const d = c ? ctx.def(c) : null;
             return { p, c, v: d && d.kind === 'resource' ? d.value : 0 };
           });
@@ -854,8 +854,8 @@ export const ABILITIES: Record<string, Ability> = {
         const loser = rollers[0];
         if (!loser) return;
         ctx.queue({
-          t: 'choose', purpose: 'companionMinion', player: loser.id, source: 'Iron Mites',
-          prompt: 'Iron Mites: choose one of your companions to join the encounter as a minion',
+          t: 'choose', purpose: 'companionMinion', player: loser.id, source: 'Infectious Zombie',
+          prompt: 'Infectious Zombie: choose one of your companions to join the encounter as a minion',
           options: loser.companions.map((c) => cardOption(ctx, c)), min: 1, max: 1,
         });
       },
