@@ -26,7 +26,7 @@ export interface Source { card: CardId; owner: PlayerId | null; kind: CardKind }
 export interface OwnedSource extends Source { owner: PlayerId }
 
 export type TriggerName = 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'companionEntered' | 'heroFell' | 'locationWon' | 'statForced' | 'turnStart'
-  | 'minionDrawn' | 'locationReplaced' | 'companionLeft';
+  | 'minionDrawn' | 'locationReplaced' | 'companionLeft' | 'resourceEntered';
 export interface TriggerPayload {
   /** The turn's encounter challenge was announced (stat as modified by the location); player is the active player. */
   challengeFaced: { stat: Stat; player: PlayerId };
@@ -45,6 +45,8 @@ export interface TriggerPayload {
   locationReplaced: { from: CardId; to: CardId };
   /** A companion was replaced or discarded; `player` controlled it. */
   companionLeft: { card: CardId; player: PlayerId };
+  /** A resource was revealed or played face up under `player`'s control (face-down bids do not count until then). */
+  resourceEntered: { card: CardId; player: PlayerId };
 }
 
 export type ImplStatus = 'full' | 'partial' | 'todo';
@@ -79,7 +81,7 @@ export interface Ability {
   /** This companion may contribute its X stat in place of another (applied when higher). */
   selfStatSub?: Stat;
   /** Corvin: draw one more whenever you draw ('ownTurn': only on your own turn). */
-  extraDrawOnDraw?: boolean | 'ownTurn';
+  extraDrawOnDraw?: boolean | 'ownTurn' | 'oncePerTurn';
   /** Aldric: may counter another player's activated ability as it is used (once per turn, shared with Shield of the Dawn). */
   counter?: boolean;
   /** Flat bonus to your total in every challenge (balance option). */
@@ -91,8 +93,10 @@ export interface Ability {
   /** With more than two companions, your weakest one (in the tested stat) counts half (balance option). */
   extraCompanionHalf?: boolean;
   ignorePositiveMinionBonus?: boolean;
-  /** If you would not survive, gain this much (Thorgar). */
-  failSave?: number;
+  /** Once per game, a fall of this hero is prevented and its player draws 3 resources (Thorgar). */
+  unburied?: boolean;
+  /** Every resource this hero's player bids is worth this much more (Kazra). */
+  bidBonus?: number;
   /** If you play at least `cards` resources, each gains `bonus`. */
   multiBidBonus?: { cards: number; bonus: number };
   /** Override a resource's value in context. */
@@ -155,6 +159,17 @@ function encounterEntered(group: string) {
 function locationEntered(group: string) {
   return (ctx: Ctx, self: Source, e: TriggerPayload['locationEntered']) => {
     if (hasGroup(ctx.def(e.card), group)) drawFor(ctx, self);
+  };
+}
+
+/** "When a <tag> card enters play, draw a resource": locations, encounters and minions, companions and resources (revealed or played face up) of any player. */
+function cardEnters(group: string, draws = 1): NonNullable<Ability['on']> {
+  const hit = (ctx: Ctx, self: Source, card: CardId) => { if (hasGroup(ctx.def(card), group)) drawFor(ctx, self, draws); };
+  return {
+    locationEntered: (ctx, self, e) => hit(ctx, self, e.card),
+    encounterEntered: (ctx, self, e) => { if (e.asMinion && !ctx.s.rules.minionsTriggerEntersPlay) return; hit(ctx, self, e.card); },
+    companionEntered: (ctx, self, e) => hit(ctx, self, e.card),
+    resourceEntered: (ctx, self, e) => hit(ctx, self, e.card),
   };
 }
 
@@ -345,7 +360,7 @@ export const ABILITIES: Record<string, Ability> = {
   // Heroes
   'warchief-grukka-ironjaw': {
     status: 'full',
-    on: { locationEntered: locationEntered('Capital') },
+    on: cardEnters('Capital', 2),
     activations: [{
       id: 'mineNow', label: 'Look at the next location; you may swap it in', windows: ['afterLocation'], per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.location) && hasLocationsToPeek(ctx),
@@ -366,7 +381,7 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'thorgar-twice-buried': { status: 'full', failSave: 5, on: { encounterEntered: encounterEntered('Undead') } },
+  'thorgar-twice-buried': { status: 'full', unburied: true, on: cardEnters('Undead') },
   'aelthir-moonveil': {
     status: 'full',
     on: { challengeFaced: onChallenge('G') },
@@ -385,7 +400,7 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full',
     on: { heroFell: (ctx, self) => drawFor(ctx, self, 3) },
     activations: [{
-      id: 'shadowsteeds', label: 'Draw the next encounter; its minion bonus goes to all your stats', windows: ['beforeBidding'], per: 'turn',
+      id: 'shadowsteeds', label: 'Draw the next encounter; use its minion bonus or give it to another player', windows: ['beforeBidding'], per: 'turn',
       canUse: (ctx) => ctx.s.decks.encounter.length + ctx.s.discards.encounter.length > 0,
       use: (ctx, self) => {
         const c = ctx.take('encounter');
@@ -393,7 +408,13 @@ export const ABILITIES: Record<string, Ability> = {
         ctx.s.turn.setAside.push(c);
         ctx.emit({ type: 'cardShown', player: self.owner, card: ctx.ref(c), reason: 'Master of Shadowsteeds' });
         const mv = (ctx.def(c) as EncounterDef).minionValue;
-        addEffect(ctx, { kind: 'statBonus', source: self.card, owner: self.owner, target: self.owner, stat: 'all', amount: mv });
+        const sign = mv > 0 ? '+' : '';
+        ctx.queueFirst({
+          t: 'choose', purpose: 'vaelisGive', player: self.owner, source: nameOf(ctx, self.card),
+          prompt: `Master Manipulator: ${nameOf(ctx, c)} has a minion bonus of ${sign}${mv}. Use it yourself, or give it to another player?`,
+          options: [{ value: 'self', label: `Use it myself (${sign}${mv} to all stats)` }, ...others(ctx, self).map((o) => ({ value: o.id, label: `Give it to ${o.name}` }))],
+          min: 1, max: 1, data: { amount: mv, card: self.card },
+        });
       },
     }],
   },
@@ -414,8 +435,8 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'kazra-emberdeep': { status: 'full', ignorePositiveMinionBonus: true, on: { encounterEntered: encounterEntered('Ironbound') } },
-  'ysolde-of-the-wellspring': { status: 'full', maxCompanions: 3, on: { encounterEntered: encounterEntered('Beast') } },
+  'kazra-emberdeep': { status: 'full', bidBonus: 1, on: cardEnters('Ironbound') },
+  'ysolde-of-the-wellspring': { status: 'full', maxCompanions: 3, on: cardEnters('Beast') },
   'mayor-hobby-trickgrin': {
     status: 'full', mayBidFaceDown: true,
     note: 'Face-down cards still reveal in the normal reveal step.',
@@ -423,11 +444,7 @@ export const ABILITIES: Record<string, Ability> = {
   },
   'lord-paladin-aldric-ashcroft': {
     status: 'full', counter: true,
-    on: {
-      locationEntered: locationEntered('Marchguard'),
-      // Only the order's own recruits: Marchguard companions entering under his control.
-      companionEntered: (ctx, self, e) => { if (e.player === self.owner && hasGroup(ctx.def(e.card), 'Marchguard')) drawFor(ctx, self); },
-    },
+    on: cardEnters('Marchguard'),
     activations: [{
       id: 'shield', label: "Disable another player's hero or companion ability this turn", windows: ['bidding'], per: 'turn',
       use: (ctx, self) => ctx.queueFirst({
@@ -441,7 +458,7 @@ export const ABILITIES: Record<string, Ability> = {
   'high-thane-brunna-stonefast': { status: 'full', ignoreForcedStat: true, ignoreHostileEffects: true, on: { challengeFaced: onChallenge('P') } },
   'queen-maren-ashcroft': {
     status: 'full',
-    on: { locationEntered: locationEntered('Wardhouse') },
+    on: cardEnters('Wardhouse'),
     activations: [{
       id: 'requisition', label: 'Trade a card from your hand for a random card from another hand', windows: ['beforeBidding'], turn: 'own', per: 'turn',
       canUse: (ctx, self) => ctx.player(self.owner).hand.length > 0 && others(ctx, self).some((p) => p.hand.length > 0),
@@ -453,10 +470,10 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'archmage-corvin-varro': { status: 'full', extraDrawOnDraw: 'ownTurn', on: { challengeFaced: onChallenge('M') } },
+  'archmage-corvin-varro': { status: 'full', extraDrawOnDraw: 'oncePerTurn', on: { challengeFaced: onChallenge('M') } },
   'professor-barnaby-pickwort': {
     status: 'full',
-    on: { locationEntered: locationEntered('Accord') },
+    on: cardEnters('Accord'),
     activations: [{
       id: 'maps', label: 'Look at the next two locations; you may swap one in', windows: ['afterLocation', 'beforeBidding', 'bidding', 'endOfBidding'], turn: 'own', per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.location) && hasLocationsToPeek(ctx),
@@ -502,37 +519,36 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  // Oskar: at the start of bidding, name an opponent; if they win this encounter they carry -3 into the next one.
+  // Oskar: before bidding, name an opponent; whenever they use an ability against his hero or companions this turn, he draws a resource.
   'loremaster-oskar-grimgate': {
     status: 'full',
-    on: { encounterEntered: encounterEntered('Oathbreaker') },
+    on: cardEnters('Oathbreaker'),
     activations: [{
-      id: 'grudge', label: 'Name an opponent: if they win this encounter they have -3 in the next', windows: ['beforeBidding'], per: 'turn',
+      id: 'grudge', label: 'Name an opponent: when they use an ability against you, draw a resource', windows: ['beforeBidding'], per: 'turn',
       canUse: (ctx, self) => others(ctx, self).length > 0,
       use: (ctx, self) => ctx.queueFirst({
         t: 'choose', purpose: 'oskarGrudge', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: 'Entered in the Grudge Book: choose an opponent. If they win this encounter they have -3 during the next one.',
+        prompt: 'Entered in the Book of Grudges: choose an opponent. When they use an ability against your hero or companions this turn, you draw a resource.',
         options: others(ctx, self).map((p) => ({ value: p.id, label: p.name })), min: 1, max: 1, data: { source: self.card },
       }),
     }],
   },
 
   // Companions
-  // Goldie: once per turn, look at one of another player's face-down bids at random.
+  // Goldie: once per turn, during bidding, look at all of one other player's face-down bids.
   'goldie-trickgrin-keeper-of-the-goose-and-kettle': {
     status: 'full', pair: 'gimlet-a-very-good-dog',
     activations: [{
-      id: 'rumour', label: "Look at a random face-down card another player has bid", windows: ['bidding'], per: 'turn',
+      id: 'rumour', label: "Look at all the face-down cards another player has bid", windows: ['bidding'], per: 'turn',
       canUse: (ctx, self) => !(ctx.location && abilityOf(ctx.location.id)?.hidesFaceDown) && others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
       use: (ctx, self) => {
-        const hidden = others(ctx, self).flatMap((p) => p.bids.filter((b) => !b.visible).map((b) => ({ p, b })));
-        if (!hidden.length) return;
-        const { p, b } = hidden[nextInt(ctx.s.rng, hidden.length)]!;
+        const targets = others(ctx, self).filter((p) => p.bids.some((b) => !b.visible));
+        if (!targets.length) return;
         ctx.queueFirst({
-          t: 'choose', purpose: 'rumourMill', player: self.owner, source: nameOf(ctx, self.card),
-          prompt: `Rumour Mill: one of ${p.name}'s face-down cards is ${nameOf(ctx, b.card)}.`,
-          options: [peekOption(ctx, 'seen', b.card, `${p.name}'s card is ${nameOf(ctx, b.card)}`), { value: 'done', label: 'Got it' }],
-          min: 1, max: 1,
+          t: 'choose', purpose: 'rumourTarget', player: self.owner, source: nameOf(ctx, self.card),
+          prompt: 'Rumour Mill: whose face-down cards do you look at?',
+          options: targets.map((p) => ({ value: p.id, label: `${p.name} (${p.bids.filter((b) => !b.visible).length} face down)` })),
+          min: 1, max: 1, data: { source: shortName(ctx, self.card) },
         });
       },
     }],
@@ -560,12 +576,12 @@ export const ABILITIES: Record<string, Ability> = {
   'torvi-cinderkeg-master-gunner': {
     status: 'full',
     activations: [{
-      id: 'fire', label: 'Discard Torvi: every opponent has -4 (-5 with Mhorgrim\'s Hunt) this encounter', windows: ['endOfBidding'], per: 'turn',
+      id: 'fire', label: 'Discard Torvi: every opponent has -4 (-6 with Mhorgrim\'s Hunt) this encounter', windows: ['endOfBidding'], per: 'turn',
       canUse: (ctx, self) => others(ctx, self).length > 0,
       use: (ctx, self) => {
         const p = ctx.player(self.owner);
         const hunt = p.bids.some((b) => b.visible && ctx.defId(b.card) === 'mhorgrims-hunt');
-        const amount = hunt ? 5 : 4;
+        const amount = hunt ? 6 : 4;
         discardCompanion(ctx, p, self.card, 'Fire in the Hole');
         for (const o of others(ctx, self)) addEffect(ctx, { kind: 'statBonus', source: self.card, owner: p.id, target: o.id, stat: 'all', amount: -amount });
         ctx.log(p.id, nameOf(ctx, self.card), `Fire in the Hole! Every opponent has -${amount}`);
@@ -588,7 +604,7 @@ export const ABILITIES: Record<string, Ability> = {
   },
   // Varg: at the start of your turn, a resource for every other Orc in your party.
   'varg-ironjaw': {
-    status: 'full', pair: 'moss-dire-wolf', partnerBonus: { with: 'sigrun-stonefast-metal-singer', amount: 1 },
+    status: 'full', pair: 'moss-dire-wolf', partnerBonus: { with: 'sigrun-stonefast-metal-singer', amount: 2 },
     on: {
       turnStart: (ctx, self, e) => {
         if (e.player !== self.owner) return;
@@ -631,7 +647,7 @@ export const ABILITIES: Record<string, Ability> = {
   'nettle-burrows-trouble-maker': { status: 'full', selfStatSub: 'G' },
   'sister-aurelie-dane-physician': { status: 'full', selfStatSub: 'M' },
   'gnash-the-butcher-of-bloodmire': { status: 'full', selfStatSub: 'P' },
-  'sigrun-stonefast-metal-singer': { status: 'full', drawFromDiscardChoice: true, partnerBonus: { with: 'varg-ironjaw', amount: 1 } },
+  'sigrun-stonefast-metal-singer': { status: 'full', drawFromDiscardChoice: true, partnerBonus: { with: 'varg-ironjaw', amount: 2 } },
   'liriel-nightbloom': forceCompanion('G'),
   'thessaly-of-the-grove': forceCompanion('M'),
   'kesh-the-bog-huntress': { ...forceCompanion('P'), on: { encounterEntered: encounterEntered('Beast') } },
@@ -657,8 +673,8 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G', heroSubBonus: 1 },
-  'rosalind-marchwell-marchguard-clerk': { status: 'full', heroStatSub: 'M', heroSubBonus: 1 },
+  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G' },
+  'rosalind-marchwell-marchguard-clerk': { status: 'full', heroStatSub: 'M' },
   'brisa-blastcap-bombardier': forceHero('P'),
   'dagny-coldhearth-the-grudge-bearer': {
     status: 'full',
@@ -949,7 +965,7 @@ for (const n of ['i', 'ii', 'iii', 'iv', 'v', 'vi']) {
 
 // --- Kin bonuses (see docs/KINGDOM-REDESIGN.md) --------------------------------------
 //   A: +1 to all your hero's stats for each companion of its kingdom you control (totals.ts)
-//   B: when a companion of its kingdom enters play under any player's control, draw a resource
+//   B: when a card of its kingdom (a companion, or a resource revealed or played face up) enters play under your control, draw a resource
 //   C: while an opponent controls a companion of its kingdom, that companion gets -1 to all stats (totals.ts)
 export const KIN: Record<string, 'A' | 'B' | 'C'> = {
   'queen-maren-ashcroft': 'B', 'lord-paladin-aldric-ashcroft': 'A', 'archmage-corvin-varro': 'B',
@@ -964,12 +980,13 @@ for (const [id, kin] of Object.entries(KIN)) {
   a.kin = kin;
   if (kin === 'B') {
     const prev = a.on?.companionEntered;
+    const kinCard = (ctx: Ctx, self: Source, e: { card: CardId; player: PlayerId }) => {
+      if (self.owner && e.player === self.owner && sharesKingdom(ctx.def(self.card), ctx.def(e.card))) drawFor(ctx, self);
+    };
     a.on = {
       ...a.on,
-      companionEntered: (ctx, self, e) => {
-        prev?.(ctx, self, e);
-        if (self.owner && sharesKingdom(ctx.def(self.card), ctx.def(e.card))) drawFor(ctx, self);
-      },
+      companionEntered: (ctx, self, e) => { prev?.(ctx, self, e); kinCard(ctx, self, e); },
+      resourceEntered: kinCard,
     };
   }
 }

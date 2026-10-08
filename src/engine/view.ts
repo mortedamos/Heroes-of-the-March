@@ -133,7 +133,7 @@ function ownerOfCard(state: GameState, card: CardId): PlayerId | null {
 export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
   const ctx = new Ctx(state);
   const ref = (c: CardId): CardRef => ctx.ref(c);
-  const vis = visibleTo(viewer);
+  const vis = visibleTo(viewer, state.players.find((p) => p.id === viewer)?.seen ?? []);
   const t = state.turn;
   const me = viewer ? state.players.find((p) => p.id === viewer) ?? null : null;
 

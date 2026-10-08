@@ -48,6 +48,8 @@ export interface PlayerState {
   claimed: CardId[];
   renown: number;
   bids: Bid[];
+  /** Face-down bids of other players this player has looked at this turn (Goldie): visible to them only. */
+  seen: CardId[];
   /** Heroes borrowed through Council resources for this encounter. */
   councilHeroes: CardId[];
   /** Per-player challenge stat override set by resources (Arangil's Vision Glass, Blasting Powder). */
@@ -72,6 +74,7 @@ export type EffectKind =
   | 'heroMultiplier'     // target player's hero stats x `amount` (Mags)
   | 'negateBid'          // target bid's value counts as zero (no card uses it now)
   | 'grudge'             // target player: if they win this encounter they have -`amount` in the next (Oskar)
+  | 'grudgeWatch'        // target player: when they use an ability against the owner's hero or companions, the owner draws a resource (Oskar)
   | 'disableAbilities'   // target hero/companion's abilities are off this turn (Aldric)
   | 'autoWin';           // target player wins this encounter (Mira)
 
@@ -234,7 +237,7 @@ export type ChoosePurpose =
   | 'marenTarget' | 'marenGive' | 'pipClaim'
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
   | 'counterAbility' | 'oskarGrudge' | 'rumourMill' | 'fetch' | 'pickFight' | 'appleSwap'
-  | 'curseTarget' | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'companionMinion'
+  | 'curseTarget' | 'vaelisGive' | 'rumourTarget' | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'companionMinion'
   | 'heroDraft' | 'heroKeep' | 'companionDraft';
 
 export type Decision = CompanionOfferDecision | CompanionPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;

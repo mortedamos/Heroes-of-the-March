@@ -55,7 +55,7 @@ export function activeEffects(ctx: Ctx, kind?: EffectKind): TurnEffect[] {
 }
 
 /** Effects whose target is a player, not a card. */
-export const PLAYER_TARGET_KINDS: readonly EffectKind[] = ['forceHeroStat', 'statBonus', 'heroMultiplier', 'autoWin', 'grudge'];
+export const PLAYER_TARGET_KINDS: readonly EffectKind[] = ['forceHeroStat', 'statBonus', 'heroMultiplier', 'autoWin', 'grudge', 'grudgeWatch'];
 
 /**
  * Marshal Hedda Ironvow's "Hold the Line": once per turn, an opponent's ability that would affect one of
@@ -92,6 +92,17 @@ export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect | nul
     targetCard: cardTarget && ctx.s.cards[cardTarget] ? ctx.ref(cardTarget) : null,
     targetPlayer: cardTarget ? ownerOf(ctx, cardTarget) : e.target,
   });
+  // Oskar's "Entered in the Book of Grudges": the watched opponent used an ability against his player's hero or companions.
+  const hostile = e.kind === 'silenceCompanion' || e.kind === 'forceCompanionStat' || e.kind === 'forceHeroStat' || e.kind === 'negateBid' || e.kind === 'disableAbilities'
+    || (e.kind === 'statBonus' && (e.amount ?? 0) < 0);
+  if (hostile) {
+    const hit = PLAYER_TARGET_KINDS.includes(e.kind) ? e.target : ownerOf(ctx, e.target);
+    for (const w of t.effects) {
+      if (w.kind === 'grudgeWatch' && w.target === e.owner && w.owner === hit && w.owner !== e.owner) {
+        drawResources(ctx, w.owner, 1, ctx.def(w.source).name);
+      }
+    }
+  }
   const victim = hostileVictim(ctx, effect);
   if (victim && ctx.s.cards[victim.hero]) {
     // Brunna's "Walls First": make it visible that the hero's ability is shielding the target.
@@ -212,7 +223,9 @@ export function drawResources(ctx: Ctx, player: PlayerId, n: number, reason: str
   let count = n;
   // Archmage Corvin Varro: any time you would draw a resource, you may draw an additional one.
   const extra = p.hero ? activeAbility(ctx, p.hero)?.extraDrawOnDraw : undefined;
-  if (extra === true || (extra === 'ownTurn' && p === ctx.active)) {
+  const corvinUsed = ctx.s.turn.used[`corvin:${player}`];
+  if (extra === 'oncePerTurn' && !corvinUsed && ctx.s.turn.number > 0) ctx.s.turn.used[`corvin:${player}`] = 1;
+  if (extra === true || (extra === 'ownTurn' && p === ctx.active) || (extra === 'oncePerTurn' && !corvinUsed && ctx.s.turn.number > 0)) {
     count += 1;
     // Shown as a zap into the resource deck (no big card: it happens on every draw).
     if (ctx.s.turn.number > 0 && p.hero) ctx.emit({ type: 'abilityZap', player, source: ctx.ref(p.hero), deck: 'resource', pile: 'deck' });

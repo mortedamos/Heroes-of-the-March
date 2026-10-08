@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { botDecide } from '../bots/heuristic';
 import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
-import { companionEnters, discardCompanion, fire, maxCompanions, replaceLocation } from './effects';
+import { companionEnters, discardCompanion, drawResources, fire, maxCompanions, replaceLocation } from './effects';
 import { difficultyFor, totalFor } from './totals';
 import { abilityOf } from './abilities';
 import { getDef } from './cards';
@@ -259,14 +259,14 @@ describe('forced stats', () => {
   it('forced hero stat (Brisa: Physical)', () => {
     const g = newGame();
     standard(g, { companions: ['brisa-blastcap-bombardier', 'pell-quillon-collegium-prodigy'] }, { hero: 'professor-barnaby-pickwort' });
-    onTop(g.s, 'location', ['tomb-of-the-first-wardens']); // Guile challenge; Barnaby G8 -> P4
+    onTop(g.s, 'location', ['tomb-of-the-first-wardens']); // Guile challenge; Barnaby G7 -> P4
     restart(g);
     until(g, bidFor(g.A));
     const before = total(g, g.A, g.B);
     use(g, 'brisa-blastcap-bombardier', 'force');
     // Only one opponent: a single forced option resolves without asking.
     expect(g.s.pending?.kind).toBe('bid');
-    expect(total(g, g.A, g.B)).toBe(before - 4); // Barnaby G8 -> P4
+    expect(total(g, g.A, g.B)).toBe(before - 3); // Barnaby G7 -> P4
   });
 });
 
@@ -318,12 +318,12 @@ describe('silence, steal, negate, swap', () => {
 
   it('a tie discards the location; each tied player draws and claims a new one with no effects', () => {
     const g = newGame();
-    // Kazra P7 + Waddle 4 = 11 against Maren P4 + Cobra 4 + a 3-point resource = 11.
-    standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: ['scrying-lenses'] });
+    // Kazra P8 + Waddle 4 = 12 against Maren P4 + Cobra 4 + a 4-point resource = 12.
+    standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: ['the-axe-of-doom'] });
     onTop(g.s, 'encounter', ['ironbound-vanguard']);
     restart(g);
     until(g, bidFor(g.B));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'scrying-lenses') });
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
     finishTurn(g);
     const outcome = g.events.find((e) => e.type === 'outcome');
     const res = outcome?.type === 'outcome' ? outcome.result : undefined;
@@ -678,8 +678,23 @@ describe('challenge and encounter control', () => {
     until(g, activateFor(g.A, 'beforeBidding'));
     const before = total(g, g.A, g.A);
     use(g, 'lord-vaelis-nightbloom', 'shadowsteeds');
+    pick(g, 'self');
     expect(g.s.turn.setAside).toHaveLength(1);
     expect(total(g, g.A, g.A)).toBe(before + 4);
+  });
+
+  it('Vaelis may give the minion bonus to another player instead', () => {
+    const g = newGame();
+    standard(g, { hero: 'lord-vaelis-nightbloom' });
+    onTop(g.s, 'encounter', ['ironbound-vanguard', 'bone-colossus']);
+    restart(g);
+    until(g, activateFor(g.A, 'beforeBidding'));
+    const mine = total(g, g.A, g.A);
+    const theirs = total(g, g.A, g.B);
+    use(g, 'lord-vaelis-nightbloom', 'shadowsteeds');
+    pick(g, g.B);
+    expect(total(g, g.A, g.A)).toBe(mine);
+    expect(total(g, g.A, g.B)).toBe(theirs + 4);
   });
 });
 
@@ -1123,16 +1138,41 @@ describe('revised heroes (data/balance.json)', () => {
     expect(total(g, g.A, g.B)).toBe(before);
   });
 
-  it('Thorgar has no flat bonus; he saves himself with a 5 instead', () => {
+  it('Thorgar is Unburied once per game: a fall is prevented and he draws 3', () => {
     const g = newGame();
-    standard(g, { hero: 'thorgar-twice-buried', hand: [] });
+    standard(g, { hero: 'thorgar-twice-buried', companions: ['pell-quillon-collegium-prodigy'], hand: [] });
     restart(g);
     until(g, bidFor(g.A));
-    const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.bonus).toBe(0);
-    expect(abilityOf('thorgar-twice-buried')?.failSave).toBe(5);
+    finishTurn(g); // Thorgar P7 + Pell 1 = 8 against 10
+    expect(g.events.some((e) => e.type === 'heroFalls' && e.player === g.A)).toBe(false);
+    expect(g.events.some((e) => e.type === 'fallPrevented' && e.player === g.A)).toBe(true);
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Thorgar Twice-Buried').reduce((n, e) => n + (e.type === 'drew' ? e.cards.length : 0), 0)).toBe(3);
+    expect(player(g, g.A).used['unburied']).toBe(1);
+    expect(abilityOf('thorgar-twice-buried')?.unburied).toBe(true);
   });
 
+  it('Kazra: every Dwarf resource he bids is worth one more (not a curse)', () => {
+    const g = newGame();
+    standard(g, { hero: 'kazra-emberdeep', hand: ['the-axe-of-doom', 'sprig-of-heather', 'cursed-locket'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    const hand = (d: string) => viewFor(g.s, g.A).hand.find((h) => h.card.def === d)!.value;
+    expect(hand('the-axe-of-doom')).toBe(4 + 1); // Dwarf
+    expect(hand('sprig-of-heather')).toBe(2); // not a Dwarf card
+    expect(hand('cursed-locket')).toBe(-5);
+  });
+
+  it('Corvin draws one extra resource, once per turn, on any turn', () => {
+    const g = newGame();
+    standard(g, { hero: 'archmage-corvin-varro' });
+    const ctx = atBidding(g);
+    delete g.s.turn.used[`corvin:${g.A}`]; // the turn's own refill already used the extra draw
+    const before = player(g, g.A).hand.length;
+    drawResources(ctx, g.A, 1, 'test');
+    expect(player(g, g.A).hand.length).toBe(before + 2);
+    drawResources(ctx, g.A, 1, 'test');
+    expect(player(g, g.A).hand.length).toBe(before + 3); // only the first draw of the turn is doubled
+  });
   it('revised cards say so and carry the new stats; Kazra is unchanged', () => {
     const barnaby = getDef('professor-barnaby-pickwort');
     expect(barnaby.kind === 'hero' && barnaby.stats.P).toBe(4);
@@ -1249,21 +1289,21 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     expect(g.s.turn.used[`sigrun:${g.A}`]).toBe(1);
   });
 
-  it('Posy and Osric gain +1 when the hero swap is used, and only then', () => {
+  it('Rosalind and Osric no longer gain anything when the hero swap is used', () => {
     // Barnaby: P5 M10 G11. A Physical challenge: Mental 10 beats Physical 5, so Rosalind's swap is used and she gains +1.
     const g = newGame();
     standard(g, { hero: 'professor-barnaby-pickwort', companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] });
     restart(g);
     until(g, bidFor(g.A));
     const used = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(used.companions.find((c) => c.source === card(g, 'rosalind-marchwell-marchguard-clerk'))?.value).toBe(3 + 1);
+    expect(used.companions.find((c) => c.source === card(g, 'rosalind-marchwell-marchguard-clerk'))?.value).toBe(3);
     // Osric swaps Guile 5 for Physical 4: also used (+1). Guile 5 does not beat a Guile challenge, so no swap there.
     const h = newGame();
     standard(h, { hero: 'professor-barnaby-pickwort', companions: ['sir-osric-vane-marshal-of-the-old-guard', 'pell-quillon-collegium-prodigy'], hand: [] });
     restart(h);
     until(h, bidFor(h.A));
     const osric = totalFor(new Ctx(h.s), player(h, h.A), () => true)!;
-    expect(osric.companions.find((c) => c.source === card(h, 'sir-osric-vane-marshal-of-the-old-guard'))?.value).toBe(4 + 1);
+    expect(osric.companions.find((c) => c.source === card(h, 'sir-osric-vane-marshal-of-the-old-guard'))?.value).toBe(4);
     const onGuile = totalFor(new Ctx(h.s), player(h, h.A), () => true, 'G')!;
     expect(onGuile.companions.find((c) => c.source === card(h, 'sir-osric-vane-marshal-of-the-old-guard'))?.value).toBe(4);
   });
@@ -1350,15 +1390,44 @@ describe('Kin bonuses', () => {
     }
   });
 
-  it('B: draw when a companion of the hero\'s kingdom enters play under any player (Maren, Human)', () => {
+  it('B: draw when a companion of the hero\'s kingdom enters play under your control (Maren, Human)', () => {
     const g = newGame();
     standard(g, { hero: 'queen-maren-ashcroft' }, { hero: 'thorgar-twice-buried' });
     const ctx = atBidding(g);
     const hand = player(g, g.A).hand.length;
-    companionEnters(ctx, player(g, g.B), card(g, 'mags-tolliver-market-trader'), null); // a Human, entering for B
+    companionEnters(ctx, player(g, g.B), card(g, 'mags-tolliver-market-trader'), null); // a Human entering for B: not under her control
+    expect(player(g, g.A).hand.length).toBe(hand);
+    companionEnters(ctx, player(g, g.A), card(g, 'mags-tolliver-market-trader'), null); // a Human entering for A
     expect(player(g, g.A).hand.length).toBe(hand + 1);
-    companionEnters(ctx, player(g, g.B), card(g, 'thessaly-of-the-grove'), null); // an Elf: nothing
+    companionEnters(ctx, player(g, g.A), card(g, 'thessaly-of-the-grove'), null); // an Elf: nothing
     expect(player(g, g.A).hand.length).toBe(hand + 1);
+  });
+
+  it('B: a resource of the hero\'s kingdom counts when revealed or played face up, under your control only', () => {
+    const g = newGame();
+    standard(g, { hero: 'queen-maren-ashcroft', hand: ['scrying-lenses', 'the-dawn-temple-bell', 'honey-biscuit'] }, { hero: 'warchief-grukka-ironjaw', hand: ['dowsing-rod'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Queen Maren')).length;
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'scrying-lenses') }); // Human + Collegium, face up
+    expect(drawn()).toBe(1);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-dawn-temple-bell') }); // Human, face down: hidden, so nothing yet
+    expect(drawn()).toBe(1);
+    until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve');
+    expect(drawn()).toBe(2); // turned face up at the reveal
+  });
+
+  it('B: a card of another kingdom, or one under an opponent\'s control, does nothing', () => {
+    const g = newGame();
+    standard(g, { hero: 'queen-maren-ashcroft', hand: ['honey-biscuit'] }, { hero: 'warchief-grukka-ironjaw', hand: ['the-dawn-temple-bell'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') }); // Halfellow
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-dawn-temple-bell') }); // Human, but B's
+    until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve');
+    expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Queen Maren'))).toBe(false);
   });
 
   it('C: while an opponent controls a companion of the hero\'s kingdom it gets -1 (Vaelis, Elf)', () => {
@@ -1378,7 +1447,7 @@ describe('Kin bonuses', () => {
     const { CARDS } = await import('./cards');
     for (const h of CARDS.heroes) {
       expect(KIN[h.id], h.name).toBeTruthy();
-      expect(h.kinText, h.name).toContain(KIN[h.id] === 'A' ? '+1 to all stats' : KIN[h.id] === 'B' ? 'enters play, draw' : '-1 to all stats');
+      expect(h.kinText, h.name).toContain(KIN[h.id] === 'A' ? '+1 to all stats' : KIN[h.id] === 'B' ? 'enters play under your control, draw' : '-1 to all stats');
     }
   });
 });
@@ -1420,13 +1489,13 @@ describe('Bonus companions (Varg and Moss, Goldie and Gimlet)', () => {
     expect(g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardCompanion')).toHaveLength(1);
   });
 
-  it('Varg and Sigrun each gain +1 while the other is in the party', () => {
+  it('Varg and Sigrun each gain +2 while the other is in the party', () => {
     const g = newGame();
     standard(g, { companions: ['varg-ironjaw', 'sigrun-stonefast-metal-singer'] });
     atBidding(g); // Physical
     const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.companions.find((c) => c.source === card(g, 'varg-ironjaw'))?.value).toBe(5 + 1);
-    expect(tb.companions.find((c) => c.source === card(g, 'sigrun-stonefast-metal-singer'))?.value).toBe(2 + 1);
+    expect(tb.companions.find((c) => c.source === card(g, 'varg-ironjaw'))?.value).toBe(5 + 2);
+    expect(tb.companions.find((c) => c.source === card(g, 'sigrun-stonefast-metal-singer'))?.value).toBe(2 + 2);
   });
 
   it('Gimlet gains +1 while Destiny the Frog is part of the encounter', () => {
@@ -1588,8 +1657,8 @@ describe('Activated abilities of the redesign', () => {
     expect(g.s.turn.effects.filter((e) => e.kind === 'forceCompanionStat')).toHaveLength(1); // her once per turn is spent
   });
 
-  it('Torvi: Fire in the Hole discards him and takes 4 off every opponent (5 with Mhorgrim\'s Hunt)', () => {
-    for (const [hand, amount] of [[['honey-biscuit'], 4], [['mhorgrims-hunt'], 5]] as const) {
+  it('Torvi: Fire in the Hole discards him and takes 4 off every opponent (6 with Mhorgrim\'s Hunt)', () => {
+    for (const [hand, amount] of [[['honey-biscuit'], 4], [['mhorgrims-hunt'], 6]] as const) {
       const g = newGame();
       standard(g, { companions: ['torvi-cinderkeg-master-gunner', 'pell-quillon-collegium-prodigy'], hand: [...hand] });
       restart(g);
@@ -1603,23 +1672,20 @@ describe('Activated abilities of the redesign', () => {
     }
   });
 
-  it('Oskar names an opponent: if they win, they have -3 in the next encounter only', () => {
+  it('Oskar watches an opponent: when they use an ability against his hero or companions, he draws', () => {
     const g = newGame();
     standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: [] },
-      { hero: 'warchief-grukka-ironjaw', companions: ['gnash-the-butcher-of-bloodmire', 'kesh-the-bog-huntress'] });
+      { hero: 'warchief-grukka-ironjaw', companions: ['brisa-blastcap-bombardier', 'kesh-the-bog-huntress'] });
     onTop(g.s, 'encounter', ['crawling-remnant']);
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
     use(g, 'loremaster-oskar-grimgate', 'grudge'); // the only opponent is named without asking
-    finishTurn(g);
-    const outcome = g.events.find((e) => e.type === 'outcome');
-    expect(outcome?.type === 'outcome' && outcome.result.winner).toBe(g.B);
-    expect(player(g, g.B).penalty).toBe(3); // B's turn: the penalty is in force
-    expect(viewFor(g.s, g.A).players.find((p) => p.id === g.B)!.penalty).toBe(3);
-    finishTurn(g);
-    expect(player(g, g.B).penalty).toBe(0);
+    const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Loremaster Oskar Grimgate').length;
+    expect(drawn()).toBe(0);
+    until(g, bidFor(g.B));
+    use(g, 'brisa-blastcap-bombardier', 'force'); // B forces A's hero to use Physical
+    expect(drawn()).toBe(1);
   });
-
   it('The Book of Grudges: +3 (+4 for Oskar), and if its owner falls the winner has -3 next encounter', () => {
     const g = newGame();
     standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: ['the-book-of-grudges'] },
@@ -1636,6 +1702,46 @@ describe('Activated abilities of the redesign', () => {
     const outcome = g.events.find((e) => e.type === 'outcome');
     expect(outcome?.type === 'outcome' && outcome.result.winner).toBe(g.B);
     expect(player(g, g.B).penalty).toBe(3);
+  });
+});
+
+describe("Goldie's Rumour Mill", () => {
+  it('shows every face-down card of one opponent and the viewer keeps seeing them this turn', () => {
+    const g = newGame();
+    standard(g, { companions: ['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'] }, { hand: ['the-axe-of-doom', 'feathered-cap', 'jesters-cap'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') }); // face down
+    until(g, bidFor(g.A));
+    use(g, 'goldie-trickgrin-keeper-of-the-goose-and-kettle', 'rumour'); // one opponent: no question
+    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'rumourMill').toBe(true);
+    expect(player(g, g.A).seen).toEqual([card(g, 'feathered-cap')]);
+    pick(g, 'done');
+    const b = viewFor(g.s, g.A).players.find((p) => p.id === g.B)!;
+    expect(b.bids.filter((x) => x.hidden)).toHaveLength(0);
+    expect(JSON.stringify(viewFor(g.s, g.B))).toContain('feathered-cap'); // their own card
+    // The third player (if any) and spectators still do not see it.
+    expect(JSON.stringify(viewFor(g.s, null))).not.toContain(card(g, 'feathered-cap'));
+  });
+
+  it('a normal bot waits until a few cards are down; an easy bot may look at once', () => {
+    const g = newGame();
+    standard(g, { companions: ['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'bag-of-toffees'] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') });
+    until(g, bidFor(g.A));
+    // Three cards are down: a normal bot looks.
+    const cmd = botDecide(viewFor(g.s, g.A), 'normal', () => 0.9);
+    expect(cmd?.type === 'ability.use' && cmd.ability).toBe('rumour');
   });
 });
 

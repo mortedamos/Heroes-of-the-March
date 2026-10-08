@@ -115,8 +115,12 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     case 'fetch': return fetchWorthIt(t);
     // Torvi, at the end of bidding when the numbers are exact.
     case 'fire': return fireWorthIt(t, a, level);
-    // Goldie's rumours are information a bot can't use.
-    case 'rumour': return false;
+    // Goldie: easy bots look at random; the others wait until a few cards are down, so there is something worth knowing.
+    case 'rumour': {
+      if (!t.others.some((p) => p.bids.some((b) => b.hidden))) return false;
+      if (level === 'easy') return rand() < 0.3;
+      return t.view.players.reduce((n, p) => n + p.bids.length, 0) >= 3;
+    }
     // Pure information: worth a look now and then, always for a hard bot.
     case 'readAhead': return level === 'hard' || (level === 'normal' && rand() < 0.4);
     case 'shadowsteeds': {
@@ -602,6 +606,18 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       return [pickMax((v) => { const p = t.view.players.find((x) => x.id === v); return p ? t.estimate(p) + p.renown * 0.3 : -99; })];
     case 'rumourMill':
       return one(values[0]);
+    case 'rumourTarget': {
+      // Look at whoever has the most hidden cards (the biggest unknown); ties go to the stronger rival.
+      const hidden = (v: string) => t.view.players.find((x) => x.id === v)?.bids.filter((b) => b.hidden).length ?? 0;
+      if (level === 'easy') return [random()];
+      return [pickMax((v) => { const p = t.view.players.find((x) => x.id === v); return hidden(v) * 10 + (p ? t.estimate(p) : 0); })];
+    }
+    case 'vaelisGive': {
+      // A positive minion bonus helps whoever holds it; a negative one hurts them. Keep the good, hand out the bad.
+      const mv = Number(/([+-]?d+) to all stats/.exec(c.options.find((o) => o.value === 'self')?.label ?? '')?.[1] ?? 0);
+      if (mv >= 0 || level === 'easy') return ['self'];
+      return [pickMax((v) => { const p = t.view.players.find((x) => x.id === v); return p ? t.estimate(p) : -99; })];
+    }
     case 'fetch': {
       const worst = pickMin((v) => (v === 'skip' ? 99 : t.handValue(v)));
       return [worst !== 'skip' && topDiscardValue(t) >= t.handValue(worst) + 2 ? worst : 'skip'];

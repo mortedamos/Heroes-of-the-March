@@ -112,7 +112,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
       // No hero yet: heroes are drafted (or dealt) below.
       id: s.id, name: sanitizeName(s.name, `Player ${i + 1}`), hero: NO_HERO,
       companions: [], inactiveCompanions: [], resting: [], hand: [], claimed: [], renown: 0,
-      bids: [], councilHeroes: [], statOverride: null, used: {}, penalty: 0, penaltyNext: 0,
+      bids: [], seen: [], councilHeroes: [], statOverride: null, used: {}, penalty: 0, penaltyNext: 0,
     });
   }
   ctx.emit({ type: 'gameStarted', players: state.players.map((p) => p.id) });

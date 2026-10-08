@@ -92,6 +92,7 @@ function effectTag(e: EffectView): string {
     case 'negateBid': return `${tgt} zero`;
     case 'disableAbilities': return `${tgt} disabled`;
     case 'autoWin': return 'Takes the location';
+    case 'grudgeWatch': return 'Watched';
     case 'grudge': return `Grudge -${e.amount ?? 3}`;
   }
 }

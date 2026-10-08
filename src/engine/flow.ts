@@ -422,11 +422,6 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       const tb = totalFor(ctx, p, ALL_VISIBLE)!;
       const diff = difficultyFor(ctx, p)!.total;
       let total = tb.total;
-      const save = activeAbility(ctx, p.hero)?.failSave;
-      if (total < diff && save) {
-        total += save;
-        ctx.log(p.id, ctx.def(p.hero).name, `gains ${save} to avoid defeat`);
-      }
       const parts: ResultPart[] = [];
       const nm = (c: CardId) => ctx.def(c).name.split(',')[0]!;
       parts.push({ kind: 'hero', card: ctx.ref(p.hero), label: nm(p.hero), value: tb.hero - tb.kin });
@@ -529,6 +524,12 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     for (const pid of falling) {
       const p = ctx.player(pid);
       if (t.noFalls) { ctx.emit({ type: 'fallPrevented', player: p.id, source: 'Shield of Xorthalos' }); continue; }
+      if (activeAbility(ctx, p.hero)?.unburied && !p.used['unburied']) {
+        p.used['unburied'] = 1;
+        ctx.emit({ type: 'fallPrevented', player: p.id, source: ctx.def(p.hero).name });
+        drawResources(ctx, p.id, 3, ctx.def(p.hero).name);
+        continue;
+      }
       if (p.bids.some((b) => ctx.defId(b.card) === 'the-amulet-of-aesia') && !(auto && auto.target === pid)) {
         ctx.emit({ type: 'fallPrevented', player: p.id, source: 'The Amulet of Aesia' });
         drawResources(ctx, p.id, ctx.s.players.length - 1, 'The Amulet of Aesia');
@@ -577,6 +578,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     for (const p of ctx.s.players) {
       for (const b of p.bids) ctx.discard('resource', b.card);
       p.bids = [];
+      p.seen = [];
       borrowed.push(...p.councilHeroes);
       p.councilHeroes = [];
       p.statOverride = null;
@@ -614,11 +616,28 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
 
 /** House rule: the player(s) with the lowest Renown draw extra resources (unless everyone is tied). */
 
+/** Goldie's Rumour Mill: `p` looks at every face-down card `target` has bid, and remembers them for the rest of the turn. */
+export function lookAtBids(ctx: Ctx, p: PlayerState, target: PlayerState, source: string): void {
+  const hidden = target.bids.filter((b) => !b.visible).map((b) => b.card);
+  if (!hidden.length) return;
+  for (const c of hidden) {
+    if (!p.seen.includes(c)) p.seen.push(c);
+    ctx.emit({ type: 'cardShown', player: p.id, card: ctx.ref(c), reason: source });
+  }
+  ctx.queueFirst({
+    t: 'choose', purpose: 'rumourMill', player: p.id, source,
+    prompt: `Rumour Mill: ${target.name}'s face-down cards are ${hidden.map((c) => ctx.def(c).name).join(', ')}.`,
+    options: [...hidden.map((c) => peekOption(ctx, 'seen', c, `${target.name}: ${ctx.def(c).name}`)), { value: 'done', label: 'Got it' }],
+    min: 1, max: 1,
+  });
+}
+
 /** Apply a revealed (or face-up) resource's effects. */
 export function resolveBid(ctx: Ctx, p: PlayerState, bid: Bid): void {
   if (bid.resolved) return;
   bid.resolved = true;
   abilityOf(ctx.defId(bid.card))?.onReveal?.(ctx, { card: bid.card, owner: p.id, kind: 'resource' });
+  fire(ctx, 'resourceEntered', { card: bid.card, player: p.id });
 }
 
 /**
@@ -755,6 +774,7 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
       const bid = ctx.s.players.find((o) => o.id === pid)?.bids[Number(idx)];
       return Boolean(bid && !bid.visible);
     });
+    case 'rumourTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p && o.bids.some((b) => !b.visible)));
     case 'curseTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p));
     case 'appleSwap': return keep((v) => ctx.s.players.some((o) => o.bids.some((b) => b.card === v && b.visible)));
     case 'gauntlet': return keep((v) => ctx.s.discards.companion.includes(v));
@@ -945,7 +965,7 @@ export function applyChoice(
       }
       case 'oskarGrudge':
         // Entered in the Grudge Book: if `pick` wins this encounter they have -3 in the next (applied in resolve).
-        addEffect(ctx, { kind: 'grudge', source: String(data['source']), owner: p.id, target: pick, amount: 3 });
+        addEffect(ctx, { kind: 'grudgeWatch', source: String(data['source']), owner: p.id, target: pick });
         break;
       case 'rumourMill':
         break; // the card was shown; nothing else happens
@@ -965,6 +985,18 @@ export function applyChoice(
         // Urzha: swap this encounter for the next one, or shuffle the stack so nothing is remembered.
         if (pick === 'replace' && ctx.s.decks.encounter[ctx.s.decks.encounter.length - 1] === data['card']) replaceEncounter(ctx, 'Pick Your Fight');
         else ctx.shuffle('encounter');
+        break;
+      }
+      case 'rumourTarget': {
+        const target = ctx.s.players.find((o) => o.id === pick && o !== p);
+        if (target) lookAtBids(ctx, p, target, String(data['source']));
+        break;
+      }
+      case 'vaelisGive': {
+        const mv = Number(data['amount']);
+        const to = pick === 'self' ? p.id : pick;
+        addEffect(ctx, { kind: 'statBonus', source: String(data['card']), owner: p.id, target: to, stat: 'all', amount: mv });
+        ctx.log(p.id, 'Master Manipulator', to === p.id ? `uses the minion bonus (${mv >= 0 ? '+' : ''}${mv}) for themselves` : `gives the minion bonus (${mv >= 0 ? '+' : ''}${mv}) to ${ctx.player(to).name}`);
         break;
       }
       case 'curseTarget': {

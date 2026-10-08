@@ -156,7 +156,8 @@ describe('information hiding', () => {
     const shown = JSON.stringify(s.turn.result ?? null);
     ids.push(...s.turn.extraLocations);
     if (s.pending?.kind === 'companion.place' && s.pending.player !== viewer) ids.push(s.pending.drawn);
-    return ids.filter((id) => !shown.includes(`"${id}"`));
+    const seen = s.players.find((p) => p.id === viewer)?.seen ?? []; // cards the viewer legitimately looked at (Goldie)
+    return ids.filter((id) => !shown.includes(`"${id}"`) && !seen.includes(id));
   }
 
   it('views never contain hidden card ids, the RNG state or the card map', () => {

@@ -17,8 +17,8 @@ export type Visible = (owner: PlayerState, bid: Bid) => boolean;
 /** Engine-only: sees every card. Never use for anything sent to a client. */
 export const ALL_VISIBLE: Visible = () => true;
 /** What a viewer may see: visible bids plus their own. A null viewer (spectator) sees only visible bids. */
-export const visibleTo = (viewer: PlayerId | null): Visible =>
-  (owner, bid) => bid.visible || (viewer !== null && owner.id === viewer);
+export const visibleTo = (viewer: PlayerId | null, seen: readonly CardId[] = []): Visible =>
+  (owner, bid) => bid.visible || (viewer !== null && owner.id === viewer) || seen.includes(bid.card);
 
 export function currentChallenge(ctx: Ctx): Challenge | null {
   const enc = ctx.encounter;
@@ -170,6 +170,8 @@ export function resourceValue(ctx: Ctx, owner: PlayerState, card: CardId): numbe
   if (d.wand) {
     if (ctx.s.turn.wandsDisabled) return 0;
   }
+  // Kazra: every resource he bids is worth one more (a curse placed in front of him is not his bid).
+  if (d.groups.includes('Dwarf') && d.value >= 0 && owner.hero && activeAbility(ctx, owner.hero)?.bidBonus) v += activeAbility(ctx, owner.hero)!.bidBonus!;
   // Oskar: "any numeric bonus it grants counts as zero instead".
   if (v > 0 && activeEffects(ctx, 'negateBid').some((e) => e.target === card && hostileApplies(ctx, owner, e.owner))) v = 0;
   return v;
