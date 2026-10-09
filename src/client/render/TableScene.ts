@@ -12,6 +12,9 @@ const WIDE_TABLE = { w: 19, d: 12.6, cz: 0 };
 const ZOOM_MIN = 0.78;
 const ZOOM_MAX = 1.25;
 
+/** How far (degrees) the pulled-back camera turns left or right when the mouse is at the edge of the screen. */
+const LOOK_YAW_DEG = 27.5;
+
 export class TableScene {
   readonly renderer: THREE.WebGLRenderer;
   readonly scene = new THREE.Scene();
@@ -161,7 +164,7 @@ export class TableScene {
       const r = el.getBoundingClientRect();
       const nx = ((e.clientX - r.left) / r.width) * 2 - 1;
       const ny = ((e.clientY - r.top) / r.height) * 2 - 1;
-      this.want.yaw = THREE.MathUtils.degToRad(-nx * 55);
+      this.want.yaw = THREE.MathUtils.degToRad(-nx * LOOK_YAW_DEG);
       this.want.pitch = THREE.MathUtils.degToRad(-ny * 14);
     };
     el.addEventListener('wheel', wheel, { passive: false });
