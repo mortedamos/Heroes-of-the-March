@@ -13,7 +13,7 @@ const ZOOM_MIN = 0.78;
 const ZOOM_MAX = 1.25;
 
 /** How far (degrees) the pulled-back camera turns left or right when the mouse is at the edge of the screen. */
-const LOOK_YAW_DEG = 27.5;
+const LOOK_YAW_DEG = 23.4;
 
 export class TableScene {
   readonly renderer: THREE.WebGLRenderer;
