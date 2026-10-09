@@ -323,6 +323,7 @@ export class GameClient {
     await boardDone; // the card has landed
     if (this.disposed) return;
     const d = getDef(def) as { name: string; renown: number; conditionText: string | null; quote: string | null };
+    this.showPlaceInfo(def);
     this.scene.environment.setLocation(def);
     music.locationRevealed(def, advance);
     const swing = this.scene.swingOut();
@@ -330,6 +331,13 @@ export class GameClient {
     if (this.disposed) return;
     await this.hud.showPlace(d.name, d.renown, d.conditionText, d.quote);
     await this.scene.swingBack();
+  }
+
+  /** Tell the HUD which place is on the table, for the step-back camera to show (its name, renown and ability, as the reveal does). */
+  private showPlaceInfo(def: string | null | undefined): void {
+    if (!def) { this.hud.setPlaceInfo(null); return; }
+    const d = getDef(def) as { name: string; renown: number; conditionText: string | null; quote: string | null };
+    this.hud.setPlaceInfo({ name: d.name, renown: d.renown, ability: d.conditionText, quote: d.quote });
   }
 
   /** The debug panel's hold on the table's look; it also restores what was set last time. */
@@ -378,7 +386,10 @@ export class GameClient {
     this.scene.setView(this.board.layout!.shape, this.board.layout!.frame);
     // The table takes on the look of the place being contested. A newly revealed location does this as part of its
     // reveal below (the camera swings out to it first).
-    if (!events.some((e) => e.type === 'locationRevealed')) this.scene.environment.setLocation(view.turn.location?.def);
+    if (!events.some((e) => e.type === 'locationRevealed')) {
+      this.scene.environment.setLocation(view.turn.location?.def);
+      this.showPlaceInfo(view.turn.location?.def);
+    }
     const opening = view.turn.number === 0 || (view.turn.number === 1 && (view.turn.step === 'turnStart' || view.turn.step === 'companions' || view.turn.step === 'draft'));
     if (opening !== this.openingMusic) {
       this.openingMusic = opening;

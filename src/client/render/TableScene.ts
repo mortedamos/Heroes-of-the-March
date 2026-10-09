@@ -192,6 +192,8 @@ export class TableScene {
     }
     if (!moved) return;
     document.body.classList.toggle('looking', Math.max(v.amt, v.back) > 0.15);
+    // The step-back camera is out: the HUD hides the value circles on the table cards until it is nearly home again.
+    document.body.classList.toggle('camera-back', v.back > 0.15);
     if (this.frame) this.environment.setCameraDistance(this.shape === 'wide' ? this.poseWide() : this.poseFit());
   }
 
@@ -357,7 +359,7 @@ export class TableScene {
 
   dispose(): void {
     this.disposed = true;
-    document.body.classList.remove('establishing', 'looking', 'stepped-back');
+    document.body.classList.remove('establishing', 'looking', 'stepped-back', 'camera-back');
     this.unbindLook();
     this.environment.dispose();
     this.scene.traverse((o) => {

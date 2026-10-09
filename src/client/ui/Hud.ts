@@ -23,6 +23,15 @@ import { PALETTE, RUNES, type Theme } from './themes';
 /** A button shown under a pinned card, e.g. "Bid this card" after a tap. */
 interface InspectAction { label: string; primary?: boolean; run: () => void; /** An ability of the card: its OK button sits on the card, beside the ability text. */ ability?: { name: string } }
 
+/** What says a place: its name, its renown, and its ability (or, when it has none, its quote). Used by the reveal and by the step-back camera. */
+function placeLines(name: string, renown: number, ability: string | null, quote: string | null): (HTMLElement | null)[] {
+  return [
+    h('div', { class: 'place-title' }, name),
+    h('div', { class: 'place-renown' }, `Renown ${renown}`),
+    ability ? h('div', { class: 'place-ability' }, ability) : quote ? h('div', { class: 'place-ability place-quote' }, quote) : null,
+  ];
+}
+
 /** Thumbnail widths (CSS px) for the current screen. */
 function thumbSizes(): { hand: number; option: number; drawn: number } {
   const cl = document.body.classList;
@@ -202,8 +211,11 @@ export class Hud {
   private plateHeld = new Map<string, number>();
   /** Players whose next change of total comes from a card being revealed (it lands with an impact). */
   private impactFor = new Set<string>();
+  /** The place on the table, shown again (name, renown, ability) while the camera is stepped back; the stylesheet shows it only then. */
+  private readonly placeInfo = h('div', { class: 'place-info', aria: { hidden: 'true' } });
 
   constructor(private readonly root: HTMLElement, private readonly deps: HudDeps) {
+    append(root, this.placeInfo);
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
     this.setLogOpen(false); // the log starts hidden; the Log item in the menu opens it
     append(this.dock, this.prompt, this.hand);
@@ -1595,11 +1607,7 @@ export class Hud {
   showPlace(name: string, renown: number, ability: string | null, quote: string | null): Promise<void> {
     return new Promise((resolve) => {
       const hint = h('div', { class: 'place-hint' }, 'Click to continue');
-      const el = h('div', { class: 'place' },
-        h('div', { class: 'place-title' }, name),
-        h('div', { class: 'place-renown' }, `Renown ${renown}`),
-        ability ? h('div', { class: 'place-ability' }, ability) : quote ? h('div', { class: 'place-ability place-quote' }, quote) : null,
-        hint);
+      const el = h('div', { class: 'place' }, ...placeLines(name, renown, ability, quote), hint);
       el.style.setProperty('--ability-delay', '1.3s');
       el.style.setProperty('--hint-delay', ability || quote ? '2.4s' : '1.5s');
       let done = false;
@@ -1616,6 +1624,14 @@ export class Hud {
       window.addEventListener('keydown', key, true);
       append(this.root, el);
     });
+  }
+
+  /**
+   * The place now on the table, for the step-back camera to show over the low view as the reveal did: the same name,
+   * renown and ability, without the hint, and taking no clicks. `null` clears it (no place yet).
+   */
+  setPlaceInfo(info: { name: string; renown: number; ability: string | null; quote: string | null } | null): void {
+    replace(this.placeInfo, ...(info ? placeLines(info.name, info.renown, info.ability, info.quote) : []));
   }
 
   noticesClosed(): Promise<void> {

@@ -839,6 +839,8 @@ body.establishing .dock { opacity: 0.25; pointer-events: none; }
 
 /* Looking around: the info plates fade back a little. */
 body.looking .plate, body.looking .challenge, body.looking .card-chips { opacity: 0.45; }
+/* Stepped back: the cards are too small for their value circles, which hide until the camera has come back in. */
+body.stepped-back .card-chips, body.camera-back .card-chips { opacity: 0; }
 
 /* A new location: name, then ability, then a hint, over the low view of the place. Click to go on. */
 .place {
@@ -853,6 +855,20 @@ body.looking .plate, body.looking .challenge, body.looking .card-chips { opacity
 .place-ability { max-width: min(640px, 92vw); font-size: clamp(15px, 1.6vw, 20px); line-height: 1.45; color: #f4ead0; padding: 10px 18px; border-radius: 10px;
   background: rgba(14, 10, 6, 0.62); text-shadow: 0 2px 10px rgba(0,0,0,0.9); animation-delay: var(--ability-delay, 1.3s); }
 .place-quote { font-style: italic; color: #d9c9a0; }
+/* The place again, while the camera is stepped back: the same name, renown and ability as its reveal, but it stays, takes no clicks and
+   steps aside while the reveal itself is showing. */
+.place-info {
+  position: fixed; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 12px;
+  padding: 11vh 24px 0; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.6s ease;
+  background: linear-gradient(to bottom, rgba(8, 5, 2, 0.5), rgba(8, 5, 2, 0) 55%);
+}
+/* Tall phone screens show only a thin strip of sky above the table: hold the text up under the top bar and keep it small so it stays off the name plates. */
+body.shape-tall .place-info { padding-top: calc(var(--top-h, 48px) + 6px); gap: 4px; }
+body.shape-tall .place-info .place-title { font-size: 30px; }
+body.shape-tall .place-info .place-renown { font-size: 15px; }
+body.shape-tall .place-info .place-ability { font-size: 14px; padding: 6px 12px; }
+body.stepped-back .place-info { opacity: 1; }
+body.stepped-back.establishing .place-info { opacity: 0; }
 .place-hint { margin-top: 8px; font-size: 14px; letter-spacing: 0.12em; text-transform: uppercase; color: #cdbb8d; animation: place-in 1s ease forwards, place-pulse 2.4s ease-in-out infinite; animation-delay: var(--hint-delay, 2.4s), calc(var(--hint-delay, 2.4s) + 1s); }
 @keyframes place-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes place-pulse { 50% { opacity: 0.45; } }
