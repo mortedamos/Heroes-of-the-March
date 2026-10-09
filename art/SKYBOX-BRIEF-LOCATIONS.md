@@ -8,7 +8,7 @@ The spec for every place (mood, light, what is in the picture) is `docs/LOCATION
 
 A painting is **one flat, wide picture, not a panorama of the whole sky**. The game sticks it onto the sky like a poster, centred on the way the camera looks, and it fades into the plain sky at its left, right and top edges. The picture does not need to wrap, and nothing outside it is ever seen.
 
-- **Any shape that is not exactly 2:1 is a strip.** (The ten old family paintings are 2:1 panoramas of the whole sky and still work as they are.) The wider the better: a 4:1 picture spends all of its pixels where the camera looks, a 21:9 picture most of them, a 16:9 picture only its lower third. The generator asks for 4:1 and falls back to 21:9.
+- **Any shape that is not exactly 2:1 is a strip.** (The ten old family paintings are 2:1 panoramas of the whole sky and still work as they are.) The wider the better: a 4:1 picture spends all of its pixels where the camera looks, a 21:9 picture most of them, a 16:9 picture only its lower third. The generator asks Gemini (Nano Banana 2.1) for 4:1, which it accepts, at the "2K" size: 4128 x 1024, about all the game can use.
 - **Its height on the sky follows from its shape**, so it is never stretched: 4:1 covers 34 degrees up from the horizon, 21:9 covers 59, 16:9 covers 77. Only the lowest part of a tall picture is ever on screen.
 - **Where things go, measured in the game** (1280 x 720 window, a 4:1 strip; heights are measured up from the bottom edge, which is the horizon):
 
@@ -37,7 +37,7 @@ npm run skies -- generate --only barrowdeep,the-umbral-deep     ask Gemini (leav
 npm run skies -- install --only barrowdeep copy it into public/locations and the manifest
 ```
 
-Made pictures are kept in `_build/art-work/skies/` (not in git) next to a `.json` note of the prompt and model used, until they are installed. Use `--force` to make one again, `--ratio 21:9` or `--size 2K` to ask for a different shape or size, `--model` to pick a model, and `--dry` to see the prompts without asking.
+Made pictures are kept in `_build/art-work/skies/` (not in git) next to a `.json` note of the prompt and model used, until they are installed. Use `--force` to make one again (each is a fresh try, and costs credits), `--ratio 21:9` or `--size 4K` to ask for a different shape or size (a 4K one is 8256 pixels across; `install` shrinks anything over 4096 across with ffmpeg, so it is no heavier in the game), `--model` to pick a model, and `--dry` to see the prompts without asking.
 
 To make one by hand instead, paste the output of `prompts` into the Gemini app, ask for a 4:1 (or the widest) picture, and save it as `public/locations/<id>_sky.jpg`; then add `"<id>": { "sky": "<id>_sky.jpg" }` to `public/locations/manifest.json` (`fog` is optional: the game reads the horizon colour from the image).
 

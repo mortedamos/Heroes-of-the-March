@@ -54,17 +54,25 @@ describe('prompts', () => {
 });
 
 describe('asking for pictures', () => {
-  it('asks for the widest shape first, and the sharpest size first', () => {
+  it('asks for the widest shape first, and for the size that is enough first', () => {
     expect(RATIOS[0]).toBe('4:1');
     expect(RATIOS).toContain('21:9');
-    expect(SIZES[0]).toBe('4K');
+    expect(SIZES[0]).toBe('2K');
   });
 
   it('finds the picture whatever shape the reply is', () => {
-    const data = 'A'.repeat(5000);
-    expect(findImage({ output_image: { data, mime_type: 'image/png' } })).toEqual({ data, mime: 'image/png' });
-    expect(findImage({ candidates: [{ content: { parts: [{ text: 'hi' }, { inlineData: { mimeType: 'image/jpeg', data } }] } }] })).toEqual({ data, mime: 'image/jpeg' });
-    expect(findImage({ steps: [{ type: 'model_output', content: [{ type: 'image', data }] }] })).toEqual({ data, mime: 'image/jpeg' });
+    const jpeg = '/9j/' + 'A'.repeat(5000);
+    const png = 'iVBORw0KGgo' + 'A'.repeat(5000);
+    expect(findImage({ output_image: { data: png, mime_type: 'image/png' } })).toEqual({ data: png, mime: 'image/png' });
+    expect(findImage({ candidates: [{ content: { parts: [{ text: 'hi' }, { inlineData: { mimeType: 'image/jpeg', data: jpeg } }] } }] })).toEqual({ data: jpeg, mime: 'image/jpeg' });
+    expect(findImage({ steps: [{ type: 'model_output', content: [{ type: 'image', data: jpeg }] }] })).toEqual({ data: jpeg, mime: 'image/jpeg' });
+  });
+
+  it('takes the picture, not a longer string that is not one', () => {
+    const jpeg = '/9j/' + 'A'.repeat(5000);
+    const signature = 'EvQBCvEBAXLI' + 'B'.repeat(20000);
+    expect(findImage({ steps: [{ signature }, { content: [{ data: jpeg }] }] })).toEqual({ data: jpeg, mime: 'image/jpeg' });
+    expect(findImage({ steps: [{ signature }] })).toBeNull();
   });
 
   it('finds no picture in a reply without one', () => {

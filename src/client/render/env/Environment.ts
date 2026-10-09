@@ -212,11 +212,12 @@ export class Environment {
         fragmentShader: `uniform vec3 top; uniform vec3 bottom; uniform vec3 fogOut; uniform float haze; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; uniform float offFrom; uniform float offTo; uniform vec4 winFrom; uniform vec4 winTo; varying vec3 vP; varying vec2 vUv;
 ${SKY_PAINT_GLSL}
 void main(){ float h = pow(clamp(vP.y, 0.0, 1.0), mix(0.55, 1.4, max(wFrom, wTo))); vec3 c = mix(bottom, top, h);
-c = skyPaint(c, vUv, vP.y, skyFrom, skyTo, wFrom, wTo, offFrom, offTo, winFrom, winTo, haze); gl_FragColor = vec4(c, 1.0);
+float hz = skyHaze(haze, winFrom, winTo, wFrom, wTo);
+c = skyPaint(c, vUv, vP.y, skyFrom, skyTo, wFrom, wTo, offFrom, offTo, winFrom, winTo, hz); gl_FragColor = vec4(c, 1.0);
 #include <tonemapping_fragment>
 #include <colorspace_fragment>
 // The ground fades into the fog colour, which is not tone mapped: so the sky meets it as exactly that colour, with no line.
-gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * haze, 0.3 * haze + 0.001, vP.y));
+gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * hz, 0.3 * hz + 0.001, vP.y));
 }`,
       }),
     );
@@ -347,8 +348,8 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * haze, 0
       c.width = 64; c.height = 32;
       const g = c.getContext('2d')!;
       g.drawImage(img, 0, 0, 64, 32);
-      // Just above the horizon: rows 40% to 47% of a panorama, or the lower part of a strip (its horizon is near the bottom edge).
-      const d = strip ? g.getImageData(0, 19, 64, 5).data : g.getImageData(0, 13, 64, 2).data;
+      // Just above the horizon: rows 40% to 47% of a panorama, or the strip's rows just above its horizon (a little way up from its bottom edge).
+      const d = strip ? g.getImageData(0, 24, 64, 4).data : g.getImageData(0, 13, 64, 2).data;
       let r = 0, gr = 0, b = 0;
       const n = d.length / 4;
       for (let i = 0; i < d.length; i += 4) { r += d[i]!; gr += d[i + 1]!; b += d[i + 2]!; }

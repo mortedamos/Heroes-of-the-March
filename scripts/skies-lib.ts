@@ -35,21 +35,23 @@ export function buildPrompt(b: SkyBrief): string {
   return `${COMMON} ${b.kind === 'indoor' ? INDOOR : OUTDOOR} ${b.kind === 'indoor' ? 'The room' : 'The scene'}: ${b.scene.replace(/\.$/, '')}.`;
 }
 
+/** What the start of a picture looks like in base64 (a JPEG, a PNG, a WebP), so a picture is told from the other long strings a reply can hold (such as an opaque signature). */
+const MAGIC: [prefix: string, mime: string][] = [['/9j/', 'image/jpeg'], ['iVBORw0KGgo', 'image/png'], ['UklGR', 'image/webp']];
+
 /**
- * The image in an API reply, whatever shape the reply has: the largest long base64 string in it, with the mime type
- * named beside it (mime_type or mimeType) if there is one.
+ * The picture in an API reply, whatever shape the reply has: the largest long base64 string in it that starts like an
+ * image file. (A reply can hold other long base64 strings, even longer ones.)
  */
 export function findImage(json: unknown): { data: string; mime: string } | null {
   let best: { data: string; mime: string } | null = null;
   const walk = (v: unknown): void => {
     if (Array.isArray(v)) { for (const x of v) walk(x); return; }
     if (v === null || typeof v !== 'object') return;
-    const o = v as Record<string, unknown>;
-    for (const [k, x] of Object.entries(o)) {
-      if (typeof x === 'string' && x.length > 2000 && /^[A-Za-z0-9+/=_-]+$/.test(x) && (!best || x.length > best.data.length)) {
-        const m = o.mime_type ?? o.mimeType;
-        best = { data: x, mime: typeof m === 'string' && m.startsWith('image/') ? m : 'image/jpeg' };
-        void k;
+    for (const x of Object.values(v as Record<string, unknown>)) {
+      if (typeof x === 'string') {
+        if (x.length <= 2000 || !/^[A-Za-z0-9+/=]+$/.test(x) || (best && x.length <= best.data.length)) continue;
+        const magic = MAGIC.find(([prefix]) => x.startsWith(prefix));
+        if (magic) best = { data: x, mime: magic[1] };
       } else walk(x);
     }
   };
@@ -81,6 +83,6 @@ export function imageInfo(buf: Uint8Array): { width: number; height: number; typ
   return null;
 }
 
-/** The ways to ask for a picture, widest and sharpest first; the generator falls back down the list when the API refuses one. */
+/** The ways to ask for a picture, widest first, and the size that gives about 4100 pixels across a 4:1 picture (all the game can use) before the sharper and softer ones; the generator falls back down the list when the API refuses one. */
 export const RATIOS = ['4:1', '21:9'] as const;
-export const SIZES = ['4K', '2K', '1K'] as const;
+export const SIZES = ['2K', '4K', '1K'] as const;

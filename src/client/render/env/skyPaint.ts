@@ -2,6 +2,13 @@
 // reflects it, so the two always agree.
 
 export const SKY_PAINT_GLSL = `
+// A strip has its own horizon, painted, so it needs far less of the horizon haze (which hides the seam of a 2:1 panorama) than a panorama does.
+const float STRIP_HAZE = 0.3;
+float skyHaze(float haze, vec4 winA, vec4 winB, float wA, float wB) {
+  float strip = clamp(wA * step(0.0001, winA.y - winA.x) + wB * step(0.0001, winB.y - winB.x), 0.0, 1.0);
+  return haze * mix(1.0, STRIP_HAZE, strip);
+}
+
 // The picture \`tex\` at dome position \`uv\` (x round, y up): its colour, and how much of it shows there.
 // A window with no width means a 2:1 panorama of the whole sky, which can slide round by \`off\`; otherwise \`win\` is the
 // patch of dome (x0, x1, y0, y1) a flat strip is stuck onto, and its edges fade away.

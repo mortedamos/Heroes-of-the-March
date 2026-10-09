@@ -30,5 +30,83 @@
   "sky": {
     "sky": "sky_sky.webp",
     "fog": "#9a9fb2"
+  },
+  "barrowdeep": {
+    "sky": "barrowdeep_sky.jpg"
+  },
+  "the-umbral-deep": {
+    "sky": "the-umbral-deep_sky.jpg"
+  },
+  "tomb-of-the-first-wardens": {
+    "sky": "tomb-of-the-first-wardens_sky.jpg"
+  },
+  "the-deep-forge-of-karrak": {
+    "sky": "the-deep-forge-of-karrak_sky.jpg"
+  },
+  "the-wardens-hall": {
+    "sky": "the-wardens-hall_sky.jpg"
+  },
+  "the-hearthlands-archive": {
+    "sky": "the-hearthlands-archive_sky.jpg"
+  },
+  "the-sealed-archive": {
+    "sky": "the-sealed-archive_sky.jpg"
+  },
+  "the-collegium-observatory": {
+    "sky": "the-collegium-observatory_sky.jpg"
+  },
+  "the-endless-stair": {
+    "sky": "the-endless-stair_sky.jpg"
+  },
+  "parting-strand": {
+    "sky": "parting-strand_sky.jpg"
+  },
+  "the-old-quarry": {
+    "sky": "the-old-quarry_sky.jpg"
+  },
+  "the-crack-in-the-marchstone": {
+    "sky": "the-crack-in-the-marchstone_sky.jpg"
+  },
+  "gorewatch": {
+    "sky": "gorewatch_sky.jpg"
+  },
+  "the-storybook-glade": {
+    "sky": "the-storybook-glade_sky.jpg"
+  },
+  "sylvaneth": {
+    "sky": "sylvaneth_sky.jpg"
+  },
+  "the-hollow-hills": {
+    "sky": "the-hollow-hills_sky.jpg"
+  },
+  "the-hollow-between": {
+    "sky": "the-hollow-between_sky.jpg"
+  },
+  "the-mirror-marches": {
+    "sky": "the-mirror-marches_sky.jpg"
+  },
+  "silverlake-at-midsummer": {
+    "sky": "silverlake-at-midsummer_sky.jpg"
+  },
+  "marchguard-keep": {
+    "sky": "marchguard-keep_sky.jpg"
+  },
+  "the-field-of-oaths": {
+    "sky": "the-field-of-oaths_sky.jpg"
+  },
+  "grimgate": {
+    "sky": "grimgate_sky.jpg"
+  },
+  "kingsford": {
+    "sky": "kingsford_sky.jpg"
+  },
+  "the-speaking-stones": {
+    "sky": "the-speaking-stones_sky.jpg"
+  },
+  "the-endless-road": {
+    "sky": "the-endless-road_sky.jpg"
+  },
+  "clover-hollow": {
+    "sky": "clover-hollow_sky.jpg"
   }
 }

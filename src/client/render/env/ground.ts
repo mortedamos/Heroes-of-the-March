@@ -190,7 +190,7 @@ function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
           vec2 uv = vec2(1.0 - fract(atan(n.z, -n.x) / 6.28318530718), 1.0 - acos(clamp(n.y, -1.0, 1.0)) / 3.14159265359);
           float h = pow(clamp(n.y, 0.0, 1.0), mix(0.55, 1.4, max(uWFrom, uWTo)));
           vec3 sky = mix(uBottom, uTop, h);
-          return skyPaint(sky, uv, n.y, uSkyFrom, uSkyTo, uWFrom, uWTo, uOffFrom, uOffTo, uWinFrom, uWinTo, uHaze);
+          return skyPaint(sky, uv, n.y, uSkyFrom, uSkyTo, uWFrom, uWTo, uOffFrom, uOffTo, uWinFrom, uWinTo, skyHaze(uHaze, uWinFrom, uWinTo, uWFrom, uWTo));
         }`)
       .replace('#include <opaque_fragment>', `
         {

@@ -10,6 +10,7 @@
 //
 // Options: --model <id>  --api interactions|generate  --ratio 4:1  --size 4K  --dry (print, do not ask)
 
+import { spawnSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -43,9 +44,11 @@ if (only) for (const id of only) if (!all.some((b) => b.id === id)) { console.er
 const chosen = all.filter((b) => !only || only.includes(b.id));
 
 const madeFile = (id: string): string | null => {
-  for (const ext of ['jpg', 'png']) { const p = join(WORK, `${id}.${ext}`); if (existsSync(p)) return p; }
+  for (const ext of ['jpg', 'png', 'webp']) { const p = join(WORK, `${id}.${ext}`); if (existsSync(p)) return p; }
   return null;
 };
+/** How many pixels across a picture is shrunk to on install. */
+const MAX_WIDTH = 4096;
 const kb = (n: number): string => `${Math.round(n / 1024)} KB`;
 
 /** One request for one picture. */
@@ -119,7 +122,7 @@ async function generate(): Promise<void> {
     if (has('dry')) { console.log(`\n${b.id} (${b.kind})\n${buildPrompt(b)}`); continue; }
     try {
       const r = await make(key!, b);
-      const ext = r.mime.includes('png') ? 'png' : 'jpg';
+      const ext = r.mime.includes('png') ? 'png' : r.mime.includes('webp') ? 'webp' : 'jpg';
       const file = join(WORK, `${b.id}.${ext}`);
       writeFileSync(file, r.data);
       const info = imageInfo(r.data);
@@ -146,11 +149,20 @@ function install(): void {
   for (const b of chosen) {
     const src = madeFile(b.id);
     if (!src) { console.log(`skip  ${b.id} (not made yet)`); continue; }
-    const name = `${b.id}_sky.${src.endsWith('.png') ? 'png' : 'jpg'}`;
-    copyFileSync(src, join(LOCATIONS, name));
+    const ext = src.endsWith('.png') ? 'png' : src.endsWith('.webp') ? 'webp' : 'jpg';
+    const name = `${b.id}_sky.${ext}`;
+    const dest = join(LOCATIONS, name);
+    // The game shows a picture no sharper than about 4100 pixels across, so a bigger one is shrunk (with ffmpeg, if there is one).
+    const info = imageInfo(readFileSync(src));
+    let note = '';
+    if (info && info.width > MAX_WIDTH && ext === 'jpg') {
+      const r = spawnSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', src, '-vf', `scale=${MAX_WIDTH}:-2`, '-q:v', '2', dest]);
+      if (r.status === 0) note = `  (shrunk from ${info.width} to ${MAX_WIDTH} across)`;
+      else { copyFileSync(src, dest); note = '  (not shrunk: ffmpeg not found)'; }
+    } else copyFileSync(src, dest);
     manifest[b.id] = { ...(manifest[b.id] ?? {}), sky: name };
-    const size = statSync(src).size;
-    console.log(`install  ${name}  ${kb(size)}${size > 4 * 1024 * 1024 ? '  (big: over 4 MB)' : ''}`);
+    const size = statSync(dest).size;
+    console.log(`install  ${name}  ${kb(size)}${note}${size > 4 * 1024 * 1024 ? '  (big: over 4 MB)' : ''}`);
     n++;
   }
   writeFileSync(MANIFEST, `${JSON.stringify(manifest, null, 2)}\n`);
