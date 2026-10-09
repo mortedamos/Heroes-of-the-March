@@ -20,6 +20,8 @@ export interface DebugApi {
   setHaze(level: number): void;
   /** Play one of this look's place sounds now; false when it has none. */
   playAmbience(): boolean;
+  /** Show an image from disk as the sky of every place, to try a new painting (null: back to the real skies). Not saved. */
+  tryPainting(file: File | null): void;
 }
 
 const STORE = 'hotm.debug';
@@ -75,15 +77,20 @@ function render(api: DebugApi): void {
   }
   pick.value = api.pinned() ?? '';
   pick.addEventListener('change', () => { api.pin(pick.value || null); savePrefs(api); render(api); });
+  const painting = h('input', { type: 'file', aria: { label: 'Try a painting' } });
+  painting.accept = 'image/*';
+  painting.addEventListener('change', () => { api.tryPainting(painting.files?.[0] ?? null); });
   replace(panel,
     h('div', { class: 'music-title' }, 'Debug'),
     h('label', { class: 'debug-row' }, h('span', { class: 'debug-label' }, 'Location look'), pick,
       h('span', { class: 'debug-hint' }, 'Hold one place on the table, whatever the game reveals.')),
+    h('label', { class: 'debug-row' }, h('span', { class: 'debug-label' }, 'Try a painting'), painting,
+      h('span', { class: 'debug-hint' }, 'Show an image from your disk as the sky of every place, to see a new painting before it is added. Pick a look above to see it in each place; Reset puts the real skies back. Nothing is saved.')),
     slider('Fog level', '0 = none, 0.5 = default, 1 = as each place was designed, higher = thicker. Moves how near the fog starts.', api.fog(), 4, (v) => { api.setFog(v); savePrefs(api); }),
     slider('Horizon haze', '0 = the panorama runs to the ground, 0.5 = default, 1 = as designed, higher = more mist at the horizon.', api.haze(), 3, (v) => { api.setHaze(v); savePrefs(api); }),
     h('div', { class: 'music-buttons' },
       h('button', { class: 'btn', title: 'Play one of this look\'s place sounds now', on: { click: (e) => { const b = e.currentTarget as HTMLButtonElement; b.textContent = api.playAmbience() ? 'Playing…' : 'No sound for this look'; setTimeout(() => { b.textContent = 'Play a place sound'; }, 1800); } } }, 'Play a place sound'),
-      h('button', { class: 'btn', on: { click: () => { api.pin(null); api.setFog(DEBUG_DEFAULTS.fog); api.setHaze(DEBUG_DEFAULTS.haze); savePrefs(api); render(api); } } }, 'Reset')),
+      h('button', { class: 'btn', on: { click: () => { api.pin(null); api.tryPainting(null); api.setFog(DEBUG_DEFAULTS.fog); api.setHaze(DEBUG_DEFAULTS.haze); savePrefs(api); render(api); } } }, 'Reset')),
     h('div', { class: 'debug-hint' }, 'Tip: scroll down on the table to lift the camera and look at the horizon.'),
   );
 }

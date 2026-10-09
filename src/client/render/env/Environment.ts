@@ -132,6 +132,8 @@ export class Environment {
   private skyTo: ThemeId | null = null;
   private fileFrom: string | null = null;
   private fileTo: string | null = null;
+  /** Debug: the key of an image from disk that stands in as every place's sky (see tryPainting). */
+  private tryKey: string | null = null;
   private artReady: Promise<void> = Promise.resolve();
   private readonly accents: THREE.PointLight[];
   private readonly rimMat = new THREE.MeshStandardMaterial();
@@ -263,11 +265,11 @@ export class Environment {
     return { ...fam, ...(sharesFamilySky(id) ? {} : { sky: undefined, fog: undefined, keepSkyline: undefined }), ...own };
   }
 
-  /** Start loading a panorama (once); the dome picks it up when it arrives. */
-  private loadSky(file: string): void {
+  /** Start loading a panorama (once); the dome picks it up when it arrives. `url` is where it is, unless it is a file in public/locations. */
+  private loadSky(file: string, url = `${import.meta.env.BASE_URL}locations/${file}`, done?: () => void): void {
     if (this.skies.has(file) || this.skyLoading.has(file)) return;
     this.skyLoading.add(file);
-    new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}locations/${file}`, (tex) => {
+    new THREE.TextureLoader().load(url, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = this.aniso;
       // So a panorama that slides round the sky wraps past its own edge.
@@ -283,6 +285,32 @@ export class Environment {
           if (this.look >= 1) this.shown.sky.copy(fog);
         }
       }
+      done?.();
+    }, undefined, () => { this.skyLoading.delete(file); });
+  }
+
+  /**
+   * Debug: show an image from disk as the sky of whatever place is on the table (and of every place you move to), to see a
+   * new painting in the game before it is added to the manifest. `null` puts the real skies back. Nothing is saved.
+   */
+  tryPainting(file: File | null): void {
+    if (this.tryKey) {
+      this.skies.get(this.tryKey)?.dispose();
+      this.skies.delete(this.tryKey);
+      this.autoFog.delete(this.tryKey);
+      this.tryKey = null;
+    }
+    if (!file) {
+      this.setTheme(this.theme, true);
+      return;
+    }
+    if (!file.type.startsWith('image/') || file.size > 40 * 1024 * 1024) return;
+    const key = `try:${file.name}:${file.size}:${file.lastModified}`;
+    const url = URL.createObjectURL(file);
+    this.loadSky(key, url, () => {
+      URL.revokeObjectURL(url);
+      this.tryKey = key;
+      this.setTheme(this.theme, true);
     });
   }
 
@@ -384,9 +412,10 @@ export class Environment {
     this.from.copy(this.shown);
     this.to.set(th.look);
     const art = this.artOf(id);
-    const auto = art.sky ? this.autoFog.get(art.sky) : undefined;
+    const sky = this.tryKey ?? art.sky;
+    const auto = sky ? this.autoFog.get(sky) : undefined;
     if (auto) this.to.sky.copy(auto);
-    else if (art.sky && art.fog) this.to.sky.set(art.fog);
+    else if (!this.tryKey && art.sky && art.fog) this.to.sky.set(art.fog);
     this.look = instant ? 1 : 0;
     if (instant) {
       this.shown.copy(this.to);
@@ -404,8 +433,8 @@ export class Environment {
     this.skyFrom = instant ? null : this.skyTo;
     this.fileFrom = instant ? null : this.fileTo;
     this.skyTo = id;
-    this.fileTo = this.artOf(id).sky ?? null;
-    if (this.fileTo) this.loadSky(this.fileTo);
+    this.fileTo = this.tryKey ?? this.artOf(id).sky ?? null;
+    if (this.fileTo && this.fileTo !== this.tryKey) this.loadSky(this.fileTo);
     this.bindSkies();
   }
 

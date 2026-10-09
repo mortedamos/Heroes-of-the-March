@@ -353,6 +353,7 @@ export class GameClient {
       haze: () => env.hazeAmount,
       setHaze: (v) => env.setHaze(v),
       playAmbience: () => ambience.playNow(),
+      tryPainting: (file) => env.tryPainting(file),
     };
   }
 

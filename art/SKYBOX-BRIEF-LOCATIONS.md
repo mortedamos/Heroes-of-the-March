@@ -40,7 +40,9 @@ For each painting: save `public/locations/<location-id>_sky.webp` (quality about
 "the-umbral-deep": { "sky": "the-umbral-deep_sky.webp" }
 ```
 
-(`fog` is optional: the game reads the horizon colour from the image.) Then it is checked in the game with the debug menu's "Location look" picker. Keep the **Parting Strand** painting wrapping at the edges if you want its sky to keep sliding past; otherwise its slide is switched off (`skyScroll: null` in `themes.ts`).
+(`fog` is optional: the game reads the horizon colour from the image.) Then it is checked in the game with the debug menu's "Location look" picker.
+
+**To judge a painting before it is in the manifest:** open the debug menu (the Debug button in the dev build, or add `?debug` to the page address), choose the place under "Location look", then pick the image file under **Try a painting**. It becomes the sky of every place (so you can check it against each table and light) until you press Reset or reload. Nothing is saved or copied into the project. Pull the camera back (scroll down on the table) or start a new place to see the sky. Keep the **Parting Strand** painting wrapping at the edges if you want its sky to keep sliding past; otherwise its slide is switched off (`skyScroll: null` in `themes.ts`).
 
 The old forge and fortress paintings (`forge_sky.webp`, `fortress_sky.webp`) are retired: no location uses them any more. The files are left in place.
 
