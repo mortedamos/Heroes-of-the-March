@@ -8,6 +8,7 @@
 //   mirror - still water that reflects the sky dome.
 
 import * as THREE from 'three';
+import { SKY_PAINT_GLSL } from './skyPaint';
 
 export type GroundKind = 'waves' | 'clouds' | 'rock' | 'mirror';
 
@@ -21,6 +22,8 @@ export interface SkyUniforms {
   wTo: { value: number };
   offFrom: { value: number };
   offTo: { value: number };
+  winFrom: { value: THREE.Vector4 };
+  winTo: { value: THREE.Vector4 };
   haze: { value: number };
 }
 
@@ -164,7 +167,7 @@ function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
     const s = u.sky;
     Object.assign(shader.uniforms, {
       uTop: s.top, uBottom: s.bottom, uSkyFrom: s.skyFrom, uSkyTo: s.skyTo, uWFrom: s.wFrom, uWTo: s.wTo,
-      uOffFrom: s.offFrom, uOffTo: s.offTo, uHaze: s.haze, uDome: u.dome,
+      uOffFrom: s.offFrom, uOffTo: s.offTo, uWinFrom: s.winFrom, uWinTo: s.winTo, uHaze: s.haze, uDome: u.dome,
     });
     shader.vertexShader = shader.vertexShader
       .replace('#include <common>', '#include <common>\nvarying vec3 vMirrorPos;')
@@ -173,7 +176,8 @@ function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
       .replace('#include <common>', `#include <common>
         varying vec3 vMirrorPos;
         uniform vec3 uTop; uniform vec3 uBottom; uniform sampler2D uSkyFrom; uniform sampler2D uSkyTo;
-        uniform float uWFrom; uniform float uWTo; uniform float uOffFrom; uniform float uOffTo; uniform float uHaze; uniform vec4 uDome;
+        uniform float uWFrom; uniform float uWTo; uniform float uOffFrom; uniform float uOffTo; uniform float uHaze; uniform vec4 uDome; uniform vec4 uWinFrom; uniform vec4 uWinTo;
+        ${SKY_PAINT_GLSL}
         // The sky as the dome paints it, seen along the unit direction R from the point P.
         vec3 mirrorSky(vec3 P, vec3 R) {
           vec3 o = vec3(P.x / uDome.x, (P.y - uDome.w) / uDome.y, P.z / uDome.z);
@@ -186,10 +190,7 @@ function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
           vec2 uv = vec2(1.0 - fract(atan(n.z, -n.x) / 6.28318530718), 1.0 - acos(clamp(n.y, -1.0, 1.0)) / 3.14159265359);
           float h = pow(clamp(n.y, 0.0, 1.0), mix(0.55, 1.4, max(uWFrom, uWTo)));
           vec3 sky = mix(uBottom, uTop, h);
-          float vis = smoothstep(0.07 * uHaze, 0.32 * uHaze + 0.001, n.y);
-          sky = mix(sky, texture2D(uSkyFrom, vec2(uv.x + uOffFrom, uv.y)).rgb, uWFrom * vis);
-          sky = mix(sky, texture2D(uSkyTo, vec2(uv.x + uOffTo, uv.y)).rgb, uWTo * vis);
-          return sky;
+          return skyPaint(sky, uv, n.y, uSkyFrom, uSkyTo, uWFrom, uWTo, uOffFrom, uOffTo, uWinFrom, uWinTo, uHaze);
         }`)
       .replace('#include <opaque_fragment>', `
         {

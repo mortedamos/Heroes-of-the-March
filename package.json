@@ -17,6 +17,7 @@
     "test:watch": "vitest",
     "audit": "npm audit --omit=dev",
     "sfx": "node scripts/sfx.ts",
+    "skies": "node scripts/skies.ts",
     "numbers": "node scripts/card-numbers.ts",
     "export:cards": "node scripts/export-cards.ts",
     "ambience": "node scripts/sfx.ts",

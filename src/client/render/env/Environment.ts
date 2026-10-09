@@ -8,6 +8,8 @@ import { buildThemeScene, type ThemeScene } from './props';
 import { groundMaterial, type GroundUniforms } from './ground';
 import { TABLE_CORNER } from './tables';
 import { sharesFamilySky, THEMES, themeFor, type Look, type ThemeId } from './themes';
+import { SKY_PAINT_GLSL } from './skyPaint';
+import { isStrip, stripWindow } from './strip';
 
 const FADE_S = 1.8;
 /** How thick the fog and the horizon haze are before the player changes them (1 = the full amount each place was designed with). */
@@ -91,6 +93,8 @@ interface ArtEntry {
 }
 
 const smooth = (t: number): number => t * t * (3 - 2 * t);
+/** The window of a 2:1 panorama: none. */
+const NO_WINDOW = new THREE.Vector4();
 
 function disposeMaterial(m: THREE.Material): void {
   const s = m as THREE.MeshStandardMaterial;
@@ -115,6 +119,8 @@ export class Environment {
     top: { value: new THREE.Color() }, bottom: { value: new THREE.Color() },
     skyFrom: { value: this.blank as THREE.Texture }, skyTo: { value: this.blank as THREE.Texture },
     wFrom: { value: 0 }, wTo: { value: 0 },
+    /** Where on the dome each painting is stuck, if it is a flat strip (see strip.ts); no width means a 2:1 panorama. */
+    winFrom: { value: new THREE.Vector4() }, winTo: { value: new THREE.Vector4() },
     /** How far each panorama has slid round the sky (a fraction of a turn). */
     offFrom: { value: 0 }, offTo: { value: 0 },
     /** The fog colour as it is shown on screen (output colour space), for the sky to meet the ground. */
@@ -125,6 +131,8 @@ export class Environment {
   /** The panoramas loaded so far, by file name (places of one family share a file). */
   private readonly skies = new Map<string, THREE.Texture>();
   private readonly skyLoading = new Set<string>();
+  /** Where each loaded strip is stuck on the dome (see strip.ts); a 2:1 panorama has none. */
+  private readonly skyWin = new Map<string, THREE.Vector4>();
   /** Horizon colour read from each loaded panorama, so the ground fades into the sky without a seam. */
   private readonly autoFog = new Map<string, THREE.Color>();
   /** The look whose panorama fades out and the one whose fades in (a look decides how far its sky slides round), and their files. */
@@ -201,7 +209,15 @@ export class Environment {
       new THREE.ShaderMaterial({
         uniforms: this.domeUniforms, side: THREE.BackSide, depthWrite: false, fog: false,
         vertexShader: 'varying vec3 vP; varying vec2 vUv; void main(){ vP = normalize(position); vUv = vec2(1.0 - uv.x, uv.y); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-        fragmentShader: 'uniform vec3 top; uniform vec3 bottom; uniform vec3 fogOut; uniform float haze; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; uniform float offFrom; uniform float offTo; varying vec3 vP; varying vec2 vUv;\nvoid main(){ float h = pow(clamp(vP.y, 0.0, 1.0), mix(0.55, 1.4, max(wFrom, wTo))); vec3 c = mix(bottom, top, h);\nfloat vis = smoothstep(0.07 * haze, 0.32 * haze + 0.001, vP.y); c = mix(c, texture2D(skyFrom, vec2(vUv.x + offFrom, vUv.y)).rgb, wFrom * vis); c = mix(c, texture2D(skyTo, vec2(vUv.x + offTo, vUv.y)).rgb, wTo * vis); gl_FragColor = vec4(c, 1.0);\n#include <tonemapping_fragment>\n#include <colorspace_fragment>\n// The ground fades into the fog colour, which is not tone mapped: so the sky meets it as exactly that colour, with no line.\ngl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * haze, 0.3 * haze + 0.001, vP.y));\n}',
+        fragmentShader: `uniform vec3 top; uniform vec3 bottom; uniform vec3 fogOut; uniform float haze; uniform sampler2D skyFrom; uniform sampler2D skyTo; uniform float wFrom; uniform float wTo; uniform float offFrom; uniform float offTo; uniform vec4 winFrom; uniform vec4 winTo; varying vec3 vP; varying vec2 vUv;
+${SKY_PAINT_GLSL}
+void main(){ float h = pow(clamp(vP.y, 0.0, 1.0), mix(0.55, 1.4, max(wFrom, wTo))); vec3 c = mix(bottom, top, h);
+c = skyPaint(c, vUv, vP.y, skyFrom, skyTo, wFrom, wTo, offFrom, offTo, winFrom, winTo, haze); gl_FragColor = vec4(c, 1.0);
+#include <tonemapping_fragment>
+#include <colorspace_fragment>
+// The ground fades into the fog colour, which is not tone mapped: so the sky meets it as exactly that colour, with no line.
+gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * haze, 0.3 * haze + 0.001, vP.y));
+}`,
       }),
     );
     // An oval, not a ball: long across the table (x) and shallow behind it (z). The camera looks along the short axis,
@@ -272,12 +288,20 @@ export class Environment {
     new THREE.TextureLoader().load(url, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = this.aniso;
-      // So a panorama that slides round the sky wraps past its own edge.
-      tex.wrapS = THREE.RepeatWrapping;
+      const img = tex.image as { width: number; height: number };
+      const strip = isStrip(img.width / img.height);
+      if (strip) {
+        // A flat strip is stuck onto a patch of the dome and does not wrap.
+        tex.wrapS = tex.wrapT = THREE.ClampToEdgeWrapping;
+        this.skyWin.set(file, new THREE.Vector4(...stripWindow(img.width / img.height)));
+      } else {
+        // So a panorama that slides round the sky wraps past its own edge.
+        tex.wrapS = THREE.RepeatWrapping;
+      }
       this.skies.set(file, tex);
       this.skyLoading.delete(file);
       this.bindSkies();
-      const fog = this.horizonColor(tex);
+      const fog = this.horizonColor(tex, strip);
       if (fog) {
         this.autoFog.set(file, fog);
         if (this.fileTo === file) {
@@ -297,6 +321,7 @@ export class Environment {
     if (this.tryKey) {
       this.skies.get(this.tryKey)?.dispose();
       this.skies.delete(this.tryKey);
+      this.skyWin.delete(this.tryKey);
       this.autoFog.delete(this.tryKey);
       this.tryKey = null;
     }
@@ -315,14 +340,15 @@ export class Environment {
   }
 
   /** The average colour of the band of the panorama where the far edge of the ground meets it (just above its horizon), a touch darker. */
-  private horizonColor(tex: THREE.Texture): THREE.Color | null {
+  private horizonColor(tex: THREE.Texture, strip = false): THREE.Color | null {
     try {
       const img = tex.image as CanvasImageSource;
       const c = document.createElement('canvas');
       c.width = 64; c.height = 32;
       const g = c.getContext('2d')!;
       g.drawImage(img, 0, 0, 64, 32);
-      const d = g.getImageData(0, 13, 64, 2).data;
+      // Just above the horizon: rows 40% to 47% of a panorama, or the lower part of a strip (its horizon is near the bottom edge).
+      const d = strip ? g.getImageData(0, 19, 64, 5).data : g.getImageData(0, 13, 64, 2).data;
       let r = 0, gr = 0, b = 0;
       const n = d.length / 4;
       for (let i = 0; i < d.length; i += 4) { r += d[i]!; gr += d[i + 1]!; b += d[i + 2]!; }
@@ -336,6 +362,8 @@ export class Environment {
     const u = this.domeUniforms;
     u.skyFrom.value = (this.fileFrom && this.skies.get(this.fileFrom)) || this.blank;
     u.skyTo.value = (this.fileTo && this.skies.get(this.fileTo)) || this.blank;
+    u.winFrom.value.copy((this.fileFrom && this.skyWin.get(this.fileFrom)) || NO_WINDOW);
+    u.winTo.value.copy((this.fileTo && this.skyWin.get(this.fileTo)) || NO_WINDOW);
   }
 
   private surface(theme: ThemeId, which: 'top' | 'floor'): THREE.MeshStandardMaterial {
