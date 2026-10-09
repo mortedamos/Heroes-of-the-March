@@ -10,20 +10,17 @@ import { h } from './dom';
 import { startTitleEffects } from './titleFx';
 import { TITLE_FRAME_URL } from './titleFrame';
 
-export type HandModelChoice = 'steady' | 'refill';
-
 export interface SetupChoice {
   name: string;
   bots: number;
   level: BotLevel;
-  handModel: HandModelChoice;
   draftOnReplace: boolean;
 }
 
 /** The house rules a setup choice turns into (the engine validates them again). */
 export function rulesFor(c: SetupChoice): Partial<HouseRules> {
   return {
-    handModel: c.handModel,
+    handModel: 'steady', // current player draws 2, everyone else 1, hand limit 6: no longer a choice
     heroDraft: 3, // at the start: look at three heroes, keep one
     draftOnReplace: c.draftOnReplace,
   };
@@ -48,7 +45,6 @@ function loadPrefs(): Partial<SetupChoice> {
     if (Number.isInteger(v['bots'])) out.bots = Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, v['bots'] as number));
     if (v['level'] === 'easy' || v['level'] === 'normal' || v['level'] === 'hard') out.level = v['level'];
     if (typeof v['draftOnReplace'] === 'boolean') out.draftOnReplace = v['draftOnReplace'];
-    if (v['handModel'] === 'steady' || v['handModel'] === 'refill') out.handModel = v['handModel'];
     return out;
   } catch {
     return {};
@@ -90,16 +86,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
     level.value = prefs.level ?? 'normal';
 
     const draftOnReplace = checkbox('setup-draft-replace', prefs.draftOnReplace ?? false);
-    const handModel = h('select', { id: 'setup-hand' });
-    for (const [v, label] of [
-      ['steady', 'Steady draws: current player draws 2, everyone else 1, hand limit 6'],
-      ['refill', 'Refill on your turn (v0.3 rules)'],
-    ] as const) {
-      const o = h('option', {}, label);
-      o.value = v;
-      handModel.appendChild(o);
-    }
-    handModel.value = prefs.handModel ?? 'steady';
 
     const start = h('button', { class: 'btn primary big', type: 'submit' }, 'Ride out');
     const form = h('form', { class: 'setup-card' },
@@ -112,8 +98,7 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
       h('details', { class: 'house-rules' },
         h('summary', {}, 'House rules'),
         h('label', { class: 'check' }, draftOnReplace,
-          h('span', {}, h('strong', {}, 'Draft from three after a fall'), ': pick from three heroes every time, not just at the start. Otherwise you draw one and may send it back once.')),
-        h('label', { class: 'stack' }, h('span', {}, 'Resource cards'), handModel)),
+          h('span', {}, h('strong', {}, 'Draft from three after a fall'), ': pick from three heroes every time, not just at the start. Otherwise you draw one and may send it back once.'))),
       start,
       h('p', { class: 'fine' }, 'Local game against bots. Online multiplayer is coming.'),
     );
@@ -123,7 +108,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
         name: name.value,
         bots: Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, Number.parseInt(bots.value, 10) || 2)),
         level: (['easy', 'normal', 'hard'] as const).find((x) => x === level.value) ?? 'normal',
-        handModel: handModel.value === 'refill' ? 'refill' : 'steady',
         draftOnReplace: draftOnReplace.checked,
       };
       savePrefs(choice);

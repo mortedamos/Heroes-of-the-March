@@ -22,6 +22,10 @@ import {
 } from './knowledge';
 
 export type BotLevel = 'easy' | 'normal' | 'hard';
+
+/** How often an easy bot plays a random card when it is behind, and when it is not. */
+const EASY_BID_WHEN_BEHIND = 0.75;
+const EASY_BID_WHEN_AHEAD = 0.15;
 export { companionScore };
 
 /** Forced-stat abilities: which stat they force, and on what. */
@@ -67,7 +71,7 @@ export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.ran
 
   switch (detail.kind) {
     case 'companion.offer': {
-      if (level === 'easy' && rand() < 0.3) return { type: 'companion.skip', decision };
+      if (level === 'easy' && rand() < 0.5) return { type: 'companion.skip', decision };
       // A random draw can still be let go, so drawing is never worse than skipping.
       return { type: 'companion.draw', decision };
     }
@@ -97,7 +101,7 @@ export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.ran
 // --- abilities -------------------------------------------------------------------
 
 function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Rand): boolean {
-  if (level === 'easy' && rand() < 0.45) return false;
+  if (level === 'easy' && rand() < 0.75) return false;
   const stat = t.stat;
   switch (a.ability) {
     // Before bidding the bots hold back until the situation calls for it.
@@ -451,15 +455,20 @@ function decideBid(t: Table, d: PendingView, level: BotLevel, rand: Rand): Comma
 
   const proj = t.me.projection;
   if (!proj || t.view.hand.length === 0) return pass;
-  if (level === 'easy' && rand() < 0.25) return pass;
+  if (level === 'easy') {
+    // Easy bots don't do the sums: when behind they often play a card, any card, and otherwise they mostly sit still.
+    const behind = t.myEstimate() < Math.max(proj.difficulty, t.bestRivalEstimate(0));
+    if (rand() >= (behind ? EASY_BID_WHEN_BEHIND : EASY_BID_WHEN_AHEAD)) return pass;
+    const any = t.view.hand[Math.floor(rand() * t.view.hand.length)]!;
+    return { type: 'bid.play', decision, card: any.card.id };
+  }
 
   const mine = t.myEstimate();
   const difficulty = proj.difficulty;
   const bestRival = t.bestRivalEstimate(level === 'hard' ? 1 : 0);
   const curse = pickCurse(t, mine, bestRival, level, rand);
   if (curse) return { type: 'bid.play', decision, card: curse };
-  const buffer = level === 'easy' ? 0 : 1;
-  const targetWin = Math.max(difficulty, bestRival + 1 + buffer);
+  const targetWin = Math.max(difficulty, bestRival + 2);
   if (mine >= targetWin) return pass;
   const hand: HandCard[] = t.view.hand.map((h) => ({ id: h.card.id, worth: t.handValue(h.card.id) })).filter((h) => h.worth > 0);
 
@@ -468,7 +477,7 @@ function decideBid(t: Table, d: PendingView, level: BotLevel, rand: Rand): Comma
   const plans: { cards: HandCard[]; score: number }[] = [];
   const win = planSpend(hand, targetWin - mine);
   if (win) plans.push({ cards: win, score: holdChance(t, targetWin, level) * prizeValue(t, level) + avoidFall - spendCost(t, win, level) });
-  if (!surviving && level !== 'easy') {
+  if (!surviving) {
     const live = planSpend(hand, difficulty - mine);
     if (live) plans.push({ cards: live, score: avoidFall - spendCost(t, live, level) });
   }
@@ -476,8 +485,8 @@ function decideBid(t: Table, d: PendingView, level: BotLevel, rand: Rand): Comma
   if (!best) return pass;
 
   const pick = best.cards[0]!;
-  // Mayor Hobby: keep the first bid hidden to bluff (normal/hard).
-  const faceDown = detail.canFaceDown && level !== 'easy';
+  // Mayor Hobby: keep the first bid hidden to bluff.
+  const faceDown = detail.canFaceDown;
   return faceDown ? { type: 'bid.play', decision, card: pick.id, faceDown: true } : { type: 'bid.play', decision, card: pick.id };
 }
 
