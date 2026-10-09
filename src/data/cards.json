@@ -206,7 +206,7 @@
     "G": 8
    },
    "abilityName": "Walls First",
-   "abilityText": "You may ignore any opponent's ability that would force a hero or companion under your control to contribute a different stat, stop one of your companions contributing stats, or make one of your resource cards count as a negative.",
+   "abilityText": "Ignore any opponent's ability that would force a hero or companion under your control to contribute a different stat, stop one of your companions contributing stats, or make one of your resource cards count as a negative.",
    "kind": "hero",
    "triggerText": "When a Physical challenge is faced, draw a resource.",
    "revision": "Guile 7 -> 6 to pay for the Kin bonus.",
@@ -251,7 +251,7 @@
     "G": 7
    },
    "abilityName": "Resources of the Collegium",
-   "abilityText": "Once per turn, any time you would draw a resource, you may draw an additional resource.",
+   "abilityText": "Once per turn, when you draw a resource, draw an additional resource.",
    "kind": "hero",
    "triggerText": "When a Mental challenge is faced, draw a resource.",
    "revision": "Was any turn. With steady draws it fired every turn (50% win rate).",
@@ -273,7 +273,7 @@
     "G": 7
    },
    "abilityName": "The Society's Maps",
-   "abilityText": "Once per turn, at any time on your turn, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
+   "abilityText": "Once per turn, whenever abilities can be used on your turn, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
    "kind": "hero",
    "triggerText": "When an Accord card enters play, draw a resource.",
    "revision": "Physical 2 → 4 (was a 25% win rate).",
@@ -359,7 +359,7 @@
     "G": 5
    },
    "abilityName": "Waiting at the Door",
-   "abilityText": "Before bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn you may draw two additional resource cards and then turn this card face up.",
+   "abilityText": "Before bidding on any turn you may turn this companion face down and gain no bonuses from it. On your next turn, draw two additional resource cards and then turn this card face up.",
    "kind": "companion",
    "revision": "Now two extra cards on her return (was one); Physical 1 → 2 and Mental 3 → 4 (the ability alone didn't make up for resting).",
    "number": 2002
@@ -496,7 +496,7 @@
     "G": 5
    },
    "abilityName": "Brave Little Heart",
-   "abilityText": "This companion may contribute their guile stat in place of another stat.",
+   "abilityText": "This companion contributes their guile stat in place of another stat when it is higher.",
    "kind": "companion",
    "revision": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter.",
    "number": 2009
@@ -517,7 +517,7 @@
     "G": 3
    },
    "abilityName": "Think It Through",
-   "abilityText": "This companion may contribute their mental stat in place of another stat.",
+   "abilityText": "This companion contributes their mental stat in place of another stat when it is higher.",
    "kind": "companion",
    "number": 2010
   },
@@ -535,7 +535,7 @@
     "G": 2
    },
    "abilityName": "Gnash SMASH",
-   "abilityText": "This companion may contribute their physical stat in place of another stat.",
+   "abilityText": "This companion contributes their physical stat in place of another stat when it is higher.",
    "kind": "companion",
    "number": 2011
   },
@@ -685,7 +685,7 @@
     "G": 6
    },
    "abilityName": "Eternal Vigilance",
-   "abilityText": "At any time on your turn, you may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
+   "abilityText": "Once per turn, whenever abilities can be used on your turn, you may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
    "kind": "companion",
    "revision": "Was Wren Nightingale (Human); now an Elf.",
    "number": 2019
@@ -705,7 +705,7 @@
     "G": 4
    },
    "abilityName": "Assess the Situation",
-   "abilityText": "You may use your hero's guile stat in place of another stat.",
+   "abilityText": "Your hero contributes their guile stat in place of another stat when it is higher.",
    "kind": "companion",
    "revision": "Now also gains +1 when the swap is used (was a below-average card).",
    "number": 2020
@@ -725,7 +725,7 @@
     "G": 3
    },
    "abilityName": "Cross-Reference",
-   "abilityText": "You may use your hero's mental stat in place of another stat.",
+   "abilityText": "Your hero contributes their mental stat in place of another stat when it is higher.",
    "kind": "companion",
    "revision": "Was Posy Marchbank (Halfellow); now a Human.",
    "number": 2021
@@ -960,7 +960,7 @@
     "G": 4
    },
    "abilityName": "Raised by Both",
-   "abilityText": "Once per turn you may re-use a once-per-turn ability of another companion you control.",
+   "abilityText": "Once per turn, you may use a once-per-turn ability of another companion you control a second time.",
    "kind": "companion",
    "revision": "Demoted from hero to companion; counts as both an Orc and a Human.",
    "number": 2033
@@ -1171,7 +1171,7 @@
    "quote": null,
    "art": "terrain__desert_2",
    "renown": 2,
-   "conditionText": "All players may immediately draw a resource card for every Orc companion they have in play.",
+   "conditionText": "All players immediately draw a resource card for every Orc companion they have in play.",
    "number": 3016
   },
   {
@@ -1226,7 +1226,7 @@
    "quote": null,
    "art": "buildings__great_hall",
    "renown": 6,
-   "conditionText": "All players may immediately draw a resource card for every Warden they have in play (heroes count).",
+   "conditionText": "All players immediately draw a resource card for every Warden they have in play (heroes count).",
    "number": 3020
   },
   {
@@ -1240,7 +1240,7 @@
    "quote": null,
    "art": "cities__dwarf_city_5",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Dwarf companion they have in play.",
+   "conditionText": "All players immediately draw a resource card for every Dwarf companion they have in play.",
    "number": 3021
   },
   {
@@ -1281,7 +1281,7 @@
    "quote": null,
    "art": "buildings__mage_college",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Collegium companion they have in play.",
+   "conditionText": "All players immediately draw a resource card for every Collegium companion they have in play.",
    "number": 3024
   },
   {
@@ -1308,7 +1308,7 @@
    "quote": "“Five banners on one wall. Somebody always complains about the order.” — Marshal Hedda Ironvow",
    "art": "buildings__war_camp",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Marchguard companion they have in play.",
+   "conditionText": "All players immediately draw a resource card for every Marchguard companion they have in play.",
    "number": 3027
   },
   {
@@ -1403,7 +1403,7 @@
    "quote": null,
    "art": "cities__elf_city_6",
    "renown": 4,
-   "conditionText": "All players may immediately draw a resource card for every Elf companion they have in play.",
+   "conditionText": "All players immediately draw a resource card for every Elf companion they have in play.",
    "number": 3035
   },
   {
@@ -1431,7 +1431,7 @@
    "quote": null,
    "art": "cities__halfellow_city_6",
    "renown": 3,
-   "conditionText": "All players may immediately draw a resource card for every Halfellow companion they have in play.",
+   "conditionText": "All players immediately draw a resource card for every Halfellow companion they have in play.",
    "number": 3039
   },
   {
@@ -2403,7 +2403,7 @@
    },
    "stat": "G",
    "difficulty": 12,
-   "conditionText": "When this card comes into play, all players draw a resource card. When it is defeated, each player who survived may draw a resource card.",
+   "conditionText": "When this card comes into play, all players draw a resource card. When it is defeated, each player who survived draws a resource card.",
    "number": 4059
   }
  ],
@@ -2433,7 +2433,7 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up you may draw up to 5 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack.",
+   "conditionText": "When this card is revealed or played face up, draw up to 5 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack.",
    "number": 5002
   },
   {
@@ -2446,7 +2446,7 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up you may draw up to 3 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack.",
+   "conditionText": "When this card is revealed or played face up, draw up to 3 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack.",
    "number": 5003
   },
   {
@@ -2459,7 +2459,7 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up you may draw a hero from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle this card back into the hero stack.",
+   "conditionText": "When this card is revealed or played face up, draw a hero from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle this card back into the hero stack.",
    "number": 5004
   },
   {
@@ -2502,7 +2502,7 @@
    "value": 0,
    "wand": false,
    "council": true,
-   "conditionText": "When this card is revealed or played face up, every player who has bid at least one card may draw a hero from the hero stack and add its stat values to theirs for the current encounter challenge. When the encounter is finished, shuffle those heroes back into the hero stack.",
+   "conditionText": "When this card is revealed or played face up, every player who has bid at least one card draws a hero from the hero stack and adds its stat values to theirs for the current encounter challenge. When the encounter is finished, shuffle those heroes back into the hero stack.",
    "number": 5007
   },
   {
@@ -2785,7 +2785,7 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "If your hero would fall the round this card was played, you may instead draw a resource card for every other player.",
+   "conditionText": "If your hero would fall the round this card was played, it doesn't; instead, draw a resource card for every other player.",
    "number": 5031
   },
   {
@@ -2873,7 +2873,7 @@
    "value": 3,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up, you may change the current location to The Wardens' Hall, then shuffle the replaced location back into the location stack.",
+   "conditionText": "When this card is revealed or played face up, change the current location to The Wardens' Hall, then shuffle the replaced location back into the location stack.",
    "number": 5039
   },
   {
@@ -2962,7 +2962,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up, you may change the stat needed for you to beat the current encounter challenge to Mental.",
+   "conditionText": "When this card is revealed or played face up, the stat needed for you to beat the current encounter challenge becomes Mental if that is your stronger stat.",
    "number": 5046
   },
   {
@@ -3006,7 +3006,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "conditionText": "When this card is revealed, draw a resource card for every other Shard of the Marchstone already in play.",
    "number": 5049
   },
   {
@@ -3019,7 +3019,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "conditionText": "When this card is revealed, draw a resource card for every other Shard of the Marchstone already in play.",
    "number": 5050
   },
   {
@@ -3032,7 +3032,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "conditionText": "When this card is revealed, draw a resource card for every other Shard of the Marchstone already in play.",
    "number": 5051
   },
   {
@@ -3045,7 +3045,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "conditionText": "When this card is revealed, draw a resource card for every other Shard of the Marchstone already in play.",
    "number": 5052
   },
   {
@@ -3058,7 +3058,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "conditionText": "When this card is revealed, draw a resource card for every other Shard of the Marchstone already in play.",
    "number": 5053
   },
   {
@@ -3071,7 +3071,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource card for every other Shard of the Marchstone already in play.",
+   "conditionText": "When this card is revealed, draw a resource card for every other Shard of the Marchstone already in play.",
    "number": 5054
   },
   {
@@ -3101,7 +3101,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed or played face up you may change the stat needed for you to beat the current encounter challenge to Physical.",
+   "conditionText": "When this card is revealed or played face up, the stat needed for you to beat the current encounter challenge becomes Physical if that is your stronger stat.",
    "number": 5056
   },
   {
@@ -3114,7 +3114,7 @@
    "value": 4,
    "wand": false,
    "council": false,
-   "conditionText": "When this card is revealed you may draw a resource from the discard stack, but it cannot be used this turn.",
+   "conditionText": "When this card is revealed, draw a resource from the discard stack, but it cannot be used this turn.",
    "number": 5057
   },
   {

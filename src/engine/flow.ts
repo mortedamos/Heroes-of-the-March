@@ -571,7 +571,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       }
     }
 
-    // Gauntlet of Returning: may bring a companion back from the discard pile.
+    // Pariapt of the Phoenix: may bring a companion back from the discard pile.
     const gauntletOwners = ctx.s.players.filter((p) => p.bids.some((b) => ctx.defId(b.card) === 'gauntlet-of-returning'));
 
     const borrowed: string[] = [];
@@ -600,8 +600,8 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       const pile = ctx.s.discards.companion;
       if (!pile.length) continue;
       ctx.queue({
-        t: 'choose', purpose: 'gauntlet', player: p.id, source: 'Gauntlet of Returning',
-        prompt: 'Gauntlet of Returning: bring a companion back from the discard pile?',
+        t: 'choose', purpose: 'gauntlet', player: p.id, source: 'Pariapt of the Phoenix',
+        prompt: 'Pariapt of the Phoenix: bring a companion back from the discard pile?',
         options: pile.map((c) => cardOption(ctx, c)), min: 0, max: 1,
       });
     }
@@ -964,7 +964,7 @@ export function applyChoice(
         break;
       }
       case 'oskarGrudge':
-        // Entered in the Grudge Book: if `pick` wins this encounter they have -3 in the next (applied in resolve).
+        // Entered in the Book of Grudges: whenever `pick` uses a hostile ability on this player this turn, the player draws a resource.
         addEffect(ctx, { kind: 'grudgeWatch', source: String(data['source']), owner: p.id, target: pick });
         break;
       case 'rumourMill':
@@ -1062,7 +1062,7 @@ export function applyChoice(
         if (!pile.includes(pick)) break;
         pile.splice(pile.indexOf(pick), 1);
         companionEnters(ctx, p, pick, null);
-        enforceCompanionLimit(ctx, p, 'Gauntlet of Returning');
+        enforceCompanionLimit(ctx, p, 'Pariapt of the Phoenix');
         break;
       }
       case 'sigrunPick': {
@@ -1096,11 +1096,11 @@ export function applyChoice(
         if (pick !== 'draw') break;
         const c = ctx.take('companion');
         if (!c) break;
-        ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(c)], reason: 'The Waystone Inn' });
+        ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(c)], reason: 'The Goose & Kettle' });
         companionEnters(ctx, p, c, null);
         ctx.queueFirst({
-          t: 'choose', purpose: 'discardCompanion', player: p.id, source: 'The Waystone Inn',
-          prompt: 'The Waystone Inn: now discard one of your companions',
+          t: 'choose', purpose: 'discardCompanion', player: p.id, source: 'The Goose & Kettle',
+          prompt: 'The Goose & Kettle: now discard one of your companions',
           options: [...p.companions, ...p.inactiveCompanions, ...p.resting].map((x) => cardOption(ctx, x)), min: 1, max: 1,
         });
         break;

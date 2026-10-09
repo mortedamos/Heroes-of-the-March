@@ -13,6 +13,8 @@ import { isTouch, onLongPress } from '../viewport';
 import { append, clear, h, replace } from './dom';
 import { closeGameMenu, toggleGameMenu, type MenuApi } from './GameMenu';
 import type { DebugApi } from './DebugMenu';
+import { MomentStrip } from './Moments';
+import { newPickerState, renderSlotPicker, type PickerCard, type PickerState } from './SlotPicker';
 import { attentionOf } from '../attention';
 import { sfx } from '../audio/Sfx';
 import { tiltOnPointer } from './tilt';
@@ -125,6 +127,8 @@ export class Hud {
   }, h('span', { class: 'menu-bars' }));
   /** One line on the game now, shown at the top of the menu. */
   private turnText = '';
+  /** The turn timeline at the top of the screen. */
+  private readonly moments = new MomentStrip();
   private readonly plates = h('div', { class: 'plates' });
   /** Stat chips on the table's hero and companion cards (what each adds to the challenge now). */
   private readonly chips = h('div', { class: 'card-chips' });
@@ -160,6 +164,8 @@ export class Hud {
   private view: GameView | null = null;
   private layout: Layout | null = null;
   private selected = new Set<string>();
+  /** Where the cards are in the hero and companion pickers (kept while the same decision is open). */
+  private picker: PickerState | null = null;
   private faceDown = false;
   private pinned: string | null = null;
   private pinnedActions: InspectAction[] = [];
@@ -194,7 +200,7 @@ export class Hud {
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
     this.setLogOpen(false); // the log starts hidden; the Log item in the menu opens it
     append(this.dock, this.prompt, this.hand);
-    append(root, this.menuBtn, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
+    append(root, this.menuBtn, this.moments.el, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { this.unpin(); this.closeModal(); this.closeDetail(); }
     });
@@ -252,6 +258,7 @@ export class Hud {
     this.view = view;
     this.layout = layout;
     this.renderTop(view);
+    this.moments.update(view);
     this.renderPlates(view);
     this.renderChips(view);
     this.renderChallenge(view);
@@ -644,78 +651,123 @@ export class Hud {
 
   /** A how-to hint, shown for the first few decisions of its kind and then left out. */
   /**
-   * The opening companion draft: two empty slots (as many as you may take) and the pool below.
-   * Clicking a pool card fills the next empty slot; clicking a filled slot puts that companion back.
+   * The width of a card in a picker: as large as fits the slots and the pool together (slots beside the pool on a wide
+   * screen, above it on a narrow one).
+   */
+  private pickerWidth(slots: number, pool: number, aside = 0): number {
+    const W = window.innerWidth - 60 - (window.innerWidth <= 720 ? 0 : aside);
+    const H = window.innerHeight - 270;
+    const narrow = window.innerWidth <= 720;
+    for (let w = 190; w >= 66; w -= 4) {
+      const ch = w * CARD_H / CARD_W + 12;
+      if (narrow) {
+        const slotRows = Math.ceil((slots * (w + 12)) / W);
+        const perRow = Math.max(1, Math.floor(W / (w + 12)));
+        if ((slotRows + Math.ceil(pool / perRow)) * ch <= H) return w;
+      } else {
+        const poolCols = Math.floor((W - (w + 60) - 30) / (w + 12));
+        if (poolCols >= 1 && Math.ceil(pool / poolCols) * ch <= H && slots * ch <= H) return w;
+      }
+    }
+    return 66;
+  }
+
+  private pickerCard = (c: PickerCard, w: number, tap: () => void): HTMLButtonElement => this.thumbButton(c, w, '', tap);
+  private pickerGhost = (c: PickerCard, w: number): HTMLElement => cardThumb(c.def, w, 'thumb');
+
+  /**
+   * The opening companion draft: open slots (as many as you may take) on one side, the pool on the other. Drag or tap
+   * cards in and out; nothing is decided until the button is pressed.
    */
   private renderCompanionDraft(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
     const me = v.players.find((p) => p.id === v.you)!;
-    const w = Math.round(Math.max(84, Math.min(150, (window.innerWidth - 330) / Math.max(3.4, c.options.length * 0.7 + 0.4), (window.innerHeight - 250) / 2.9)));
-    const byValue = new Map(c.options.map((o) => [o.value, o]));
-    // Anything picked earlier that is no longer on offer (a stale selection) is dropped.
-    for (const s of [...this.selected]) if (!byValue.has(s)) this.selected.delete(s);
-    const picks = [...this.selected];
-    const refOf = (value: string): CardRef => ({ id: value, def: byValue.get(value)!.card?.def ?? value });
-    const rerender = (): void => this.renderDock(v);
-    const slots: HTMLElement[] = [];
-    for (let i = 0; i < c.max; i++) {
-      const value = picks[i];
-      if (value === undefined) {
-        const empty = h('div', { class: 'draft-slot empty' }, h('span', {}, 'Empty slot'));
-        empty.style.width = `${w}px`;
-        empty.style.height = `${Math.round(w * CARD_H / CARD_W)}px`;
-        slots.push(empty);
-      } else {
-        const b = this.thumbButton(refOf(value), w, 'selected', () => { this.selected.delete(value); rerender(); });
-        slots.push(b);
-      }
-    }
-    const pool = c.options.filter((o) => !this.selected.has(o.value)).map((o) =>
-      this.thumbButton(refOf(o.value), w, this.selected.size < c.max ? 'playable' : '', () => {
-        if (this.selected.size >= c.max) return;
-        this.selected.add(o.value);
-        rerender();
-      }));
-    const confirm = h('button', { class: 'btn primary', on: { click: () => { const p = [...this.selected]; this.selected.clear(); this.deps.send({ type: 'choose', decision, picks: p }); } } }, 'Confirm companions');
-    confirm.disabled = this.selected.size !== c.max;
-    const hero = me.hero ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w + 40, 200))) : '';
-    replace(this.stage, h('div', { class: 'stage-panel' }, hero, h('div', { class: 'stage-main' },
-      h('h2', {}, 'Choose your companions'),
-      h('section', { class: 'stage-section' }, h('h3', {}, `Your companions (${this.selected.size}/${c.max})`),
-        h('p', { class: 'stage-hint' }, 'Click a companion below to fill a slot. Click one in a slot to put it back.'),
-        h('div', { class: 'stage-row' }, ...slots)),
-      h('section', { class: 'stage-section' }, h('h3', {}, 'Available'), h('div', { class: 'stage-row' }, ...pool)),
-      h('div', { class: 'decision-buttons' }, confirm))));
+    const cards: PickerCard[] = c.options.map((o) => ({ id: o.value, def: o.card?.def ?? o.value }));
+    if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, Array.from({ length: c.max }, () => null));
+    const state = this.picker;
+    const picks = state.slots.filter((x): x is string => x !== null);
+    const w = this.pickerWidth(c.max, cards.length, 170);
+    const box = h('div', { class: 'picker-box' });
+    renderSlotPicker(box, {
+      state, cards, width: w,
+      title: 'Choose your companions',
+      slotsLabel: `Your companions (${picks.length}/${c.max})`, poolLabel: 'Available',
+      hint: 'Drag companions into the open slots, or tap one to send it there. Drag one out (or tap it) to change your mind. Press the button when you are happy.',
+      makeCard: this.pickerCard, ghost: this.pickerGhost,
+      aside: me.hero ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w, 150))) : null,
+      confirm: { label: 'Confirm companions', enabled: picks.length >= c.min && picks.length <= c.max, run: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks }); } },
+      onChange: () => { this.inspect(null); this.renderDock(v); }, onDragStart: () => this.inspect(null),
+    });
+    replace(this.stage, h('div', { class: 'stage-panel' }, h('div', { class: 'stage-main' }, h('h2', {}, 'Choose your companions'), box)));
   }
 
-  /** The hero draft: the offered heroes as big cards, so the art and powers are easy to read. */
+  /** The hero draft: the offered heroes to drag into the hero slot (or tap), then a button to confirm. */
   private renderDraftStage(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
-    // Any number of cards (The Hall of Rest offers the whole hero stack): pick the largest size that fits in rows.
-    const n = Math.max(1, c.options.length);
-    const availW = window.innerWidth - 80, availH = window.innerHeight - 200;
-    let w = 80;
-    for (let cols = 1; cols <= n; cols++) {
-      const rows = Math.ceil(n / cols);
-      const fit = Math.min(260, (availW - (cols - 1) * 14) / cols, (availH - (rows - 1) * 14) / (rows * (CARD_H / CARD_W)));
-      if (fit > w) w = fit;
-    }
-    w = Math.round(Math.max(80, w));
-    const touch = isTouch();
     const cardOptions = c.options.filter((o) => o.card);
     const others = c.options.filter((o) => !o.card);
-    const cards = cardOptions.map((o) => {
-      const ref: CardRef = { id: o.card?.id ?? o.value, def: o.card?.def ?? o.value };
-      return this.thumbButton(ref, w, this.armed?.card === ref.id ? 'selected' : 'playable',
-        this.confirmTap(v, decision, ref, 'Choose ' + shortName(ref.def), () => this.deps.send({ type: 'choose', decision, picks: [o.value] })));
-    });
+    const cards: PickerCard[] = cardOptions.map((o) => ({ id: o.value, def: o.card!.def }));
+    if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, [null]);
+    const state = this.picker;
+    const chosen = state.slots[0] ?? null;
     const keepOrSend = c.purpose === 'heroKeep';
     const hall = c.purpose === 'hallOfRest';
+    const w = this.pickerWidth(1, cards.length);
+    const box = h('div', { class: 'picker-box' });
+    renderSlotPicker(box, {
+      state, cards, width: w,
+      title: 'Choose your hero',
+      slotsLabel: 'Your hero', poolLabel: keepOrSend ? 'The hero on offer' : hall ? 'Heroes in the stack' : 'Heroes on offer',
+      hint: hall ? 'Any hero in the stack may be chosen. Drag one into the slot (or tap it), then press the button.'
+        : keepOrSend ? 'Keep this hero by placing them in the slot, or send them back and draw another (you must keep that one).'
+        : 'Drag a hero into the slot, or tap one to send it there. The others go back in the stack, unseen. Press the button when you are happy.',
+      makeCard: this.pickerCard, ghost: this.pickerGhost,
+      extras: others.map((o) => h('button', { class: 'btn', on: { click: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks: [o.value] }); } } }, o.label)),
+      confirm: { label: 'Choose this hero', enabled: chosen !== null, run: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks: [chosen!] }); } },
+      onChange: () => { this.inspect(null); this.renderDock(v); }, onDragStart: () => this.inspect(null),
+    });
     replace(this.stage, h('div', { class: 'stage-panel draft' }, h('div', { class: 'stage-main' },
-      h('h2', {}, keepOrSend ? 'A new hero takes up your banner' : hall ? 'The Hall of Rest: choose who takes up your banner' : 'Choose your hero'),
-      h('p', { class: 'stage-hint' }, hall ? 'Any hero in the stack may be chosen.' : keepOrSend
-        ? 'Keep this hero, or send them back and draw another. You must keep the next one.'
-        : touch ? 'Tap a hero to read it; tap again to choose.' : 'Click a hero to choose them. The others go back in the stack, unseen.'),
-      h('div', { class: 'stage-row' }, ...cards),
-      others.length ? h('div', { class: 'decision-buttons' }, ...others.map((o) => h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'choose', decision, picks: [o.value] }) } }, o.label))) : '')));
+      h('h2', {}, keepOrSend ? 'A new hero takes up your banner' : hall ? 'The Hall of Rest: choose who takes up your banner' : 'Choose your hero'), box)));
+  }
+
+  /**
+   * A companion drawn on a later turn: your party's slots on one side, the new companion on the other. Drag them into
+   * an open slot to recruit them, onto one of yours to replace it, or leave them out to let them go.
+   */
+  private renderPlaceStage(v: GameView, decision: number, mine: Extract<NonNullable<PendingView['detail']>, { kind: 'companion.place' }>): void {
+    const me = v.players.find((p) => p.id === v.you)!;
+    const party = [...me.companions, ...me.inactiveCompanions];
+    const fixedCards = me.resting;
+    const all = [...party, ...fixedCards];
+    const slotCount = Math.max(me.maxCompanions, all.length);
+    const drawn: PickerCard = { id: mine.drawn.id, def: mine.drawn.def };
+    if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, Array.from({ length: slotCount }, (_, i) => all[i]?.id ?? null));
+    const state = this.picker;
+    const cards: PickerCard[] = [...all.map((c) => ({ id: c.id, def: c.def })), drawn];
+    const locked = new Set(all.map((c) => c.id));
+    const placed = state.slots.includes(drawn.id);
+    const displaced = placed ? party.find((c) => !state.slots.includes(c.id)) ?? null : null;
+    const w = this.pickerWidth(slotCount, 1 + (displaced ? 1 : 0), 170);
+    const box = h('div', { class: 'picker-box' });
+    const label = !placed ? 'Let them go' : displaced ? `Replace ${shortName(displaced.def)}` : 'Recruit';
+    renderSlotPicker(box, {
+      state, cards, locked, fixed: new Set(fixedCards.map((c) => c.id)), width: w,
+      title: 'Build your party',
+      slotsLabel: `Your companions (${slotCount - state.slots.filter((x) => x === null).length}/${me.maxCompanions})`, poolLabel: `You drew ${getDef(mine.drawn.def).name}`,
+      hint: mine.mustReplace
+        ? "You're at your companion limit. Drag the new companion onto one of yours to replace it, or tap one of yours; leave them out to let them go."
+        : 'Drag the new companion into an open slot to recruit them, or onto one of yours to replace it. Leave them out to let them go.',
+      makeCard: this.pickerCard, ghost: this.pickerGhost,
+      confirm: {
+        label, enabled: true,
+        run: () => {
+          this.picker = null;
+          if (!placed) this.deps.send({ type: 'companion.discard', decision });
+          else this.deps.send({ type: 'companion.keep', decision, replace: displaced ? displaced.id : null });
+        },
+      },
+      onChange: () => { this.inspect(null); this.renderDock(v); }, onDragStart: () => this.inspect(null),
+    });
+    const hero = me.hero ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w, 150))) : '';
+    replace(this.stage, h('div', { class: 'stage-panel' }, hero, h('div', { class: 'stage-main' }, h('h2', {}, 'Build your party'), box)));
   }
 
   /** Card width for the big panel: four across, or whatever two rows of the viewport allow. */
@@ -750,18 +802,8 @@ export class Hud {
         section('Your companions ' + limit, 'Draw one companion at random, then decide whether to keep it. If you are at your companion limit, you will need to replace one.',
           row(mineCards, (c) => this.thumbButton(c, w), 'None yet.')),
         buttons);
-    } else if (mine.kind === 'companion.place') {
-      const buttons = h('div', { class: 'decision-buttons' });
-      if (!mine.mustReplace) append(buttons, h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'companion.keep', decision, replace: null }) } }, 'Recruit'));
-      append(buttons, h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'companion.discard', decision }) } }, 'Let them go'));
-      children.push(
-        section('You drew ' + getDef(mine.drawn.def).name, mine.mustReplace ? "You're at your companion limit: choose one to replace." : '',
-          row([mine.drawn], (c) => this.thumbButton(c, w, 'drawn'), '')),
-        section((mine.mustReplace ? 'Replace one of your companions ' : 'Or replace one of your companions ') + limit, touch ? 'Tap a companion to read it; tap again to replace it.' : 'Click a companion to replace it.',
-          row(mineCards, (c) => this.thumbButton(c, w, mine.mustReplace ? 'playable' : '',
-            this.confirmTap(v, decision, c, 'Replace ' + shortName(c.def), () => this.deps.send({ type: 'companion.keep', decision, replace: c.id }))), 'None yet.')),
-        buttons);
     }
+    if (mine.kind === 'companion.place') { this.renderPlaceStage(v, decision, mine); return; }
     const hero = me.hero
       ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w + 20, 210)))
       : '';

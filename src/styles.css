@@ -378,6 +378,65 @@ body.shape-short .card-btn.fan { transform: none; }
   100% { background: transparent; box-shadow: none; }
 }
 
+/* The turn timeline (top centre): six dots, the current one lit; a diamond marks a moment when one of your cards can act. */
+.moments { position: fixed; z-index: 14; top: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; }
+.moments.hidden { display: none; }
+.moments.open { z-index: 60; }
+.moments-bar {
+  display: flex; align-items: center; gap: 7px; height: 30px; padding: 0 12px; cursor: pointer; color: var(--ink-dim); font: inherit; font-size: 12px;
+  background: rgba(24, 17, 10, 0.82); border: 1px solid var(--line); border-radius: 15px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+body.touch .moments-bar { height: 34px; }
+.moments-bar:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.moment-dot { position: relative; width: 8px; height: 8px; border-radius: 50%; border: 1px dashed var(--ink-dim); flex: none; }
+.moment-dot.done { border: 1px solid var(--ink-dim); background: var(--ink-dim); }
+.moment-dot.now { width: 12px; height: 12px; border: 2px solid var(--gold); background: rgba(229, 185, 90, 0.35); }
+.moment-dot.has::after {
+  content: ''; position: absolute; left: 50%; bottom: -7px; width: 5px; height: 5px; background: var(--gold); transform: translateX(-50%) rotate(45deg);
+}
+.moment-dot.ready { animation: moment-pulse 1.2s ease-in-out infinite; }
+@keyframes moment-pulse { 50% { box-shadow: 0 0 0 5px rgba(229, 185, 90, 0.35); } }
+.moment-name { margin-left: 2px; color: var(--ink); white-space: nowrap; }
+.moments-panel {
+  margin-top: 6px; width: min(330px, calc(100vw - 24px)); max-height: calc(var(--vh) - 70px); overflow-y: auto; padding: 10px 12px;
+  background: var(--panel-solid); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 6px 22px rgba(0, 0, 0, 0.55);
+}
+.moments-panel.hidden { display: none; }
+.moments-title { font-size: 13px; color: var(--gold); margin-bottom: 6px; }
+.moments-row { padding: 5px 8px; border-left: 2px solid transparent; }
+.moments-row.now { border-left-color: var(--gold); background: rgba(229, 185, 90, 0.1); }
+.moments-row-name { font-size: 13px; color: var(--ink); }
+.moments-row-text { font-size: 12px; color: var(--ink-dim); line-height: 1.35; }
+.moments-row-mine { font-size: 12px; color: var(--gold); margin-top: 2px; }
+.moments-foot { font-size: 11px; color: var(--ink-dim); margin-top: 8px; line-height: 1.35; }
+@media (prefers-reduced-motion: reduce) { .moment-dot.ready { animation: none; } }
+
+/* Hero and companion pickers: open slots on one side, the cards on the other. */
+.picker { display: flex; gap: 18px; align-items: flex-start; justify-content: center; }
+.picker-slots { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-right: 16px; border-right: 1px solid var(--line); }
+.picker-slots h3, .picker-pool-wrap h3 { margin: 0 0 4px; font-size: 16px; color: #fff; text-align: center; }
+.picker-slotlist { display: flex; flex-direction: column; gap: 12px; }
+.pick-slot {
+  display: flex; align-items: center; justify-content: center; flex: none; border: 2px dashed var(--line); border-radius: 9px;
+  color: var(--ink-dim); font-style: italic; transition: border-color 0.12s, background 0.12s;
+}
+.pick-slot.filled { border-style: solid; border-color: rgba(229, 185, 90, 0.55); }
+.pick-slot.over, .picker-pool.over { border-color: var(--gold); background: rgba(229, 185, 90, 0.12); }
+.picker-pool-wrap { flex: 1 1 auto; min-width: 0; }
+.picker-pool { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; min-height: 70px; padding: 8px; border: 2px dashed transparent; border-radius: 10px; }
+.picker-hint { text-align: center; margin: 6px 0 0; }
+.picker .card-btn { cursor: grab; }
+.picker .card-btn.locked { cursor: default; }
+.picker .card-btn.letgo { opacity: 0.5; filter: grayscale(0.6); }
+.card-btn.dragging { opacity: 0.3; }
+.drag-ghost { position: fixed; z-index: 120; pointer-events: none; transform: translate(-50%, -50%) rotate(4deg); line-height: 0; }
+.drag-ghost .thumb { border-radius: 7px; box-shadow: 0 12px 26px rgba(0, 0, 0, 0.75); }
+@media (max-width: 720px) {
+  .picker { flex-direction: column; align-items: stretch; gap: 12px; }
+  .picker-slots { border-right: 0; border-bottom: 1px solid var(--line); padding: 0 0 12px; }
+  .picker-slotlist { flex-direction: row; flex-wrap: wrap; justify-content: center; }
+}
+
 /* Banners & results */
 .banners { position: fixed; z-index: 5; left: 0; right: 0; top: 18%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
 .banner {
@@ -766,8 +825,8 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 .result-hint { margin: 8px 0 0; text-align: center; font-size: 11px; color: var(--ink-dim); }
 
 /* While the camera swings out to show the place, the table furniture steps back. */
-.plate, .challenge, .card-chips, .dock { transition: opacity 0.5s ease; }
-body.establishing .plate, body.establishing .challenge, body.establishing .card-chips { opacity: 0; pointer-events: none; }
+.plate, .challenge, .card-chips, .dock, .moments { transition: opacity 0.5s ease; }
+body.establishing .plate, body.establishing .challenge, body.establishing .card-chips, body.establishing .moments { opacity: 0; pointer-events: none; }
 body.establishing .dock { opacity: 0.25; pointer-events: none; }
 
 /* Looking around: the info plates fade back a little. */
