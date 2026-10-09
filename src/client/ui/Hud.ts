@@ -59,6 +59,9 @@ const WINDOW_LABEL: Record<string, string> = {
   beforeBidding: 'Before bidding', bidding: 'Bidding', beforeReveal: 'Before the reveal', endOfBidding: 'End of bidding',
 };
 
+/** The result panel closes itself after this many seconds (a countdown shows in its corner). */
+const RESULT_SHOW_S = 20;
+
 /** Smallest on-screen rules-text size (CSS px) we treat as readable without a text copy. */
 const READABLE_PX = 10;
 /** A revealed card takes this long to flip and land; its value then hits the plate's total. */
@@ -160,7 +163,11 @@ export class Hud {
   /** Tooltip for the deck under the mouse. */
   private readonly deckTipEl = h('div', { class: 'deck-tip hidden', role: 'tooltip' });
   private readonly resultPanel = h('div', { class: 'result hidden', on: { click: () => this.hideResult() } });
-  private resultTimer = 0;
+  /** Resolved when the result panel is closed: the game's pacing waits for it. */
+  private resultWaiters: (() => void)[] = [];
+  /** The panel closes by itself after RESULT_SHOW_S seconds; this ticks the countdown in its corner. */
+  private resultTick = 0;
+  private readonly resultCount = h('span', { class: 'result-count', aria: { label: 'Closes in' } });
   private view: GameView | null = null;
   private layout: Layout | null = null;
   private selected = new Set<string>();
@@ -202,7 +209,7 @@ export class Hud {
     append(this.dock, this.prompt, this.hand);
     append(root, this.menuBtn, this.moments.el, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
     window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { this.unpin(); this.closeModal(); this.closeDetail(); }
+      if (e.key === 'Escape') { this.unpin(); this.closeModal(); this.closeDetail(); this.hideResult(); }
     });
     window.addEventListener('resize', () => this.fitHand());
     // Clicking anywhere outside the detail card closes it (a click on a name plate is handled by the plate).
@@ -1691,13 +1698,34 @@ export class Hud {
           h('span', { class: 'result-badge' }, row.player === r.winner ? '👑 wins' : r.tied?.includes(row.player) ? 'tied' : row.survived ? 'survived' : '💀 falls')),
         h('div', { class: 'result-parts' }, ...row.parts.filter((p) => p.value !== 0 || p.kind === 'hero').map(part))))),
       h('p', { class: 'result-hint' }, 'Tap to close'),
+      h('div', { class: 'result-corner' }, this.resultCount,
+        h('button', { class: 'result-close', type: 'button', aria: { label: 'Close' }, title: 'Close', on: { click: (e) => { e.stopPropagation(); this.hideResult(); } } }, '×')),
     );
     this.resultPanel.classList.remove('hidden');
-    clearTimeout(this.resultTimer);
-    this.resultTimer = window.setTimeout(() => this.resultPanel.classList.add('hidden'), 16000);
+    let left = RESULT_SHOW_S;
+    this.resultCount.textContent = `${left}`;
+    clearInterval(this.resultTick);
+    this.resultTick = window.setInterval(() => {
+      left -= 1;
+      this.resultCount.textContent = `${Math.max(0, left)}`;
+      if (left <= 0) this.hideResult();
+    }, 1000);
   }
 
-  hideResult(): void { clearTimeout(this.resultTimer); this.resultPanel.classList.add('hidden'); }
+  /** Close the result panel (a click on it, Escape, or the game ending); whatever was waiting on it carries on. */
+  hideResult(): void {
+    clearInterval(this.resultTick);
+    this.resultPanel.classList.add('hidden');
+    const waiting = this.resultWaiters;
+    this.resultWaiters = [];
+    for (const r of waiting) r();
+  }
+
+  /** Resolves once the result panel is closed (at once if it isn't showing): the next turn waits for the player to read it. */
+  resultDismissed(): Promise<void> {
+    if (this.resultPanel.classList.contains('hidden')) return Promise.resolve();
+    return new Promise((resolve) => { this.resultWaiters.push(resolve); });
+  }
 
   // --- modals -----------------------------------------------------------------
 

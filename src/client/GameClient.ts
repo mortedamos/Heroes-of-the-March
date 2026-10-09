@@ -411,6 +411,8 @@ export class GameClient {
         case 'outcome':
           this.hud.showResult(e.result, view);
           this.floatContributions(e.result);
+          // The next turn waits until the player has read who won and why and closed the panel.
+          await this.hud.resultDismissed();
           break;
         case 'abilityCountered':
           this.hud.banner(`${getDef(e.source.def).name} countered by ${getDef(e.by.def).name}!`, 'warn', 2200);
@@ -680,6 +682,7 @@ export class GameClient {
     music.setDuck(1);
     ambience.stop();
     this.caseGate?.resolve();
+    this.hud.hideResult();
     for (const u of this.unhook) u();
     this.transport.close();
     this.scene.dispose();
