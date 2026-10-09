@@ -1,5 +1,5 @@
 {
-  "_about": "Every sound effect the game could use. `npm run sfx` checks public/sounds against this list, writes public/sounds/manifest.json (what the game may load: no manifest entry, no request, no 404) and docs/SFX-TRACKER.md. A sound can have up to 3 variants: name.mp3, or name_1.mp3, name_2.mp3, name_3.mp3 (.ogg/.wav/.webm also work). `wired` says whether the game plays it yet. Entries with \"ambience\": true are place sounds: one slot per look, `<look>-background` with up to three variants (fortress-background_1.mp3 to _3), in public/ambience (not public/sounds). `npm run sfx` writes public/ambience/manifest.json for them.",
+  "_about": "Every sound effect the game could use. `npm run sfx` checks public/sounds against this list, writes public/sounds/manifest.json (what the game may load: no manifest entry, no request, no 404) and docs/SFX-TRACKER.md. A sound can have up to 3 variants: name.mp3, or name_1.mp3, name_2.mp3, name_3.mp3 (.ogg/.wav/.webm also work). `wired` says whether the game plays it yet. Entries with \"ambience\": true are place sounds: one slot per place, `<place>-background` with up to three variants (the-goose-and-kettle-background_1.mp3 to _3), in public/ambience (not public/sounds). A place is a location, or a family of places (tavern, fortress...) whose sounds stand in for any location of that family that has none of its own. `npm run sfx` writes public/ambience/manifest.json for them.",
   "sounds": [
     {
       "name": "shuffle",
@@ -409,6 +409,358 @@
       "wired": true,
       "plays": "Three different short sounds of this place (a far-off bell, a soft wind. Heard in every place, as well as that place's own); one drifts in now and then while the camera is lifted away from the board",
       "search": "distant church bell, soft wind ambience"
+    },
+    {
+      "name": "the-goose-and-kettle-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-goose-and-kettle",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Goose & Kettle (crowd murmur, tankards clinking, a fiddle, a fire crackling); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "pub crowd murmur, tankard clink, tavern fiddle, fireplace crackle"
+    },
+    {
+      "name": "parting-strand-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "parting-strand",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Parting Strand (surf on shingle, a rope creaking, a bell buoy, one far horn, gulls); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "shingle beach waves, ship rope creak, bell buoy, distant ship horn, seagulls"
+    },
+    {
+      "name": "the-barrowlands-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-barrowlands",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Barrowlands (wind over grass, a crow, a low moan); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "wind over grass night, crow caw, distant ghost moan, graveyard wind"
+    },
+    {
+      "name": "tomb-of-the-first-wardens-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "tomb-of-the-first-wardens",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Tomb of the First Wardens (water dripping, stone settling, a faint choral hum from the wards); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "cave drip echo, stone creak, ethereal choir hum, tomb ambience"
+    },
+    {
+      "name": "barrowdeep-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "barrowdeep",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Barrowdeep (a deep drone, a slow drum like a heartbeat, wind along a passage, whispered chanting far back); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "deep drone ambience, slow heartbeat drum, cave passage wind, distant whispered chant"
+    },
+    {
+      "name": "the-umbral-deep-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-umbral-deep",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Umbral Deep (deep drips with a long echo, a distant rumble, air moving in a vast cavern); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "cave drip reverb, distant rumble cavern, deep cave wind, underground lake"
+    },
+    {
+      "name": "the-deep-forge-of-karrak-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-deep-forge-of-karrak",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Deep Forge of Karrak (a hammer rhythm on an anvil, bellows, iron hissing in water, a furnace roar); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "blacksmith hammer anvil rhythm, forge bellows, quench hiss, furnace roar"
+    },
+    {
+      "name": "the-old-quarry-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-old-quarry",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Old Quarry (far chisel taps echoing, crows, wind in a pit, a pebble falling); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "stone chisel tap distant echo, crows caw, wind canyon, pebbles falling"
+    },
+    {
+      "name": "the-crack-in-the-marchstone-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-crack-in-the-marchstone",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Crack in the Marchstone (a deep resonant hum, grinding stone, whispers); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "deep resonant hum drone, stone grinding, cracking rock, whispers choir"
+    },
+    {
+      "name": "gorewatch-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "gorewatch",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Gorewatch (war drums, bone horns, hammering, frogs and marsh birds far below); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "orc war drums, tribal horn, blacksmith hammer, swamp frogs night, marsh birds"
+    },
+    {
+      "name": "the-storybook-glade-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-storybook-glade",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Storybook Glade (songbirds, a music-box tinkle, soft page turns); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "spring birdsong, music box fairy tale, page turn, magical chime"
+    },
+    {
+      "name": "the-silverwood-hunt-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-silverwood-hunt",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Silverwood Hunt (a far hunting horn, hounds, hooves, snapping twigs); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "hunting horn distant, hounds baying, galloping horse forest, twig snap"
+    },
+    {
+      "name": "sylvaneth-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "sylvaneth",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Sylvaneth (wind chimes, a harp, running water, high voices); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "wind chimes wood, gentle harp, waterfall distant, ethereal choir"
+    },
+    {
+      "name": "the-hollow-hills-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-hollow-hills",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Hollow Hills (everything muffled: a far flute, whispers, no birds); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "foggy muffled ambience, distant flute, eerie whispers, hollow wind"
+    },
+    {
+      "name": "the-hollow-between-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-hollow-between",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Hollow Between (a low drone, wind chimes with no wind, long silences); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "low drone ambience, eerie glass chimes, liminal ambience, empty tone"
+    },
+    {
+      "name": "the-mirror-marches-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-mirror-marches",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Mirror Marches (single drips, a glass-bell note, a far metal clank of marching); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "single water drip, glass bell note, distant armour clank marching, still lake"
+    },
+    {
+      "name": "silverlake-at-midsummer-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "silverlake-at-midsummer",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Silverlake at Midsummer (far fair music, laughter, lapping water, crickets); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "village fair music distant, crowd laughter, lake water lapping, crickets night"
+    },
+    {
+      "name": "marchguard-keep-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "marchguard-keep",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Marchguard Keep (drill calls, marching boots, flags snapping, an armourer's hammer); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "soldiers marching boots, drill sergeant shout, flag flapping wind, blacksmith hammer"
+    },
+    {
+      "name": "the-wardens-hall-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-wardens-hall",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Wardens' Hall (echoing footsteps, a council murmur, a bell, a hearth fire); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "stone hall footsteps echo, murmur crowd reverb, church bell, fireplace"
+    },
+    {
+      "name": "the-field-of-oaths-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-field-of-oaths",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Field of Oaths (wind in banners, one bell, grass hissing, a far horn); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "wind flags flapping, single bell toll, wind in grass, distant war horn"
+    },
+    {
+      "name": "grimgate-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "grimgate",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Grimgate (deep dwarven horns, distant hammering, wind in a mountain pass); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "deep horn mountain, distant hammering echo, wind mountain pass, snow wind"
+    },
+    {
+      "name": "kingsford-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "kingsford",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Kingsford (bells, a market crowd, cartwheels, a busker, a river); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "medieval city market crowd, church bells, cart wheels cobblestone, street musician, river"
+    },
+    {
+      "name": "the-speaking-stones-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-speaking-stones",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Speaking Stones (a deep sustained hum, wind whistling round stone, murmured words); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "stone circle hum drone, wind whistle, whispered voices, mystic ambience"
+    },
+    {
+      "name": "the-hearthlands-archive-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-hearthlands-archive",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Hearthlands Historical Society (a ticking clock, a page turn, a teacup, a polite cough); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "clock ticking room, page turn, teacup clink, cough, museum ambience"
+    },
+    {
+      "name": "the-mage-college-vaults-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-mage-college-vaults",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Mage College Vaults (a low arcane hum, soft crackle, faint chimes); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "magic hum ambience, soft energy crackle, magical chimes, library whispers"
+    },
+    {
+      "name": "the-sealed-archive-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-sealed-archive",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Sealed Archive (near silence with whispers, chains, a lock turning); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "eerie whispers quiet, slow chains rattle, lock turning key, dust silence ambience"
+    },
+    {
+      "name": "the-collegium-observatory-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-collegium-observatory",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Collegium Observatory (soft gear ticking, a quill scratching, thin wind through a dome slit); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "clockwork gears ticking soft, quill writing, thin night wind, observatory"
+    },
+    {
+      "name": "the-endless-stair-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-endless-stair",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Endless Stair (footsteps echoing forever, a hammer far below, wind in a shaft); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "footsteps stone stairs echo, distant hammer echo, wind shaft, torch crackle"
+    },
+    {
+      "name": "the-endless-road-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-endless-road",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Endless Road (a wagon creaking, hooves, a traveller's whistle, crows); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "wagon wheel creak, horse hooves dirt road, whistling tune, crows countryside"
+    },
+    {
+      "name": "clover-hollow-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "clover-hollow",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Clover Hollow (bees, birdsong, hens, a kettle on the boil); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "bees buzzing meadow, spring birdsong, chickens clucking, kettle whistle"
+    },
+    {
+      "name": "hearthmeadow-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "hearthmeadow",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of Hearthmeadow (a windmill creaking, a supper bell, laughter, fiddles); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "windmill creak, dinner bell, village laughter, fiddle folk, farm ambience"
+    },
+    {
+      "name": "the-skyship-valour-background",
+      "group": "Place sounds by location",
+      "ambience": true,
+      "look": "the-skyship-valour",
+      "length": "3-10 s each",
+      "priority": false,
+      "wired": true,
+      "plays": "Three different short sounds of The Skyship Valour (roaring wind, rope creaking, canvas snapping, an engine hum); one drifts in now and then while the camera is lifted away from the board. Without its own sounds this place plays its family's.",
+      "search": "high altitude wind roar, rope creak, sail canvas flap, airship engine hum"
     }
   ]
 }

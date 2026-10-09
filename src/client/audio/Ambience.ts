@@ -1,9 +1,11 @@
 import { inFocus } from './focus';
 import { sfx } from './Sfx';
+import { THEMES, type ThemeId } from '../render/env/themes';
 // Place sounds: while the camera is lifted away from the board, the odd sound of the place drifts in (a smithy far off,
-// birdsong, wind in the trees). Files live in public/ambience/ as `<look>_<anything>.mp3` (look = tavern, harbor, forest...)
-// and `any_<anything>.mp3` for every look; `npm run sfx` (the sound tracker, which lists every place sound still to find) writes public/ambience/manifest.json from what is there, so a
-// missing sound is never requested. They follow the Effects volume and mute.
+// birdsong, wind in the trees). Files live in public/ambience/ as `<place>_<anything>.mp3`, where place is a location id
+// (the-goose-and-kettle) or a family of places (tavern, harbor, forest...) that stands in for locations with no sounds of their own,
+// and `any_<anything>.mp3` for every place; `npm run sfx` (the sound tracker, which lists every place sound still to find) writes
+// public/ambience/manifest.json from what is there, so a missing sound is never requested. They follow the Effects volume and mute.
 
 /** Only plain file names are accepted from the manifest. */
 const SAFE_FILE = /^[A-Za-z0-9._-]+\.(mp3|ogg|wav|webm)$/;
@@ -52,9 +54,11 @@ class Ambience {
     else this.stop();
   }
 
-  /** The sounds that fit this look (plus the ones for every look). */
+  /** The sounds that fit this place: its own if it has any, else its family's (the forest's for a forest), plus the ones for every place. */
   private pool(): string[] {
-    return [...(this.manifest[this.theme] ?? []), ...(this.manifest['any'] ?? [])];
+    const own = this.manifest[this.theme];
+    const family = this.manifest[THEMES[this.theme as ThemeId]?.family ?? ''];
+    return [...(own ?? family ?? []), ...(this.manifest['any'] ?? [])];
   }
 
   private schedule(seconds: number): void {

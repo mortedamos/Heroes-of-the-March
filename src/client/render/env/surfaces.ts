@@ -4,7 +4,10 @@
 
 import * as THREE from 'three';
 
-export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'slab' | 'steel' | 'soft' | 'moss' | 'dirt' | 'magma' | 'leather';
+export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'slab' | 'steel' | 'soft' | 'moss' | 'dirt' | 'magma' | 'leather' | 'channels' | 'cobbles';
+
+/** Marks that glow in the stone: runes along a seam, a sigil circle, or the spirals pecked into a megalith. */
+export type GlyphStyle = 'runes' | 'sigils' | 'spirals';
 
 export interface SurfaceSpec {
   kind: SurfaceKind;
@@ -14,9 +17,9 @@ export interface SurfaceSpec {
   tile: number;
   rough?: number;
   metal?: number;
-  /** Magma: the colour of the glowing cracks (also the emissive tint). */
+  /** The colour of whatever glows: the cracks in magma, the molten metal in channels, the glyphs (also the emissive tint). */
   glow?: string;
-  opts?: { moss?: boolean; lichen?: boolean; sparkle?: boolean; nails?: boolean; rows?: number; blobs?: number; r?: [number, number] };
+  opts?: { moss?: boolean; lichen?: boolean; sparkle?: boolean; nails?: boolean; rows?: number; blobs?: number; r?: [number, number]; glyphs?: GlyphStyle };
 }
 
 export type SkylineKind = 'castle' | 'pines' | 'peaks' | 'graves' | 'town' | 'stacks' | 'hills' | 'arches' | 'clouds';
@@ -108,6 +111,69 @@ function crack(rnd: () => number): [number, number][] {
     pts.push([x, y]);
   }
   return pts;
+}
+
+// Angular marks in a 14 x 28 box, strokes joined point to point.
+const RUNES: [number, number][][] = [
+  [[0, 0], [0, 28], [0, 14], [14, 0]],
+  [[0, 0], [14, 14], [0, 28]],
+  [[7, 0], [7, 28], [0, 10], [14, 10]],
+  [[0, 0], [0, 28], [14, 14], [0, 0]],
+  [[0, 28], [7, 0], [14, 28], [2, 16], [12, 16]],
+  [[0, 0], [14, 28], [0, 28], [14, 0]],
+  [[7, 0], [0, 14], [7, 28], [14, 14], [7, 0]],
+];
+
+/** Glowing strokes for one canvas: a soft halo under a bright core, with the same strokes carved dark into the stone. */
+function glowStroke(g: CanvasRenderingContext2D, gg: CanvasRenderingContext2D, pts: [number, number][], hot: string, w = 2.6, closed = false): void {
+  const trace = (c: CanvasRenderingContext2D): void => {
+    c.beginPath();
+    pts.forEach(([x, y], i) => (i ? c.lineTo(x, y) : c.moveTo(x, y)));
+    if (closed) c.closePath();
+    c.stroke();
+  };
+  g.strokeStyle = rgba('#000000', 0.55); g.lineWidth = w + 2.4; g.lineJoin = g.lineCap = 'round'; trace(g);
+  gg.lineJoin = gg.lineCap = 'round';
+  gg.strokeStyle = rgba(hot, 0.28); gg.lineWidth = w * 3.2; trace(gg);
+  gg.strokeStyle = hot; gg.lineWidth = w; trace(gg);
+}
+
+const arc = (cx: number, cy: number, r: number, from: number, to: number, steps = 40): [number, number][] =>
+  Array.from({ length: steps + 1 }, (_, i) => { const a = from + ((to - from) * i) / steps; return [cx + Math.cos(a) * r, cy + Math.sin(a) * r] as [number, number]; });
+
+/** Draw glowing glyphs onto an emissive canvas `gg` (and carve them into the colour canvas `g`). Everything stays clear of the tile's edges. */
+function drawGlyphs(g: CanvasRenderingContext2D, gg: CanvasRenderingContext2D, style: GlyphStyle, rnd: () => number, hot: string): void {
+  if (style === 'runes') {
+    // Two inlaid bands, a line with a row of runes standing on it.
+    for (const y of [128, 384]) {
+      glowStroke(g, gg, [[0, y], [SIZE, y]], hot, 2.4);
+      for (let x = 30; x < SIZE - 20; x += 46) {
+        const r = RUNES[Math.floor(rnd() * RUNES.length)]!;
+        glowStroke(g, gg, r.map(([px, py]) => [x + px, y - 40 + py] as [number, number]), hot, 2.2);
+      }
+    }
+  } else if (style === 'sigils') {
+    const c = SIZE / 2;
+    glowStroke(g, gg, arc(c, c, 214, 0, Math.PI * 2, 72), hot, 3, true);
+    glowStroke(g, gg, arc(c, c, 190, 0, Math.PI * 2, 72), hot, 2, true);
+    glowStroke(g, gg, arc(c, c, 74, 0, Math.PI * 2, 48), hot, 2.6, true);
+    for (const rot of [-Math.PI / 2, Math.PI / 2]) glowStroke(g, gg, arc(c, c, 150, rot, rot + Math.PI * 2, 3).slice(0, 3), hot, 2.6, true);
+    for (let k = 0; k < 12; k++) {
+      const a = (k * Math.PI) / 6;
+      glowStroke(g, gg, [[c + Math.cos(a) * 190, c + Math.sin(a) * 190], [c + Math.cos(a) * 214, c + Math.sin(a) * 214]], hot, 2);
+      const r = RUNES[k % RUNES.length]!;
+      glowStroke(g, gg, r.map(([px, py]) => [c + Math.cos(a) * 168 + (px - 7) * 0.5, c + Math.sin(a) * 168 + (py - 14) * 0.5] as [number, number]), hot, 1.6);
+    }
+  } else {
+    // Spirals, rings and zigzags, as pecked into a standing stone.
+    const spiral = (cx: number, cy: number, r: number, turns: number, dir: number): [number, number][] =>
+      Array.from({ length: 90 }, (_, i) => { const t = i / 89; const a = dir * t * turns * Math.PI * 2; return [cx + Math.cos(a) * r * t, cy + Math.sin(a) * r * t] as [number, number]; });
+    glowStroke(g, gg, spiral(150, 150, 84, 2.6, 1), hot, 3.4);
+    glowStroke(g, gg, spiral(370, 190, 70, 2.2, -1), hot, 3.4);
+    for (let k = 1; k <= 3; k++) glowStroke(g, gg, arc(250, 392, 22 * k, 0, Math.PI * 2, 40), hot, 3, true);
+    glowStroke(g, gg, Array.from({ length: 11 }, (_, i) => [30 + i * 45, 478 + (i % 2 ? -18 : 18)] as [number, number]), hot, 3);
+    glowStroke(g, gg, Array.from({ length: 9 }, (_, i) => [60 + i * 50, 38 + (i % 2 ? -14 : 14)] as [number, number]), hot, 3);
+  }
 }
 
 function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasElement | null } {
@@ -341,6 +407,84 @@ function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasEle
       }
       break;
     }
+
+    case 'channels': {
+      // Dressed slabs, tight-fitted and worn smooth, with neat channels of molten metal cut across them.
+      const n = o.rows ?? 4;
+      const cell = SIZE / n;
+      g.fillStyle = mixHex(spec.a, '#000000', 0.7);
+      g.fillRect(0, 0, SIZE, SIZE);
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        g.fillStyle = mixHex(spec.a, spec.b, rnd());
+        g.fillRect(c * cell + 1.5, r * cell + 1.5, cell - 3, cell - 3);
+        g.fillStyle = rgba('#ffffff', 0.05);
+        g.fillRect(c * cell + 1.5, r * cell + 1.5, cell - 3, 2.5);
+      }
+      for (let i = 0; i < 40; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 20 + rnd() * 40, rnd() < 0.5 ? spec.b : '#000000', 0.06 + rnd() * 0.08);
+      g.strokeStyle = rgba('#000000', 0.35);
+      g.lineWidth = 1.2;
+      for (let i = 0; i < 3; i++) wrapStroke(g, crack(rnd));
+      speckle(g, 12, rnd);
+      // The channels: along the joint between the first and second row of slabs, and between the first and second column.
+      let gg: CanvasRenderingContext2D;
+      [glow, gg] = canvas(SIZE, SIZE);
+      gg.fillStyle = '#000000';
+      gg.fillRect(0, 0, SIZE, SIZE);
+      const hot = spec.glow ?? '#ff6a22';
+      const cy = cell * Math.min(2, n - 1);
+      const cx = cell;
+      const cut = (x: number, y: number, w: number, h: number): void => {
+        g.fillStyle = rgba('#050403', 0.92); g.fillRect(x, y, w, h);
+        g.fillStyle = rgba('#ffffff', 0.14); g.fillRect(x, y - 1.5, w, 1.5); g.fillRect(x, y + h, w, 1.5);
+      };
+      cut(0, cy - 11, SIZE, 22);
+      cut(cx - 11, 0, 22, SIZE);
+      gg.fillStyle = rgba(hot, 0.18); gg.fillRect(0, cy - 11, SIZE, 22); gg.fillRect(cx - 11, 0, 22, SIZE);
+      gg.fillStyle = mixHex(hot, '#000000', 0.2); gg.fillRect(0, cy - 3.5, SIZE, 7); gg.fillRect(cx - 3.5, 0, 7, SIZE);
+      // A basin where they meet.
+      g.fillStyle = rgba('#050403', 0.95); g.fillRect(cx - 26, cy - 26, 52, 52);
+      gg.fillStyle = rgba(hot, 0.3); gg.fillRect(cx - 26, cy - 26, 52, 52);
+      gg.fillStyle = mixHex(hot, '#ffffff', 0.18); gg.fillRect(cx - 17, cy - 17, 34, 34);
+      break;
+    }
+
+    case 'cobbles': {
+      // Rounded setts in staggered rows, set in dark mortar.
+      const n = 9;
+      const cell = SIZE / n;
+      g.fillStyle = mixHex(spec.a, '#000000', 0.72);
+      g.fillRect(0, 0, SIZE, SIZE);
+      for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+        const x = (c + 0.5 + (r % 2 ? 0.5 : 0) + (rnd() - 0.5) * 0.18) * cell;
+        const y = (r + 0.5 + (rnd() - 0.5) * 0.14) * cell;
+        const rx = cell * (0.4 + rnd() * 0.07);
+        const ry = cell * (0.36 + rnd() * 0.07);
+        const col = mixHex(spec.a, spec.b, rnd());
+        const tilt = (rnd() - 0.5) * 0.5;
+        for (const dx of [0, -SIZE, SIZE]) {
+          g.fillStyle = col;
+          g.beginPath(); g.ellipse(x + dx, y, rx, ry, tilt, 0, Math.PI * 2); g.fill();
+          g.fillStyle = rgba('#ffffff', 0.07);
+          g.beginPath(); g.ellipse(x + dx - rx * 0.12, y - ry * 0.18, rx * 0.7, ry * 0.6, tilt, 0, Math.PI * 2); g.fill();
+          g.strokeStyle = rgba('#000000', 0.3); g.lineWidth = 1.5;
+          g.beginPath(); g.ellipse(x + dx, y, rx, ry, tilt, 0, Math.PI * 2); g.stroke();
+        }
+      }
+      speckle(g, 16, rnd);
+      break;
+    }
+  }
+
+  // Glyphs glow in the stone whatever the surface is.
+  if (o.glyphs) {
+    let gg: CanvasRenderingContext2D;
+    if (glow) gg = glow.getContext('2d')!;
+    else {
+      [glow, gg] = canvas(SIZE, SIZE);
+      gg.fillStyle = '#000000';
+      gg.fillRect(0, 0, SIZE, SIZE);
+    }
+    drawGlyphs(g, gg, o.glyphs, rnd, spec.glow ?? '#ffe2a0');
   }
   return { map, glow };
 }
@@ -577,4 +721,69 @@ export function beamTexture(): THREE.CanvasTexture {
   }
   g.putImageData(img, 0, 0);
   return (beam = new THREE.CanvasTexture(c));
+}
+
+let ringTex: THREE.CanvasTexture | null = null;
+let streakTex: THREE.CanvasTexture | null = null;
+
+/** A thin soft ring on clear ground, for ripples spreading on water. */
+export function ringTexture(): THREE.CanvasTexture {
+  if (ringTex) return ringTex;
+  const [c, g] = canvas(128, 128);
+  const gr = g.createRadialGradient(64, 64, 0, 64, 64, 64);
+  gr.addColorStop(0, 'rgba(255,255,255,0)');
+  gr.addColorStop(0.72, 'rgba(255,255,255,0)');
+  gr.addColorStop(0.84, 'rgba(255,255,255,0.95)');
+  gr.addColorStop(0.93, 'rgba(255,255,255,0.18)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr;
+  g.fillRect(0, 0, 128, 128);
+  return (ringTex = new THREE.CanvasTexture(c));
+}
+
+/** A streak of light, bright at its head (the right) and fading away behind it, for a shooting star. */
+export function streakTexture(): THREE.CanvasTexture {
+  if (streakTex) return streakTex;
+  const [c, g] = canvas(256, 16);
+  const img = g.createImageData(256, 16);
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 256; x++) {
+    const along = (x / 255) ** 2.2;
+    const side = Math.sin(((y + 0.5) / 16) * Math.PI) ** 2;
+    const i = (y * 256 + x) * 4;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+    img.data[i + 3] = Math.round(255 * along * side);
+  }
+  g.putImageData(img, 0, 0);
+  return (streakTex = new THREE.CanvasTexture(c));
+}
+
+/** A band of glowing runes (512 x 64, two canvases: the stone, and what glows in it) for a cornice or a frieze. */
+export function runeBand(hot: string, base = '#23262b'): { map: HTMLCanvasElement; glow: HTMLCanvasElement } {
+  const [map, g] = canvas(512, 64);
+  g.fillStyle = base;
+  g.fillRect(0, 0, 512, 64);
+  const [glow, gg] = canvas(512, 64);
+  gg.fillStyle = '#000000';
+  gg.fillRect(0, 0, 512, 64);
+  const rnd = rngOf(hash(`band${hot}`));
+  for (let x = 20; x < 500; x += 40) {
+    const r = RUNES[Math.floor(rnd() * RUNES.length)]!;
+    glowStroke(g, gg, r.map(([px, py]) => [x + px * 0.85, 14 + py * 0.85] as [number, number]), hot, 2.4);
+  }
+  speckle2(g, 10, rnd);
+  return { map, glow };
+}
+
+function speckle2(g: CanvasRenderingContext2D, amt: number, rnd: () => number): void {
+  const w = g.canvas.width;
+  const h = g.canvas.height;
+  const img = g.getImageData(0, 0, w, h);
+  const d = img.data;
+  for (let i = 0; i < d.length; i += 4) {
+    const n = (rnd() - 0.5) * amt;
+    d[i] = Math.max(0, Math.min(255, d[i]! + n));
+    d[i + 1] = Math.max(0, Math.min(255, d[i + 1]! + n));
+    d[i + 2] = Math.max(0, Math.min(255, d[i + 2]! + n));
+  }
+  g.putImageData(img, 0, 0);
 }

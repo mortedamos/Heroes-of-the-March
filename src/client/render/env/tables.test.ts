@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { loft, ring, TABLE_CORNER, type Level, type Outline } from './tables';
+import { evenSpots, loft, ring, TABLE_CORNER, type Level, type Outline } from './tables';
 
 const wide: Outline = { w: 19, d: 12.6, cz: 0.5, r: TABLE_CORNER };
 const tall: Outline = { w: 7.4, d: 14.8, cz: -1, r: TABLE_CORNER };
@@ -80,5 +80,44 @@ describe('loft', () => {
     for (let i = 0; i < uv.count; i++) max = Math.max(max, uv.getX(i));
     // The whole way round: two long sides, two short sides, and four quarter-circle corners (each a short run of straight pieces).
     expect(max).toBeCloseTo(2 * (19 - 2 * TABLE_CORNER) + 2 * (12.6 - 2 * TABLE_CORNER) + 2 * Math.PI * TABLE_CORNER, 0);
+  });
+});
+
+describe('evenSpots', () => {
+  it('returns as many points as asked for, all on the ring they were taken from', () => {
+    for (const o of [wide, tall]) {
+      const pts = evenSpots(o, 0.9, 9);
+      expect(pts).toHaveLength(9);
+      const ringPts = ring(o, 0.9);
+      // The distance from a point to the closed outline, segment by segment.
+      const distance = (x: number, z: number): number => Math.min(...ringPts.map((a, i) => {
+        const b = ringPts[(i + 1) % ringPts.length]!;
+        const dx = b.x - a.x;
+        const dz = b.z - a.z;
+        const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz || 1)));
+        return Math.hypot(a.x + dx * t - x, a.z + dz * t - z);
+      }));
+      for (const p of pts) {
+        expect(Math.hypot(p.nx, p.nz)).toBeCloseTo(1, 5);
+        expect(distance(p.x, p.z)).toBeLessThan(1e-6);
+      }
+    }
+  });
+
+  it('spaces them evenly, so no stone is crowded and no gap is left', () => {
+    const pts = evenSpots(wide, 0.9, 12);
+    const gaps = pts.map((p, i) => {
+      const q = pts[(i + 1) % pts.length]!;
+      return Math.hypot(q.x - p.x, q.z - p.z);
+    });
+    const mean = gaps.reduce((a, b) => a + b, 0) / gaps.length;
+    for (const g of gaps) {
+      expect(g).toBeGreaterThan(mean * 0.7);
+      expect(g).toBeLessThan(mean * 1.15);
+    }
+  });
+
+  it('gives the same points every time', () => {
+    expect(evenSpots(wide, 0.5, 7)).toEqual(evenSpots(wide, 0.5, 7));
   });
 });

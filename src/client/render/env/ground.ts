@@ -5,15 +5,31 @@
 //   clouds - the same, slower and softer, for the skyship.
 //   rock   - the forge: uneven, jagged stone. Jittered, ridged heights, shaded in flat facets; calmer round the table
 //            so the foot of the anvil sits in it.
+//   mirror - still water that reflects the sky dome.
 
 import * as THREE from 'three';
 
-export type GroundKind = 'waves' | 'clouds' | 'rock';
+export type GroundKind = 'waves' | 'clouds' | 'rock' | 'mirror';
 
-/** What every moving ground shares: the clock, and the table's footprint (half width, half depth, centre z). */
+/** The sky dome's own uniforms (Environment.domeUniforms), so water can reflect what the dome shows. */
+export interface SkyUniforms {
+  top: { value: THREE.Color };
+  bottom: { value: THREE.Color };
+  skyFrom: { value: THREE.Texture };
+  skyTo: { value: THREE.Texture };
+  wFrom: { value: number };
+  wTo: { value: number };
+  offFrom: { value: number };
+  offTo: { value: number };
+  haze: { value: number };
+}
+
+/** What every moving ground shares: the clock, the table's footprint (half width, half depth, centre z), the sky, and the dome's size (semi-axes) and the height of its centre. */
 export interface GroundUniforms {
   time: { value: number };
   table: { value: THREE.Vector4 };
+  sky: SkyUniforms;
+  dome: { value: THREE.Vector4 };
 }
 
 interface Wave {
@@ -64,6 +80,7 @@ const f = (n: number): string => n.toFixed(4);
 /** Make `mat` (a ground material) move or break up as `kind` says. */
 export function groundMaterial(mat: THREE.MeshStandardMaterial, kind: GroundKind, u: GroundUniforms): void {
   if (kind === 'rock') rock(mat, u);
+  else if (kind === 'mirror') mirror(mat, u);
   else swell(mat, kind, u);
   mat.customProgramCacheKey = () => `ground:${kind}`;
 }
@@ -134,5 +151,53 @@ function rock(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
         float gCalm = mix(0.15, 1.0, smoothstep(2.0, 9.0, length(gd))) * (1.0 - smoothstep(90.0, 150.0, length(gp)));
         transformed.xy += jit * gCalm;
         transformed.z += gh * 1.15 * gCalm;`);
+  };
+}
+
+/**
+ * Still water: the ground mirrors the sky. For each pixel the reflected ray is followed up to the sky dome (an ellipsoid, see
+ * Environment) and the dome's colour there is mixed in, more strongly the lower the camera looks (Fresnel). So a painted
+ * sky, trees and all, doubles itself in the water, and the sky crossfades with the one above.
+ */
+function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
+  mat.onBeforeCompile = (shader) => {
+    const s = u.sky;
+    Object.assign(shader.uniforms, {
+      uTop: s.top, uBottom: s.bottom, uSkyFrom: s.skyFrom, uSkyTo: s.skyTo, uWFrom: s.wFrom, uWTo: s.wTo,
+      uOffFrom: s.offFrom, uOffTo: s.offTo, uHaze: s.haze, uDome: u.dome,
+    });
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', '#include <common>\nvarying vec3 vMirrorPos;')
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvMirrorPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        varying vec3 vMirrorPos;
+        uniform vec3 uTop; uniform vec3 uBottom; uniform sampler2D uSkyFrom; uniform sampler2D uSkyTo;
+        uniform float uWFrom; uniform float uWTo; uniform float uOffFrom; uniform float uOffTo; uniform float uHaze; uniform vec4 uDome;
+        // The sky as the dome paints it, seen along the unit direction R from the point P.
+        vec3 mirrorSky(vec3 P, vec3 R) {
+          vec3 o = vec3(P.x / uDome.x, (P.y - uDome.w) / uDome.y, P.z / uDome.z);
+          vec3 d = vec3(R.x / uDome.x, R.y / uDome.y, R.z / uDome.z);
+          float a = dot(d, d);
+          float b = dot(o, d);
+          float c = dot(o, o) - 1.0;
+          float t = (-b + sqrt(max(b * b - a * c, 0.0))) / a;
+          vec3 n = normalize(o + d * t);
+          vec2 uv = vec2(1.0 - fract(atan(n.z, -n.x) / 6.28318530718), 1.0 - acos(clamp(n.y, -1.0, 1.0)) / 3.14159265359);
+          float h = pow(clamp(n.y, 0.0, 1.0), mix(0.55, 1.4, max(uWFrom, uWTo)));
+          vec3 sky = mix(uBottom, uTop, h);
+          float vis = smoothstep(0.07 * uHaze, 0.32 * uHaze + 0.001, n.y);
+          sky = mix(sky, texture2D(uSkyFrom, vec2(uv.x + uOffFrom, uv.y)).rgb, uWFrom * vis);
+          sky = mix(sky, texture2D(uSkyTo, vec2(uv.x + uOffTo, uv.y)).rgb, uWTo * vis);
+          return sky;
+        }`)
+      .replace('#include <opaque_fragment>', `
+        {
+          vec3 mV = normalize(vMirrorPos - cameraPosition);
+          vec3 mR = vec3(mV.x, -mV.y, mV.z);
+          float mF = mix(0.3, 1.0, pow(1.0 - clamp(-mV.y, 0.0, 1.0), 4.0));
+          outgoingLight = mix(outgoingLight, mirrorSky(vMirrorPos, mR), mF);
+        }
+        #include <opaque_fragment>`);
   };
 }

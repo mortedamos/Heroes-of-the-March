@@ -6,8 +6,8 @@ import { FOG_DEFAULT, HAZE_DEFAULT } from '../render/env/Environment';
 
 /** What the panel can change; GameClient wires it to the table's Environment. */
 export interface DebugApi {
-  /** Every look the table can have, for the picker. */
-  themes: string[];
+  /** Every look the table can have, for the picker: its id, its name, and the family of places it is listed under. */
+  themes: { id: string; label: string; group: string }[];
   /** The look showing now. */
   theme(): string;
   /** The look the picker holds fixed, or null while the game picks one per location. */
@@ -57,13 +57,21 @@ function slider(label: string, hint: string, value: number, max: number, set: (v
 
 function render(api: DebugApi): void {
   const pick = h('select', { aria: { label: 'Location look' } });
-  const follow = h('option', {}, `Follow the game (${api.theme()})`);
+  const follow = h('option', {}, `Follow the game (${api.themes.find((t) => t.id === api.theme())?.label ?? api.theme()})`);
   follow.value = '';
   pick.appendChild(follow);
-  for (const id of api.themes) {
-    const o = h('option', {}, id);
-    o.value = id;
-    pick.appendChild(o);
+  const groups = new Map<string, HTMLOptGroupElement>();
+  for (const t of api.themes) {
+    let g = groups.get(t.group);
+    if (!g) {
+      g = document.createElement('optgroup');
+      g.label = t.group;
+      groups.set(t.group, g);
+      pick.appendChild(g);
+    }
+    const o = h('option', {}, t.label);
+    o.value = t.id;
+    g.appendChild(o);
   }
   pick.value = api.pinned() ?? '';
   pick.addEventListener('change', () => { api.pin(pick.value || null); savePrefs(api); render(api); });

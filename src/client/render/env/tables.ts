@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { mixHex, surfaceMaterial, type SurfaceSpec } from './surfaces';
+import { mixHex, runeBand, surfaceMaterial, type SurfaceSpec } from './surfaces';
 import type { ThemeScene } from './props';
 import type { TableKind, TableSpec } from './themes';
 
@@ -255,6 +255,33 @@ function spots(o: Outline, inset: number): (rnd: () => number) => RingPoint {
     const l = Math.hypot(nx, nz) || 1;
     return { x: a.x + (c.x - a.x) * t, z: a.z + (c.z - a.z) * t, nx: nx / l, nz: nz / l };
   };
+}
+
+/** `count` points spaced evenly by length round the ring `inset` in from the edge (with outward normals). */
+export function evenSpots(o: Outline, inset: number, count: number): RingPoint[] {
+  const pts = ring(o, inset);
+  const n = pts.length;
+  const cum: number[] = [0];
+  for (let j = 0; j < n; j++) {
+    const a = pts[j]!;
+    const c = pts[(j + 1) % n]!;
+    cum.push(cum[j]! + Math.hypot(c.x - a.x, c.z - a.z));
+  }
+  const total = cum[n]!;
+  const out: RingPoint[] = [];
+  let j = 0;
+  for (let k = 0; k < count; k++) {
+    const at = ((k + 0.5) / count) * total;
+    while (j < n - 1 && cum[j + 1]! < at) j++;
+    const a = pts[j]!;
+    const c = pts[(j + 1) % n]!;
+    const t = (at - cum[j]!) / Math.max(1e-6, cum[j + 1]! - cum[j]!);
+    const nx = a.nx + (c.nx - a.nx) * t;
+    const nz = a.nz + (c.nz - a.nz) * t;
+    const l = Math.hypot(nx, nz) || 1;
+    out.push({ x: a.x + (c.x - a.x) * t, z: a.z + (c.z - a.z) * t, nx: nx / l, nz: nz / l });
+  }
+  return out;
 }
 
 // -- The shadow on the ground ---------------------------------------------------------
@@ -557,6 +584,21 @@ function dress(b: Build, d: Dressing): void {
       mat.compose(at, rot, sc);
       tint.copy(palette[i % palette.length]!);
     });
+    if (cover === 'flowers') {
+      // Blossoms: small bright dots among the moss, along the lip and across the top of the block.
+      const bloom = ['#f4a3c4', '#ffffff', '#ffe27a', '#c4a6f0', '#ff9a8a'].map((c) => new THREE.Color(c));
+      const sites = [lip, ...across];
+      b.scatter(blobGeo, m.lump!, Math.round((o.w + o.d) * 4.5), (i, mat, tint) => {
+        const k = i % sites.length;
+        const p = sites[k]!(rnd);
+        at.set(p.x, k === 0 ? 0.2 + rnd() * 0.12 : d.ledgeY + 0.1 + rnd() * 0.05, p.z);
+        rot.identity();
+        const r = 0.08 + rnd() * 0.1;
+        sc.set(r, r * 0.8, r);
+        mat.compose(at, rot, sc);
+        tint.copy(bloom[Math.floor(rnd() * bloom.length)]!);
+      });
+    }
   } else {
     // Icicles hang from the edge of the block's top; a glaze of ice coats the edge itself.
     b.add(loft(o, [{ inset: d.edge - 0.035, y: d.ledgeY - 0.05 }, { inset: d.edge - 0.035, y: d.ledgeY - 0.5 }]), m.ice!, false);
@@ -614,7 +656,23 @@ const altar: Kind = {
 };
 
 const vault: Kind = {
-  mats: (c) => ({ stone: masonry(c), pool: poolMaterial(c, 0.7) }),
+  mats: (c) => {
+    const m: Mats = { stone: masonry(c), pool: poolMaterial(c, 0.7) };
+    if (c.spec.glow) {
+      // A band of runes glowing along the cornice.
+      const art = runeBand(c.spec.glow);
+      const tex = (cv: HTMLCanvasElement): THREE.CanvasTexture => {
+        const t = new THREE.CanvasTexture(cv);
+        t.colorSpace = THREE.SRGBColorSpace;
+        t.wrapS = THREE.RepeatWrapping;
+        t.repeat.set(1 / 7, 1 / 0.26);
+        t.anisotropy = c.aniso;
+        return t;
+      };
+      m.runes = c.ts.register(new THREE.MeshStandardMaterial({ map: tex(art.map), emissive: '#ffffff', emissiveMap: tex(art.glow), emissiveIntensity: 0.9, roughness: 0.8 }));
+    }
+    return m;
+  },
   build(b) {
     // A mausoleum: the playing surface is its roof slab, over a heavy cornice, pilastered walls and a stepped base.
     const H = b.spec.height;
@@ -659,6 +717,7 @@ const vault: Kind = {
         cap.rotation.y = yaw;
       }
     }
+    if (b.m.runes) b.add(loft(o, [{ inset: -0.92, y: -0.58 }, { inset: -0.92, y: -0.84 }]), b.m.runes, false);
     pool(b, 1.3, 4.2);
   },
 };
@@ -708,6 +767,192 @@ const anvil: Kind = {
   },
 };
 
+// -- Standing stones, iron, trestles, blocks and landings ----------------------------------------
+
+/** Move a box's texture coordinates, so two stones cut from one material do not show the same patch. */
+function shiftUV(g: THREE.BufferGeometry, du: number, dv: number): THREE.BufferGeometry {
+  const uv = g.getAttribute('uv') as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) + du, uv.getY(i) + dv);
+  return g;
+}
+
+const earth = (c: MatCtx): Std => textured(c, { ...c.top, kind: 'dirt', a: '#2a2118', b: '#3d3024', tile: 5, rough: 1, metal: 0, opts: {} });
+
+/** A great capstone laid on rough standing stones, spirals glowing in their faces: the table of an old passage tomb. */
+const dolmen: Kind = {
+  mats: (c) => ({
+    stone: masonry(c),
+    standing: textured(c, { ...c.top, kind: 'slab', glow: c.spec.glow ?? '#7fb8ff', tile: 4.5, opts: { glyphs: 'spirals' } }),
+    earth: earth(c),
+    pool: poolMaterial(c, 0.7),
+  }),
+  build(b) {
+    const H = b.spec.height;
+    const { o, rnd } = b;
+    const under = -2.3;
+    // The capstone: a rough, heavy slab, widest a little below the playing surface and rounded off underneath.
+    b.add(loft(o, [
+      { inset: 0, y: -LIFT }, { inset: 0, y: -0.55 },
+      { inset: -0.55, y: -0.7 }, { inset: -0.85, y: -1.2 }, { inset: -0.75, y: -1.8 }, { inset: -0.3, y: under },
+    ], true), b.m.stone!);
+    // The standing stones under its edge, each set a little differently.
+    const top = under + 0.25;
+    const bottom = -H - 0.6;
+    for (const p of evenSpots(o, 0.9, Math.max(6, Math.round((o.w + o.d) / 3.4)))) {
+      const w = 1.7 + rnd() * 0.9;
+      const dep = 0.9 + rnd() * 0.4;
+      const stone = b.add(shiftUV(worldBox(w, top - bottom, dep), rnd() * 4, rnd() * 4), b.m.standing!);
+      stone.position.set(p.x - p.nx * 0.1, (top + bottom) / 2, p.z - p.nz * 0.1);
+      stone.rotation.set(0, Math.atan2(p.nx, p.nz) + (rnd() - 0.5) * 0.35, (rnd() - 0.5) * 0.08);
+    }
+    // Earth heaped round their feet.
+    b.add(loft(o, [{ inset: 0.6, y: -H + 1.1 }, { inset: -1.1, y: -H + 0.55 }, { inset: -3.0, y: -H - 0.1 }]), b.m.earth!);
+    pool(b, 2.2, 5);
+  },
+};
+
+/** A thick riveted iron plate, hammered together in a hurry and set on a rough rise of black rock. */
+const ironslab: Kind = {
+  mats: (c) => ({
+    plate: textured(c, { ...c.top, kind: 'steel', tile: 5 }),
+    rock: textured(c, { ...c.top, kind: 'slab', a: '#4a4038', b: '#7a6a58', tile: 6, rough: 0.95, metal: 0, opts: { rows: 3 } }),
+    rivet: plain(c, '#1a1a1c', { metalness: 0.6, roughness: 0.4 }),
+    strap: plain(c, '#2e2a28', { metalness: 0.5, roughness: 0.6 }),
+    pool: poolMaterial(c, 0.7),
+  }),
+  build(b) {
+    const H = b.spec.height;
+    const { o } = b;
+    b.add(loft(o, [{ inset: 0, y: -LIFT }, { inset: 0, y: -0.85 }, { inset: 0.15, y: -1.0 }], true), b.m.plate!);
+    // Rivets round the edge of the plate.
+    const studs = evenSpots(o, 0.42, Math.round((o.w + o.d) * 1.3));
+    const at = new THREE.Vector3();
+    const q = new THREE.Quaternion();
+    const sc = new THREE.Vector3(0.15, 0.09, 0.15);
+    b.scatter(new THREE.SphereGeometry(1, 8, 6), b.m.rivet!, studs.length, (i, mat, tint) => {
+      const p = studs[i]!;
+      mat.compose(at.set(p.x, 0.02, p.z), q, sc);
+      tint.set('#ffffff');
+    }, true);
+    // The rock, with iron straps round it.
+    b.add(loft(o, [
+      { inset: 0.6, y: -1.0 }, { inset: -0.5, y: -1.1 }, { inset: -0.5, y: -2.5 },
+      { inset: -1.3, y: -3.0 }, { inset: -1.3, y: -H * 0.7 }, { inset: -2.4, y: -H - 0.8 },
+    ], true), b.m.rock!);
+    for (const [y0, y1] of [[-1.35, -1.7], [-2.0, -2.3]] as const) b.add(loft(o, [{ inset: -0.56, y: y0 }, { inset: -0.56, y: y1 }]), b.m.strap!);
+    pool(b, 2.4, 5);
+  },
+};
+
+/** A long board laid across trestles, with a bench along the far side and at each end; the near side is left clear for the player. */
+const trestle: Kind = {
+  mats: (c) => ({
+    board: boards(c, 2, 0.05), leg: boards(c, 2, 0.2, true), bench: boards(c, 2, 0.15),
+    pool: poolMaterial(c, 0.55),
+  }),
+  build(b) {
+    const H = b.spec.height;
+    const { o } = b;
+    const T = 0.55;
+    b.add(loft(o, [{ inset: 0, y: -LIFT }, { inset: 0, y: -T }], true), b.m.board!);
+    // Three trestles: a head under the board, and a splayed leg at each end of it.
+    const reach = o.d / 2 - 1.0;
+    const out = 0.9;
+    const run = H - T - 0.3;
+    const lean = Math.atan2(out, run);
+    const len = Math.hypot(out, run);
+    const xs = [-0.34 * o.w, 0, 0.34 * o.w];
+    for (const x of xs) {
+      beam(b, 0.7, 0.5, 2 * reach + 0.6, x, -T - 0.25, o.cz, b.m.leg!);
+      for (const s of [-1, 1]) {
+        const leg = b.add(worldBox(0.62, len, 0.62), b.m.leg!);
+        leg.position.set(x, -T - 0.3 - run / 2, o.cz + s * (reach + out / 2));
+        leg.rotation.x = -s * lean;
+      }
+    }
+    // A stretcher along each side ties the trestles together.
+    for (const s of [-1, 1]) beam(b, xs[2]! * 2 + 0.4, 0.4, 0.4, 0, -H + 1.2, o.cz + s * (reach + out * 0.55), b.m.leg!);
+    // Benches: a plank seat on four short legs.
+    const seatY = -H * 0.5;
+    const legH = H * 0.5 - 0.15;
+    const bench = (long: number, alongX: boolean, x: number, z: number): void => {
+      const seat = b.add(worldBox(alongX ? long : 1.3, 0.3, alongX ? 1.3 : long), b.m.bench!);
+      seat.position.set(x, seatY, z);
+      for (const lx of [-1, 1]) for (const lz of [-1, 1]) {
+        const dx = alongX ? lx * (long / 2 - 0.45) : lz * 0.4;
+        const dz = alongX ? lz * 0.4 : lx * (long / 2 - 0.45);
+        beam(b, 0.3, legH, 0.3, x + dx, -H + legH / 2, z + dz, b.m.bench!);
+      }
+    };
+    bench(o.w * 0.62, true, 0, o.cz - o.d / 2 - 1.8);
+    for (const s of [-1, 1]) bench(o.d * 0.5, false, s * (o.w / 2 + 1.8), o.cz);
+    pool(b, 2.8, 5);
+  },
+};
+
+/** A squared block of cut stone under the playing slab, split from the rock with feather-and-wedge slots along its edge. */
+const block: Kind = {
+  mats: (c) => ({ stone: masonry(c), slot: plain(c, '#171512', { roughness: 1 }), pool: poolMaterial(c, 0.6) }),
+  build(b) {
+    const H = b.spec.height;
+    const { o } = b;
+    const M = 1.7;
+    const ledge = -0.45;
+    b.add(loft(o, [
+      { inset: 0, y: -LIFT }, { inset: 0, y: ledge },                      // the slab's edge
+      { inset: -M, y: ledge },                                             // the top of the block
+      { inset: -M, y: -H * 0.5 }, { inset: -M - 0.35, y: -H * 0.5 },       // one square face, then a step out
+      { inset: -M - 0.35, y: -H - 0.8 },
+    ], true), b.m.stone!);
+    const marks = evenSpots(o, -M + 0.4, Math.round((o.w + o.d) * 1.1));
+    const at = new THREE.Vector3();
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+    const one = new THREE.Vector3(1, 1, 1);
+    b.scatter(new THREE.BoxGeometry(0.22, 0.06, 0.5), b.m.slot!, marks.length, (i, mat, tint) => {
+      const p = marks[i]!;
+      q.setFromAxisAngle(up, Math.atan2(p.nx, p.nz));
+      mat.compose(at.set(p.x, ledge + 0.03, p.z), q, one);
+      tint.set('#ffffff');
+    });
+    pool(b, M + 0.35 + 0.5, 5);
+  },
+};
+
+/** The wide end of a dwarven stair: a stone landing with a turned balustrade carved round its side. */
+function baluster(): THREE.BufferGeometry {
+  const prof: [number, number][] = [[0.16, 0], [0.24, 0.1], [0.12, 0.25], [0.12, 0.5], [0.28, 0.7], [0.12, 0.9], [0.12, 1.1], [0.22, 1.25], [0.16, 1.4]];
+  return new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 12);
+}
+
+const landing: Kind = {
+  mats: (c) => ({ stone: masonry(c), pool: poolMaterial(c, 0.7) }),
+  build(b) {
+    const H = b.spec.height;
+    const { o } = b;
+    const railTop = -0.9;
+    const railBottom = -2.8;
+    b.add(loft(o, [
+      { inset: 0, y: -LIFT }, { inset: 0, y: -0.5 },
+      { inset: -0.55, y: -0.5 }, { inset: -0.55, y: railTop },                  // the cornice
+      { inset: -0.15, y: railTop }, { inset: -0.15, y: railBottom },             // the wall the balusters stand against
+      { inset: -0.55, y: railBottom }, { inset: -0.55, y: railBottom - 0.4 },    // the rail they stand on
+      { inset: -0.15, y: railBottom - 0.4 }, { inset: -0.15, y: -H + 0.6 },
+      { inset: -0.8, y: -H + 0.6 }, { inset: -0.8, y: -H - 0.8 },                // the plinth
+    ], true), b.m.stone!);
+    const posts = evenSpots(o, -0.38, Math.round((o.w + o.d) * 1.15));
+    const at = new THREE.Vector3();
+    const q = new THREE.Quaternion();
+    const stretch = new THREE.Vector3(1.2, 1.3, 1.2);
+    b.scatter(baluster(), b.m.stone!, posts.length, (i, mat, tint) => {
+      const p = posts[i]!;
+      mat.compose(at.set(p.x, railBottom + 0.05, p.z), q, stretch);
+      tint.set('#ffffff');
+    }, true);
+    pool(b, 1.6, 5);
+  },
+};
+
 // -- Decks ------------------------------------------------------------------------------
 
 function deck(sky: boolean): Kind {
@@ -735,7 +980,7 @@ function deck(sky: boolean): Kind {
 }
 
 const KINDS: Record<Exclude<TableKind, 'plain'>, Kind> = {
-  tavern, hall, study, altar, vault, anvil, ship: deck(false), skyship: deck(true),
+  tavern, hall, study, altar, vault, anvil, ship: deck(false), skyship: deck(true), dolmen, ironslab, trestle, block, landing,
 };
 
 /**
@@ -745,7 +990,8 @@ const KINDS: Record<Exclude<TableKind, 'plain'>, Kind> = {
 export function buildTable(ts: ThemeScene, spec: TableSpec, top: SurfaceSpec, aniso: number): void {
   if (spec.kind === 'plain') return;
   const kind = KINDS[spec.kind];
-  const m = kind.mats({ ts, spec, top, aniso });
+  // The body is made from the top's colours unless the table names its own (a green leather desk on honey wood).
+  const m = kind.mats({ ts, spec, top: spec.body ? { ...top, ...spec.body } : top, aniso });
   const group = new THREE.Group();
   ts.group.add(group);
   const seed = 1000 + Object.keys(KINDS).indexOf(spec.kind) * 77 + Math.round(spec.height * 10);

@@ -15,7 +15,7 @@ import { sfx, type SfxName } from './audio/Sfx';
 import { THEME_SOUND, themeForAbility, type Theme } from './ui/themes';
 import { isTouch, syncBodyClasses } from './viewport';
 import { debugEnabled, loadDebugPrefs, type DebugApi } from './ui/DebugMenu';
-import type { ThemeId } from './render/env/themes';
+import { THEMES, type ThemeId } from './render/env/themes';
 
 const ERROR_TEXT: Record<string, string> = {
   stale_decision: 'That choice was already made.',
@@ -340,7 +340,11 @@ export class GameClient {
     env.setHaze(saved.haze);
     if (saved.pinned && env.themeIds.includes(saved.pinned as ThemeId)) env.pin(saved.pinned as ThemeId);
     return {
-      themes: env.themeIds,
+      themes: env.themeIds.map((id) => ({
+        id,
+        label: id === 'felt' ? 'Plain felt' : (getDef(id) as { name: string }).name,
+        group: THEMES[id].family,
+      })),
       theme: () => env.current,
       pinned: () => env.pinned,
       pin: (id) => env.pin(id as ThemeId | null),

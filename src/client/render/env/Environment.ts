@@ -7,7 +7,7 @@ import { surfaceMaterial, type SurfaceSpec } from './surfaces';
 import { buildThemeScene, type ThemeScene } from './props';
 import { groundMaterial, type GroundUniforms } from './ground';
 import { TABLE_CORNER } from './tables';
-import { THEMES, themeFor, type Look, type ThemeId } from './themes';
+import { sharesFamilySky, THEMES, themeFor, type Look, type ThemeId } from './themes';
 
 const FADE_S = 1.8;
 /** How thick the fog and the horizon haze are before the player changes them (1 = the full amount each place was designed with). */
@@ -77,12 +77,13 @@ class LookState {
 /** A surface that can crossfade: the settled mesh and a second one fading in above it. */
 interface Layer { base: THREE.Mesh; fade: THREE.Mesh; t: number; active: boolean }
 
+/** What public/locations/manifest.json says about one look: a location id, or a family (the fallback for its places). */
 interface ArtEntry {
   top?: string;
   floor?: string;
   tile?: number;
-  /** An equirectangular (2:1) panorama for the sky dome. */
-  sky?: string;
+  /** An equirectangular (2:1) panorama for the sky dome; `null` says this place has none, whatever its family has. */
+  sky?: string | null;
   /** Horizon colour for the fog and ground, to match the panorama's horizon. */
   fog?: string;
   /** Keep the procedural skyline ring in front of the panorama (default: the panorama replaces it). */
@@ -121,18 +122,28 @@ export class Environment {
     /** Scales how high the horizon haze reaches (1 = as designed; the debug panel changes it). */
     haze: { value: HAZE_DEFAULT },
   };
-  private readonly skies = new Map<ThemeId, THREE.Texture>();
+  /** The panoramas loaded so far, by file name (places of one family share a file). */
+  private readonly skies = new Map<string, THREE.Texture>();
+  private readonly skyLoading = new Set<string>();
   /** Horizon colour read from each loaded panorama, so the ground fades into the sky without a seam. */
-  private readonly autoFog = new Map<ThemeId, THREE.Color>();
+  private readonly autoFog = new Map<string, THREE.Color>();
+  /** The look whose panorama fades out and the one whose fades in (a look decides how far its sky slides round), and their files. */
   private skyFrom: ThemeId | null = null;
   private skyTo: ThemeId | null = null;
+  private fileFrom: string | null = null;
+  private fileTo: string | null = null;
   private artReady: Promise<void> = Promise.resolve();
   private readonly accents: THREE.PointLight[];
   private readonly rimMat = new THREE.MeshStandardMaterial();
   private readonly plinthMat = new THREE.MeshStandardMaterial({ roughness: 0.9, transparent: true });
   private plinth: THREE.Mesh | null = null;
-  /** What every moving or broken ground shares: the clock and the table's footprint. */
-  private readonly groundU: GroundUniforms = { time: { value: 0 }, table: { value: new THREE.Vector4(9.5, 6.3, 0, 0) } };
+  /** What every moving, broken or mirroring ground shares: the clock, the table's footprint, and the sky (which water reflects). */
+  private readonly groundU: GroundUniforms = {
+    time: { value: 0 },
+    table: { value: new THREE.Vector4(9.5, 6.3, 0, 0) },
+    sky: this.domeUniforms,
+    dome: { value: new THREE.Vector4(DOME.long, DOME.tall, DOME.short, 0) },
+  };
   /** The sea, the sky and the ground turned together, so the whole backdrop can rock round the table. */
   private readonly backdrop = new THREE.Group();
   /** How far the backdrop rocks now (peak degrees), and the amounts it is easing between. */
@@ -239,21 +250,35 @@ export class Environment {
     } catch { /* no art: the procedural look is the default */ }
   }
 
-  /** Start loading a theme's panorama (once); the dome picks it up when it arrives. */
-  private loadSky(id: ThemeId): void {
-    const file = this.art[id]?.sky;
-    if (!file || this.skies.has(id)) return;
+  /**
+   * What the manifest holds for a look: its own entry over its family's. A family lends its sky and fog colour only to
+   * places with the same enclosure (indoors or out), so a tomb never gets an outdoor sky; it shows the plain gradient
+   * until it has a painting of its own.
+   */
+  private artOf(id: ThemeId): ArtEntry {
+    const th = THEMES[id];
+    const own = this.art[id];
+    const fam = th.family === id ? undefined : this.art[th.family];
+    if (!fam) return own ?? {};
+    return { ...fam, ...(sharesFamilySky(id) ? {} : { sky: undefined, fog: undefined, keepSkyline: undefined }), ...own };
+  }
+
+  /** Start loading a panorama (once); the dome picks it up when it arrives. */
+  private loadSky(file: string): void {
+    if (this.skies.has(file) || this.skyLoading.has(file)) return;
+    this.skyLoading.add(file);
     new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}locations/${file}`, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.anisotropy = this.aniso;
       // So a panorama that slides round the sky wraps past its own edge.
       tex.wrapS = THREE.RepeatWrapping;
-      this.skies.set(id, tex);
+      this.skies.set(file, tex);
+      this.skyLoading.delete(file);
       this.bindSkies();
       const fog = this.horizonColor(tex);
       if (fog) {
-        this.autoFog.set(id, fog);
-        if (this.theme === id) {
+        this.autoFog.set(file, fog);
+        if (this.fileTo === file) {
           this.to.sky.copy(fog);
           if (this.look >= 1) this.shown.sky.copy(fog);
         }
@@ -281,8 +306,8 @@ export class Environment {
 
   private bindSkies(): void {
     const u = this.domeUniforms;
-    u.skyFrom.value = (this.skyFrom && this.skies.get(this.skyFrom)) || this.blank;
-    u.skyTo.value = (this.skyTo && this.skies.get(this.skyTo)) || this.blank;
+    u.skyFrom.value = (this.fileFrom && this.skies.get(this.fileFrom)) || this.blank;
+    u.skyTo.value = (this.fileTo && this.skies.get(this.fileTo)) || this.blank;
   }
 
   private surface(theme: ThemeId, which: 'top' | 'floor'): THREE.MeshStandardMaterial {
@@ -291,9 +316,10 @@ export class Environment {
     const mat = surfaceMaterial(spec, repeat, this.aniso);
     const shape = THEMES[theme].floorShape;
     if (which === 'floor' && shape) groundMaterial(mat, shape, this.groundU);
-    const file = this.art[theme]?.[which];
+    const art = this.artOf(theme);
+    const file = art[which];
     if (file) {
-      const tile = this.art[theme]?.tile ?? spec.tile;
+      const tile = art.tile ?? spec.tile;
       new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}locations/${file}`, (tex) => {
         tex.colorSpace = THREE.SRGBColorSpace;
         tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
@@ -357,10 +383,10 @@ export class Environment {
     this.swayTo = th.sway ?? 0;
     this.from.copy(this.shown);
     this.to.set(th.look);
-    const auto = this.autoFog.get(id);
-    const fog = this.art[id]?.fog;
+    const art = this.artOf(id);
+    const auto = art.sky ? this.autoFog.get(art.sky) : undefined;
     if (auto) this.to.sky.copy(auto);
-    else if (fog) this.to.sky.set(fog);
+    else if (art.sky && art.fog) this.to.sky.set(art.fog);
     this.look = instant ? 1 : 0;
     if (instant) {
       this.shown.copy(this.to);
@@ -376,8 +402,10 @@ export class Environment {
   /** Point the sky dome's two slots at the old and new panoramas. */
   private applySky(id: ThemeId, instant: boolean): void {
     this.skyFrom = instant ? null : this.skyTo;
+    this.fileFrom = instant ? null : this.fileTo;
     this.skyTo = id;
-    this.loadSky(id);
+    this.fileTo = this.artOf(id).sky ?? null;
+    if (this.fileTo) this.loadSky(this.fileTo);
     this.bindSkies();
   }
 
@@ -386,8 +414,8 @@ export class Environment {
     if (ts) return ts;
     const th = THEMES[id];
     if (th.table.kind === 'plain' && !th.fx.length && !th.skyline && !th.beams.n && !th.mist) return undefined;
-    const art = this.art[id];
-    ts = buildThemeScene(th, { key: this.lights.key, aniso: this.aniso }, this.coarse, Object.keys(THEMES).indexOf(id) + 1, !!art?.sky && !art.keepSkyline);
+    const art = this.artOf(id);
+    ts = buildThemeScene(th, { key: this.lights.key, aniso: this.aniso }, this.coarse, Object.keys(THEMES).indexOf(id) + 1, !!art.sky && !art.keepSkyline);
     ts.layout(this.dims.w, this.dims.d, this.dims.cz);
     this.group.add(ts.group);
     this.scenes.set(id, ts);
@@ -520,8 +548,8 @@ export class Environment {
       }
     }
     const e = smooth(this.look);
-    this.domeUniforms.wTo.value = this.skyTo && this.skies.has(this.skyTo) ? e : 0;
-    this.domeUniforms.wFrom.value = this.skyFrom && this.skies.has(this.skyFrom) ? 1 - e : 0;
+    this.domeUniforms.wTo.value = this.fileTo && this.skies.has(this.fileTo) ? e : 0;
+    this.domeUniforms.wFrom.value = this.fileFrom && this.skies.has(this.fileFrom) ? 1 - e : 0;
     // Some panoramas slide slowly round the sky, so the ships (or the clouds) in them pass by.
     this.domeUniforms.offTo.value = this.skyTo ? (this.time * (THEMES[this.skyTo].skyScroll ?? 0)) % 1 : 0;
     this.domeUniforms.offFrom.value = this.skyFrom ? (this.time * (THEMES[this.skyFrom].skyScroll ?? 0)) % 1 : 0;
@@ -542,6 +570,7 @@ export class Environment {
     this.floorLayer.base.position.y = this.ground;
     this.floorLayer.fade.position.y = this.ground + 0.01;
     this.dome.position.y = this.ground - DOME.below;
+    this.groundU.dome.value.w = this.dome.position.y;
   }
 
   /** Lava cracks breathe. */
