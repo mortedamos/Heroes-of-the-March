@@ -137,7 +137,8 @@ body.touch .menu-item { min-height: 44px; }
   100% { transform: scale(1) rotate(0); filter: none; text-shadow: none; }
 }
 .plate.jolt { animation: plate-jolt 0.45s ease-out; }
-@keyframes plate-jolt { 0% { transform: translate(0, 0); } 15% { transform: translate(-3px, 2px); } 35% { transform: translate(3px, -2px); } 60% { transform: translate(-2px, 1px); } 100% { transform: translate(0, 0); } }
+/* The shake uses the separate `translate` property: the plate's place on the screen is its `transform`, which an animation of `transform` would replace (the plate would jump to the corner). */
+@keyframes plate-jolt { 0% { translate: 0 0; } 15% { translate: -3px 2px; } 35% { translate: 3px -2px; } 60% { translate: -2px 1px; } 100% { translate: 0 0; } }
 @media (prefers-reduced-motion: reduce) { .tot-num.hit, .plate.jolt { animation: none; } }
 /* What each card added, floating up from the card when the encounter is settled. */
 .float-num { position: fixed; z-index: 6; pointer-events: none; transform: translate(-50%, 0); font-weight: bold; font-size: 22px; color: #ffe08a; opacity: 0;
