@@ -62,6 +62,7 @@ export function describe(e: ClientEvent, view: GameView): string | null {
     case 'peeked': return `${who(e.player)} ${e.player === view.you ? 'look' : 'looks'} at the top ${e.count === 1 ? 'card' : `${e.count} cards`} of the ${e.deck} stack.`;
     case 'bottomed': return `${who(e.player)} ${e.player === view.you ? 'put' : 'puts'} the top ${e.deck} card on the bottom.`;
     case 'bidClaimed': return `${who(e.to)} ${e.to === view.you ? 'pocket' : 'pockets'} one of ${e.from === view.you ? 'your' : `${who(e.from)}'s`} face-down cards!`;
+    case 'cursePlaced': return `${card(e.card.def)}: ${who(e.from)} ${e.from === view.you ? 'place' : 'places'} it in front of ${e.to === view.you ? 'you' : who(e.to)}.`;
     case 'bidsSwapped': return `An Apple for the Road: ${who(e.a)} ${e.a === view.you ? 'take' : 'takes'} ${card(e.aCard.def)} from ${who(e.b)}, leaving the Apple.`;
     case 'cardsTraded': return e.gave && e.got
       ? `Royal Requisition: ${who(e.from)} gave ${card(e.gave.def)} to ${who(e.to)} and took ${card(e.got.def)}.`

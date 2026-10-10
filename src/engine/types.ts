@@ -346,6 +346,8 @@ export type GameEvent =
   | { type: 'peeked'; player: PlayerId; deck: DeckName; count: number }
   | { type: 'bottomed'; player: PlayerId; deck: DeckName }
   | { type: 'bidClaimed'; from: PlayerId; to: PlayerId }
+  /** A curse resource, revealed or played face up by `from`, is placed in front of `to`, where its negative value counts against them. */
+  | { type: 'cursePlaced'; from: PlayerId; to: PlayerId; card: CardRef }
   | { type: 'bidsSwapped'; a: PlayerId; aCard: CardRef; b: PlayerId; bCard: CardRef }
   | { type: 'cardsTraded'; from: PlayerId; to: PlayerId; gave: CardRef; got: CardRef }
   | { type: 'outcome'; result: TurnResult }

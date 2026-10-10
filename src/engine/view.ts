@@ -269,7 +269,7 @@ const EVENT_POLICY: Record<GameEvent['type'], 'public' | 'redact'> = {
   minionDrawn: 'public', challengeSelected: 'public', passed: 'public',
   revealed: 'public', resourceDiscarded: 'public', councilHero: 'public', ability: 'public',
   abilityUsed: 'public', abilityCountered: 'public', abilityZap: 'public', abilityIgnored: 'public', effect: 'public', effectCancelled: 'public', cardShown: 'public',
-  peeked: 'public', bottomed: 'public', bidClaimed: 'public', bidsSwapped: 'public',
+  peeked: 'public', bottomed: 'public', bidClaimed: 'public', cursePlaced: 'public', bidsSwapped: 'public',
   outcome: 'public', renownGained: 'public', fallPrevented: 'public', heroFalls: 'public',
   turnEnded: 'public', gameOver: 'public',
   drew: 'redact', bid: 'redact', cardsTraded: 'redact',

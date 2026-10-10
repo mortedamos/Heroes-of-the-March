@@ -20,7 +20,7 @@ export const HAZE_DEFAULT = 0.5;
  * ground. Sunk, the panorama's own horizon is hidden behind the ground, so the far edge of the ground meets the sky a little
  * above it, in the part of the picture that fades into the ground's fog colour (see horizonColor). It moves with the ground.
  */
-const DOME = { long: 125, tall: 125, short: 80, below: 3.1 };
+const DOME = { long: 94, tall: 94, short: 60, below: 3.1 };
 
 /** The ground reaches past the sky oval on every side, so no lower half of the panorama shows beyond its edge. */
 const FLOOR_SIZE = DOME.long * 2 + 40;

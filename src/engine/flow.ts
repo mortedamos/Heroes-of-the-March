@@ -1006,7 +1006,7 @@ export function applyChoice(
         if (!from || !to) break;
         const [bid] = from.bids.splice(from.bids.findIndex((b) => b.card === card), 1);
         to.bids.push(bid!);
-        ctx.emit({ type: 'bidClaimed', from: from.id, to: to.id });
+        ctx.emit({ type: 'cursePlaced', from: from.id, to: to.id, card: ctx.ref(card) });
         break;
       }
       case 'appleSwap': {

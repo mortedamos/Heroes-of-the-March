@@ -30,7 +30,7 @@ const ERROR_TEXT: Record<string, string> = {
  */
 function isAbilityResult(e: ClientEvent, by: PlayerId): boolean {
   switch (e.type) {
-    case 'effect': case 'effectCancelled': case 'abilityIgnored': case 'abilityZap': case 'ability': case 'bidClaimed': case 'bidsSwapped': case 'cardsTraded':
+    case 'effect': case 'effectCancelled': case 'abilityIgnored': case 'abilityZap': case 'ability': case 'bidClaimed': case 'cursePlaced': case 'bidsSwapped': case 'cardsTraded':
     case 'cardShown': case 'peeked': case 'bottomed': case 'locationReplaced': case 'encounterReplaced':
     case 'companionFaceDown': case 'companionDiscarded': case 'companionMinion': case 'resourceDiscarded':
     case 'councilHero': case 'extraLocation': case 'fallPrevented':
@@ -81,6 +81,7 @@ function targetsOf(e: ClientEvent): PlayerId[] {
   switch (e.type) {
     case 'effect': return e.targetPlayer ? [e.targetPlayer] : [];
     case 'bidClaimed': return [e.from];
+    case 'cursePlaced': return [e.to];
     case 'bidsSwapped': return [e.b];
     case 'cardsTraded': return [e.to];
     default: return [];
@@ -106,6 +107,7 @@ function againstYou(e: ClientEvent, view: GameView): { by: PlayerId; card: strin
   switch (e.type) {
     case 'effect': return e.targetPlayer === view.you && e.effect.owner !== view.you ? { by: e.effect.owner, card: e.source.def } : null;
     case 'bidClaimed': return e.from === view.you ? { by: e.to, card: null } : null;
+    case 'cursePlaced': return e.to === view.you && e.from !== view.you ? { by: e.from, card: e.card.def } : null;
     case 'bidsSwapped': return e.b === view.you ? { by: e.a, card: e.aCard.def } : null;
     case 'cardsTraded': return e.to === view.you ? { by: e.from, card: null } : null;
     default: return null;
@@ -504,6 +506,7 @@ export class GameClient {
         return;
       }
       case 'bidClaimed': from = heroOf(e.to); to = heroOf(e.from); at = e.from; theme = 'trade'; break;
+      case 'cursePlaced': from = heroOf(e.from); to = heroOf(e.to); at = e.to; theme = 'trade'; break;
       case 'bidsSwapped': from = heroOf(e.a); to = heroOf(e.b); at = e.b; theme = 'trade'; break;
       case 'cardsTraded': {
         from = heroOf(e.from); to = heroOf(e.to); at = e.to; theme = 'trade';

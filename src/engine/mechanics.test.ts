@@ -1782,7 +1782,7 @@ describe('Curses', () => {
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'marked-for-the-hunt') });
     expect(player(g, g.A).bids).toHaveLength(2); // still hidden, still A's
     finishTurn(g);
-    expect(g.events.some((e) => e.type === 'bidClaimed' && e.from === g.A && e.to === g.B)).toBe(true);
+    expect(g.events.some((e) => e.type === 'cursePlaced' && e.from === g.A && e.to === g.B)).toBe(true);
     expect(g.s.discards.resource).toContain(card(g, 'marked-for-the-hunt')); // discarded with the rest
   });
 });
