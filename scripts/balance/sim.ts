@@ -133,8 +133,25 @@ export interface GameSpec {
 export interface PlayerRecord {
   seat: number; pos: number; won: boolean; renown: number;
   startHero: string; finalHero: string; falls: number;
+  /** Turn number of this player's first fall, or null if they never fell. */
+  firstFall: number | null;
 }
-export interface GameRecord { n: number; turns: number; winner: number; players: PlayerRecord[]; capped: boolean }
+export interface GameRecord {
+  n: number; turns: number; winner: number; players: PlayerRecord[]; capped: boolean;
+  /** Player-turns measured against an encounter, and how many survived. */
+  rows: number; surv: number;
+  /** Bid events, and turns on which at least one hostile effect or interaction happened. */
+  bids: number; sabTurns: number;
+  /** Winner's final Renown minus the best other player's. */
+  gap: number;
+}
+
+/** Effect kinds that hurt another player (old and new engine names). */
+const HOSTILE_EFFECTS = new Set([
+  'silenceCompanion', 'forceCompanionStat', 'forceHeroStat', 'negateBid', 'disableAbilities',
+  'silenceHero', 'forceStat',
+]);
+const HOSTILE_EVENTS = new Set(['bidClaimed', 'cursePlaced', 'bidsSwapped', 'cardsTraded', 'abilityCountered']);
 
 const heroIds = () => allDefs().filter((d) => d.kind === 'hero').map((d) => d.id);
 const companionIds = () => allDefs().filter((d) => d.kind === 'companion').map((d) => d.id);
@@ -166,6 +183,8 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   const seen = { loc: new Map<string, number>(), enc: new Map<string, number>(), res: new Map<string, number>() };
   for (const p of state.players) held[p.id] = new Map();
   let falls = new Map<string, number>();
+  const firstFall = new Map<string, number>();
+  let rows = 0, surv = 0, bids = 0, sabTurns = 0, turnNo = 0, sabThisTurn = false;
   let steps = 0;
 
   const snapshot = () => {
@@ -179,13 +198,20 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   };
   const scan = (evs: GameEvent[]) => {
     for (const e of evs) {
-      if (e.type === 'turnStarted') snapshot();
+      if (e.type === 'turnStarted') { snapshot(); if (sabThisTurn) sabTurns++; sabThisTurn = false; turnNo = e.turn; }
       else if (e.type === 'locationRevealed') bump(seen.loc, e.card.def);
       else if (e.type === 'locationReplaced') bump(seen.loc, e.to.def);
       else if (e.type === 'encounterRevealed') bump(seen.enc, e.card.def);
       else if (e.type === 'minionDrawn') bump(seen.enc, e.card.def);
-      else if (e.type === 'bid') bump(seen.res, e.card.def);
-      else if (e.type === 'heroFalls') falls.set(e.player, (falls.get(e.player) ?? 0) + 1);
+      else if (e.type === 'bid') { bump(seen.res, e.card.def); bids++; }
+      else if (e.type === 'heroFalls') { falls.set(e.player, (falls.get(e.player) ?? 0) + 1); if (!firstFall.has(e.player)) firstFall.set(e.player, turnNo); }
+      else if (e.type === 'outcome') { for (const r of e.result.rows) { rows++; if (r.survived) surv++; } }
+      else if (e.type === 'effect') {
+        const k = e.effect.kind as string;
+        const hostile = HOSTILE_EFFECTS.has(k) || (k === 'statBonus' && (e.effect.amount ?? 0) < 0);
+        if (hostile && e.targetPlayer !== null && e.targetPlayer !== e.effect.owner) sabThisTurn = true;
+      }
+      else if (HOSTILE_EVENTS.has(e.type)) sabThisTurn = true;
     }
   };
   const bump = (m: Map<string, number>, k: string) => m.set(k, (m.get(k) ?? 0) + 1);
@@ -246,8 +272,12 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       if (turns >= 3) { a.eligible++; if (eff === 0) a.zero++; }
       if (won) { a.winEff += eff; a.winTurns += turns; } else { a.loseEff += eff; a.loseTurns += turns; }
     }
-    players.push({ seat: i, pos: (i - start + n) % n, won, renown: p.renown, startHero: startHero[i]!, finalHero: state.cards[p.hero] ?? '', falls: falls.get(p.id) ?? 0 });
+    players.push({ seat: i, pos: (i - start + n) % n, won, renown: p.renown, startHero: startHero[i]!, finalHero: state.cards[p.hero] ?? '', falls: falls.get(p.id) ?? 0, firstFall: firstFall.get(p.id) ?? null });
   });
+  if (sabThisTurn) sabTurns++;
+  const winnerIdx = winnerId ? state.players.findIndex((p) => p.id === winnerId) : -1;
+  const others = state.players.filter((_, i) => i !== winnerIdx).map((p) => p.renown);
+  const gap = winnerIdx >= 0 ? state.players[winnerIdx]!.renown - Math.max(...others) : 0;
   for (const [m, tag] of [[seen.loc, 'loc'], [seen.enc, 'enc'], [seen.res, 'res']] as const) {
     void tag;
     for (const [def, c] of m) { const a = aggOf(cards, def); a.appear += c; }
@@ -258,15 +288,31 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
     if (owner === '-' || !held[owner]?.has(def)) { const a = aggOf(cards, def); a.calls += v.calls; a.produced += v.produced; }
   }
   for (const [key, v] of used) { const [owner, def] = key.split('|') as [string, string]; if (!held[owner]?.has(def)) aggOf(cards, def).used += v; }
-  return { n, turns: state.turn.number, winner: winnerId ? state.players.findIndex((p) => p.id === winnerId) : -1, players, capped };
+  return { n, turns: state.turn.number, winner: winnerIdx, players, capped, rows, surv, bids, sabTurns, gap };
 }
 
 // --- shards: the unit of saved results -----------------------------------------------
 
-export interface Cell { games: number; wins: number; turns: number; falls: number; capped: number; posGames: number[]; posWins: number[] }
+export interface Cell {
+  games: number; wins: number; turns: number; falls: number; capped: number; posGames: number[]; posWins: number[];
+  /** Whole-game health metrics (nat experiment): measured player-turns and survivors, bids, sabotage turns, winning margins, tenure. */
+  rows: number; surv: number; bids: number; sabTurns: number; gap: number; close: number;
+  /** Player-games, and the summed share of each player's game played before their first fall. */
+  pgames: number; tenure: number;
+}
 export interface Shard { experiment: string; args: Record<string, string>; cells: Record<string, Cell>; cards: AggMap; games: number }
 
-export const newCell = (): Cell => ({ games: 0, wins: 0, turns: 0, falls: 0, capped: 0, posGames: Array(6).fill(0), posWins: Array(6).fill(0) });
+export const newCell = (): Cell => ({
+  games: 0, wins: 0, turns: 0, falls: 0, capped: 0, posGames: Array(6).fill(0), posWins: Array(6).fill(0),
+  rows: 0, surv: 0, bids: 0, sabTurns: 0, gap: 0, close: 0, pgames: 0, tenure: 0,
+});
+
+/** Fold one finished game's whole-game metrics into a cell (all players of the game). */
+export function addGameMetrics(c: Cell, rec: GameRecord): void {
+  c.rows += rec.rows; c.surv += rec.surv; c.bids += rec.bids; c.sabTurns += rec.sabTurns;
+  c.gap += rec.gap; if (rec.gap <= 4) c.close++;
+  for (const p of rec.players) { c.pgames++; c.tenure += p.firstFall === null ? 1 : Math.min(1, p.firstFall / Math.max(1, rec.turns)); }
+}
 
 export function merge(parts: Shard[]): Shard {
   const out: Shard = { experiment: parts[0]!.experiment, args: parts[0]!.args, cells: {}, cards: {}, games: 0 };
@@ -276,6 +322,8 @@ export function merge(parts: Shard[]): Shard {
     for (const [k, c] of Object.entries(p.cells)) {
       const t = (out.cells[k] ??= newCell());
       t.games += c.games; t.wins += c.wins; t.turns += c.turns; t.falls += c.falls; t.capped += c.capped;
+      t.rows += c.rows ?? 0; t.surv += c.surv ?? 0; t.bids += c.bids ?? 0; t.sabTurns += c.sabTurns ?? 0;
+      t.gap += c.gap ?? 0; t.close += c.close ?? 0; t.pgames += c.pgames ?? 0; t.tenure += c.tenure ?? 0;
       c.posGames.forEach((v, i) => { t.posGames[i]! += v; });
       c.posWins.forEach((v, i) => { t.posWins[i]! += v; });
     }

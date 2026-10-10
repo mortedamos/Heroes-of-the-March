@@ -105,6 +105,16 @@ if (nat) {
   out.push('', `## Natural play (${nat.games} games, bots draft and play normally)`, '');
   const cells = Object.entries(nat.cells).sort();
   out.push(table(['Players', 'Games', 'Avg turns', 'Capped (turn limit)', 'Falls /game'], cells.map(([k, c]) => [k.split('|')[1]!, c.games, (c.turns / c.games).toFixed(1), c.capped, (c.falls / c.games).toFixed(2)])));
+  if (cells.some(([, c]) => c.rows)) {
+    out.push('', '### Game health (per player count)', '');
+    out.push(table(
+      ['Players', 'Survival', 'Falls /player /game', 'Turns before first fall (share of game)', 'Bids /player-turn', 'Turns with sabotage', 'Close games (winner ≤4 Renown ahead)', 'Avg winning margin (Renown)'],
+      cells.map(([k, c]) => {
+        const n = Number(k.split('|')[1]);
+        return [n, `${pct(c.surv / c.rows)}%`, (c.falls / c.games / n).toFixed(2), `${pct(c.tenure / c.pgames)}%`,
+          (c.bids / (c.turns * n)).toFixed(2), `${pct(c.sabTurns / c.turns)}%`, `${pct(c.close / c.games)}%`, (c.gap / c.games).toFixed(1)];
+      })));
+  }
   for (const kind of ['hero', 'companion'] as const) {
     out.push('', `### ${kind === 'hero' ? 'Heroes' : 'Companions'} in the final roster of winners vs. fair share`, '');
     const rows = allDefs().filter((d) => d.kind === kind).map((d) => {

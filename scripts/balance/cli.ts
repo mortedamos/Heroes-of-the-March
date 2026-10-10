@@ -9,7 +9,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BotLevel } from '../../src/bots/heuristic';
 import { getDef } from '../../src/engine/cards';
-import { companionIds, heroIds, merge, mix, mulberry, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
+import { addGameMetrics, companionIds, heroIds, merge, mix, mulberry, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
 
 
 function parseArgs(argv: string[]): { pos: string[]; opt: Record<string, string> } {
@@ -103,6 +103,7 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
       const c = (cells[`all|${n}`] ??= newCell());
       c.games++; c.turns += rec.turns; if (rec.capped) c.capped++;
       for (const p of rec.players) { c.posGames[p.pos]!++; if (p.won) c.posWins[p.pos]!++; c.falls += p.falls; }
+      addGameMetrics(c, rec);
       played++;
     }
   } else throw new Error(`unknown experiment ${experiment}`);
