@@ -37,7 +37,7 @@ button { font-family: inherit; }
 #overlay > * { pointer-events: auto; }
 /* A hover preview must never take the mouse: if it opens over the card being
    hovered, the table would see the mouse leave, close it, and flicker. */
-#overlay > .plates, #overlay > .card-chips, #overlay > .banners, #overlay > .inspector:not(.pinned) { pointer-events: none; }
+#overlay > .plates, #overlay > .card-chips, #overlay > .banners, #overlay > .place-info, #overlay > .inspector:not(.pinned) { pointer-events: none; }
 .hidden { display: none !important; }
 
 /* Buttons */
