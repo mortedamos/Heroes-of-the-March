@@ -13,6 +13,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { FAMILIES, THEMES, themeFor } from '../src/client/render/env/themes.ts';
+import { GAME_MUSIC, LOCATION_MOOD, LOCATION_PROMPT, SUNO_EXCLUDE } from './sfx-moods.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
@@ -108,9 +109,20 @@ for (const f of musicFiles) {
   const id = f.replace(EXT, '').replace(/_/g, '-').toLowerCase();
   if (locIds.has(id)) musicManifest[id] ??= `locations/${f}`; else musicUnknown.push(f);
 }
+// The tracks that belong to no place (title, drafts, neutral playlist): public/music/<file>, named as src/client/audio/Music.ts asks for them.
+const topMusic = new Set(readdirSync(join(root, 'public', 'music')).filter((f) => EXT.test(f)));
+const gameMusic = GAME_MUSIC.map((t) => ({ ...t, have: topMusic.has(t.file), path: `music/${t.file}` }));
+const musicOther = [...topMusic].filter((f) => !GAME_MUSIC.some((t) => t.file === f)).sort();
+// One row per location for the tracker: its music, and its own place sounds (the `<id>-background` slot).
 const music = locations.map((l) => {
-  const family = THEMES[themeFor(l.id)].family;
-  return { id: l.id, name: l.name, theme: family, mood: MOOD[family] ?? '', have: Boolean(musicManifest[l.id]) };
+  const look = THEMES[themeFor(l.id)];
+  const slot = `${l.id}-background`;
+  return {
+    id: l.id, name: l.name, theme: look.family, indoors: look.indoors,
+    mood: LOCATION_MOOD[l.id] ?? MOOD[look.family] ?? '', prompt: LOCATION_PROMPT[l.id] ?? '',
+    have: Boolean(musicManifest[l.id]), file: musicManifest[l.id] ? `music/${musicManifest[l.id]}` : null,
+    slot, placeSounds: manifest[slot] ?? [],
+  };
 });
 writeFileSync(join(root, 'public', 'music', 'manifest.json'), `${JSON.stringify({ locations: musicManifest }, null, 2)}\n`);
 
@@ -121,7 +133,7 @@ mkdirSync(join(root, 'docs'), { recursive: true });
 // public/sounds/manifest.json is for the game's effects only; place sounds have their own manifest (public/ambience).
 writeFileSync(join(DIR, 'manifest.json'), `${JSON.stringify(Object.fromEntries(Object.entries(manifest).filter(([k]) => !ambSlots.has(k))), null, 2)}\n`);
 // A plain script (not JSON) so tools/sfx-tracker.html also works when opened straight from disk.
-writeFileSync(join(root, 'tools', 'sfx-data.js'), `window.SFX = ${JSON.stringify({ maxVariants: MAX_VARIANTS, catalog, manifest, unknown, extra, music, musicUnknown, ambExtra, ambUnknown })};\n`);
+writeFileSync(join(root, 'tools', 'sfx-data.js'), `window.SFX = ${JSON.stringify({ maxVariants: MAX_VARIANTS, catalog, manifest, unknown, extra, music, gameMusic, musicOther, sunoExclude: SUNO_EXCLUDE, musicUnknown, ambExtra, ambUnknown })};\n`);
 
 // --- the tracker ---------------------------------------------------------------
 const have = catalog.filter((c) => manifest[c.name]);
@@ -152,18 +164,27 @@ if (ambExtra.length) md += `\n## Extra place sounds (not a slot above, but they 
 if (ambUnknown.length) md += `\n## Files in public/ambience that start with no look name\n\n${ambUnknown.map((f) => `- \`${f}\` (rename it to start with a location id, a family: tavern, harbor, snow, crypt, forge, forest, fortress, archive, plains, sky, felt, or any)`).join('\n')}\n`;
 if (extra.length) md += `\n## Ignored: more than ${MAX_VARIANTS} variants\n\n${extra.map((f) => `- \`${f}\``).join('\n')}\n`;
 
+md += '\n# Music\n\n';
+md += `**${gameMusic.filter((t) => t.have).length} of ${gameMusic.length}** game tracks present: the ones that belong to no place. Each location's own track is listed under Location music below. To add a game track, add it to \`TRACKS\` in \`src/client/audio/Music.ts\` and to \`GAME_MUSIC\` in \`scripts/sfx-moods.ts\`.\n\n`;
+md += '| Track | File | Plays when | Status |\n|---|---|---|---|\n';
+for (const t of gameMusic) md += `| ${t.label} | \`${t.file}\` | ${t.plays} | ${t.have ? '✅' : '❌ missing'} |\n`;
+if (musicOther.length) md += `\nFiles in public/music that the game does not play: ${musicOther.map((f) => '`' + f + '`').join(', ')} (add them to \`TRACKS\` in \`Music.ts\`, or remove them).\n`;
 md += '\n# Location music\n\n';
-md += `_Each location can have its own track: \`public/music/locations/<location-id>.mp3\`. It loops while that location is on the table. A location without a track plays the next neutral track instead (\`neutral_music_*.mp3\`). A missing file is never requested, so there is no error._\n\n`;
+md += `_Each location can have its own track: \`public/music/locations/<location-id>.mp3\`. It loops while that location is on the table. The brief is a starting point for finding one, drawn from \`docs/LOCATION-LOOKS.md\`. A location without a track plays the next neutral track instead (\`neutral_music_*.mp3\`). A missing file is never requested, so there is no error._\n\n`;
 md += `**${music.filter((m) => m.have).length} of ${music.length}** locations have their own track.\n\n`;
 for (const theme of [...new Set(music.map((m) => m.theme))]) {
-  md += `## ${theme}: ${MOOD[theme] ?? ''}\n\n| Location | File name | Status |\n|---|---|---|\n`;
-  for (const m of music.filter((x) => x.theme === theme)) md += `| ${m.name} | \`${m.id}.mp3\` | ${m.have ? '✅' : '❌ neutral'} |\n`;
+  md += `## ${theme}\n\n| Location | In/Out | Music file | Music | Place sounds | Music brief |\n|---|---|---|---|---|---|\n`;
+  for (const m of music.filter((x) => x.theme === theme)) {
+    const n = m.placeSounds.length;
+    md += `| ${m.name} | ${m.indoors ? 'In' : 'Out'} | \`${m.id}.mp3\` | ${m.have ? '✅' : '❌ neutral'} | ${n === 0 ? `❌ ${theme}'s` : n >= MAX_VARIANTS ? `✅ ${n}/${MAX_VARIANTS}` : `🟡 ${n}/${MAX_VARIANTS}`} | ${m.mood} |\n`;
+  }
   md += '\n';
 }
 if (musicUnknown.length) md += `## Music files that match no location\n\n${musicUnknown.map((f) => `- \`${f}\` (rename it to a location id)`).join('\n')}\n`;
 writeFileSync(join(root, 'docs', 'SFX-TRACKER.md'), md);
 
-console.log(`music: ${music.filter((m) => m.have).length}/${music.length} locations have their own track`);
+console.log(`music: ${gameMusic.filter((t) => t.have).length}/${gameMusic.length} game tracks, ${music.filter((m) => m.have).length}/${music.length} locations have their own track`);
+if (musicOther.length) console.log(`  music files the game does not play: ${musicOther.join(', ')}`);
 if (musicUnknown.length) console.log(`  music files matching no location: ${musicUnknown.join(', ')}`);
 console.log(`sfx: ${have.length}/${catalog.length} present (${priority.filter((c) => manifest[c.name]).length}/${priority.length} priority). Wrote manifest.json, docs/SFX-TRACKER.md and tools/sfx-data.js`);
 if (unknown.length) console.log(`  not in the catalog: ${unknown.join(', ')}`);

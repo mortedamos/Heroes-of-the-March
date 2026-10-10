@@ -1,3 +1,9 @@
 {
-  "locations": {}
+  "locations": {
+    "grimgate": "locations/grimgate.mp3",
+    "marchguard-keep": "locations/marchguard-keep.mp3",
+    "the-barrowlands": "locations/the-barrowlands.mp3",
+    "the-crack-in-the-marchstone": "locations/the-crack-in-the-marchstone.mp3",
+    "the-goose-and-kettle": "locations/the-goose-and-kettle.mp3"
+  }
 }

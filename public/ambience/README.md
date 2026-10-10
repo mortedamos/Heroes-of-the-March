@@ -11,6 +11,11 @@ Three generic sounds per place, named `<look>-background_1.mp3` to `<look>-backg
 - `fortress-background_1.mp3`, `_2`, `_3`: heard in castles and cities
 - `any-background_1.mp3` (up to three): heard in every place, as well as that place's own
 
+Each of the 32 locations can also have three of its own, named after its id: `<location-id>-background_1.mp3` to `_3` (for example
+`barrowdeep-background_1.mp3`, `the-goose-and-kettle-background_2.mp3`). A location plays its own, and its family's when it has none.
+The tracker lists every slot, what to put in it and what to search for under the group `Place sounds by location`, and its "By location"
+section shows each place's sounds and music side by side.
+
 Looks: `felt`, `tavern`, `harbor`, `snow`, `crypt`, `forge`, `forest`, `fortress`, `archive`, `plains`, `sky`.
 `docs/SFX-TRACKER.md` and `tools/sfx-tracker.html` show what each place's sounds could be, with search terms, under the group `Place sounds`;
 `npm run sfx` also lists which locations use which look. The Debug menu's "Location look" holds one look on the table and
