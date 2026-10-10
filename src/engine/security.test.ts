@@ -9,10 +9,10 @@ import type { GameState } from './types';
 import { redactEvents, viewFor } from './view';
 import { botDecide } from '../bots/heuristic';
 
-/** A new game, advanced (with "no thanks" answers) to the first companion offer. */
+/** A new game, advanced (with "no thanks" answers) to the first recruit offer. */
 function newGame(n = 3, s = 1): GameState {
   let state = createGame({ players: seats(n), seed: seed(s) }).state;
-  while (state.pending && state.pending.kind !== 'companion.offer') {
+  while (state.pending && state.pending.kind !== 'recruit.offer') {
     const d = state.pending;
     const cmd = d.kind === 'activate' ? { type: 'ability.done', decision: d.id }
       : d.kind === 'bid' ? { type: 'bid.pass', decision: d.id }
@@ -51,7 +51,7 @@ describe('command validation (untrusted input)', () => {
     { type: 'choose', decision: 1, picks: 'abc' },
     { type: 'choose', decision: 1, picks: ['a', 'a'] },
     { type: 'choose', decision: 1, picks: Array.from({ length: 50 }, (_, i) => `c${i}`) },
-    { type: 'companion.keep', decision: 1 },
+    { type: 'recruit.keep', decision: 1 },
     { type: 'bid.play', decision: 1, card: 'abc', faceDown: 'yes' },
     { type: 'ability.use', decision: 1, source: 'abc' },
     { type: 'ability.use', decision: 1, source: 'abc', ability: 'x'.repeat(40) },
@@ -91,17 +91,17 @@ describe('authorization and atomicity', () => {
     const s = newGame(3);
     const d = s.pending!;
     const other = s.players.find((p) => p.id !== d.player)!.id;
-    const res = applyCommand(s, other, { type: 'companion.skip', decision: d.id });
+    const res = applyCommand(s, other, { type: 'recruit.skip', decision: d.id });
     expect(res).toEqual({ ok: false, error: 'not_your_decision' });
   });
 
   it('rejects stale or replayed decision ids', () => {
     const s = newGame(3);
     const d = s.pending!;
-    const first = applyCommand(s, d.player, { type: 'companion.skip', decision: d.id });
+    const first = applyCommand(s, d.player, { type: 'recruit.skip', decision: d.id });
     expect(first.ok).toBe(true);
     if (!first.ok) return;
-    const replay = applyCommand(first.state, d.player, { type: 'companion.skip', decision: d.id });
+    const replay = applyCommand(first.state, d.player, { type: 'recruit.skip', decision: d.id });
     expect(replay.ok).toBe(false);
   });
 
@@ -123,18 +123,18 @@ describe('authorization and atomicity', () => {
     s = before;
   });
 
-  it('cannot keep a companion by "replacing" another player\'s companion', () => {
+  it('cannot keep a hero by "replacing" another player\'s hero', () => {
     let s = newGame(3, 9);
     const d = s.pending!;
-    const r = applyCommand(s, d.player, { type: 'companion.draw', decision: d.id });
+    const r = applyCommand(s, d.player, { type: 'recruit.draw', decision: d.id });
     expect(r.ok).toBe(true);
     if (!r.ok) return;
     s = r.state;
     const place = s.pending!;
-    expect(place.kind).toBe('companion.place');
+    expect(place.kind).toBe('recruit.place');
     const other = s.players.find((p) => p.id !== place.player)!;
-    const res = applyCommand(s, place.player, { type: 'companion.keep', decision: place.id, replace: other.companions[0]! });
-    expect(res).toEqual({ ok: false, error: 'not_your_companion' });
+    const res = applyCommand(s, place.player, { type: 'recruit.keep', decision: place.id, replace: other.party[0]! });
+    expect(res).toEqual({ ok: false, error: 'not_your_hero' });
   });
 
   it('no commands after the game is over', () => {
@@ -144,7 +144,13 @@ describe('authorization and atomicity', () => {
 });
 
 describe('information hiding', () => {
-  function hiddenIdsFor(s: GameState, viewer: string): string[] {
+  /** Ids that have been public at some point (a hero in a party or the discard pile). */
+  function noteKnown(s: GameState, known: Set<string>): void {
+    for (const p of s.players) for (const c of [...p.party, ...p.inactive, ...p.resting, ...p.claimed]) known.add(c);
+    for (const pile of Object.values(s.discards)) for (const c of pile) known.add(c);
+  }
+
+  function hiddenIdsFor(s: GameState, viewer: string, known: Set<string> = new Set()): string[] {
     const ids: string[] = [];
     for (const p of s.players) {
       if (p.id === viewer) continue;
@@ -155,18 +161,20 @@ describe('information hiding', () => {
     // A card named in the public result of the last turn (a hero that fell and went back into the stack) is known by name already.
     const shown = JSON.stringify(s.turn.result ?? null);
     ids.push(...s.turn.extraLocations);
-    if (s.pending?.kind === 'companion.place' && s.pending.player !== viewer) ids.push(s.pending.drawn);
+    if (s.pending?.kind === 'recruit.place' && s.pending.player !== viewer) ids.push(s.pending.drawn);
     const seen = s.players.find((p) => p.id === viewer)?.seen ?? []; // cards the viewer legitimately looked at (Goldie)
-    return ids.filter((id) => !shown.includes(`"${id}"`) && !seen.includes(id));
+    return ids.filter((id) => !shown.includes(`"${id}"`) && !seen.includes(id) && !known.has(id));
   }
 
   it('views never contain hidden card ids, the RNG state or the card map', () => {
     for (let g = 0; g < 4; g++) {
       let s = newGame(4, 100 + g);
+      const known = new Set<string>();
       for (let i = 0; i < 400 && !s.winner; i++) {
+        noteKnown(s, known);
         for (const viewer of [...s.players.map((p) => p.id), null]) {
           const json = JSON.stringify(viewFor(s, viewer));
-          for (const id of hiddenIdsFor(s, viewer ?? '')) expect(json).not.toContain(`"${id}"`);
+          for (const id of hiddenIdsFor(s, viewer ?? '', known)) expect(json).not.toContain(`"${id}"`);
           expect(json).not.toContain('"rng"');
           expect(json).not.toContain('"cards"');
           expect(json).not.toContain(String(s.rng[0]));

@@ -6,19 +6,17 @@
 //   easy   - plays straightforwardly, uses abilities some of the time, random-ish targets.
 //   normal - treats bidding as a trade (decideBid): the location's renown now
 //            against the cards it costs, keeping a reserve for next turn's
-//            challenge; protects a good hero; sabotages the player it is
+//            challenge; protects a good party; sabotages the player it is
 //            actually competing with.
 //   hard   - as normal, plus threat-weighted sabotage (who could win the GAME with
 //            this location), bluffing and tighter survival math.
 
-import { KIN } from '../engine/abilities';
 import { allDefs, getDef } from '../engine/cards';
-import { sharesKingdom } from '../engine/effects';
 import type { Stat } from '../engine/cardTypes';
 import type { Command } from '../engine/types';
 import type { AbilityOptionView, GameView, PendingView, PlayerPublicView } from '../engine/view';
 import {
-  AVG_COMPANION_SCORE, AVG_HERO_STAT, HIDDEN_BID_ESTIMATE, SPECIAL_VALUE, Table, companionDef, companionScore, heroDef, heroValue, locationRenown,
+  AVG_HERO_STAT, AVG_HERO_VALUE, HIDDEN_BID_ESTIMATE, SPECIAL_VALUE, Table, heroDef, heroValue, locationRenown, partyScore,
 } from './knowledge';
 
 export type BotLevel = 'easy' | 'normal' | 'hard';
@@ -26,43 +24,31 @@ export type BotLevel = 'easy' | 'normal' | 'hard';
 /** How often an easy bot plays a random card when it is behind, and when it is not. */
 const EASY_BID_WHEN_BEHIND = 0.75;
 const EASY_BID_WHEN_AHEAD = 0.15;
-export { companionScore };
 
-/** Forced-stat abilities: which stat they force, and on what. */
-const FORCE: Record<string, { stat: Stat; on: 'companion' | 'hero' }> = {
-  'liriel-nightbloom': { stat: 'G', on: 'companion' },
-  'thessaly-of-the-grove': { stat: 'M', on: 'companion' },
-  'kesh-the-bog-huntress': { stat: 'P', on: 'companion' },
-  'hobart-thimblewick-moot-surgeon': { stat: 'G', on: 'hero' },
-  'caelan-the-exile': { stat: 'M', on: 'hero' },
-  'brisa-blastcap-bombardier': { stat: 'P', on: 'hero' },
-  'grumma-ladlejaw-camp-cook': { stat: 'P', on: 'hero' },
+/** Forced-stat abilities: which stat they force. */
+const FORCE: Record<string, Stat> = {
+  'liriel-nightbloom': 'G',
+  'thessaly-of-the-grove': 'M',
+  'kesh-the-bog-huntress': 'P',
 };
 
-/**
- * What a companion is worth to this hero beyond its own card: sharing the hero's kingdom feeds the hero's Kin
- * bonus (A: +1 to the hero's stats per kin companion; B: a card whenever kin enters play; C: only hurts rivals).
- */
-const KIN_WORTH: Record<'A' | 'B' | 'C', number> = { A: 1.5, B: 1.2, C: 0.3 };
-/** Simulation only: an extra pull toward companions of the hero's kingdom (a "mono-kingdom" player). */
-let kinBias = 0;
-export function kinWorth(heroDefId: string | undefined, companionDefId: string): number {
-  if (!heroDefId) return 0;
-  if (!sharesKingdom(getDef(heroDefId), getDef(companionDefId))) return 0;
-  const kin = KIN[heroDefId];
-  return (kin ? KIN_WORTH[kin] : 0) + kinBias;
+/** The def ids of a party (face up, face down and resting). */
+const partyDefs = (t: Table, p = t.me) => t.heroesOf(p).map((c) => c.def);
+
+/** Which of `party` to give up for `incoming` (or just to lose, if null): the one whose removal leaves the best party. */
+function weakestFor(party: { id: string; def: string }[], incoming: string | null): { id: string; def: string; after: number } {
+  let best = { ...party[0]!, after: -Infinity };
+  for (const c of party) {
+    const rest = party.filter((x) => x.id !== c.id).map((x) => x.def);
+    const after = partyScore(incoming ? [...rest, incoming] : rest);
+    if (after > best.after) best = { ...c, after };
+  }
+  return best;
 }
-
-/** A companion's value to the bot's own team. */
-const teamScore = (t: Table, defId: string) => companionScore(defId) + kinWorth(t.me.hero?.def, defId);
-
-/** A hero worth protecting (stats + ability above the table average). */
-const KEEP_HERO = 23;
 
 type Rand = () => number;
 
-export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.random, kinPull = 0): Command | null {
-  kinBias = kinPull;
+export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.random): Command | null {
   const d = view.pending;
   if (!d || d.player !== view.you || !d.detail) return null;
   const t = new Table(view);
@@ -70,19 +56,19 @@ export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.ran
   const detail = d.detail;
 
   switch (detail.kind) {
-    case 'companion.offer': {
-      if (level === 'easy' && rand() < 0.5) return { type: 'companion.skip', decision };
+    case 'recruit.offer': {
+      if (level === 'easy' && rand() < 0.5) return { type: 'recruit.skip', decision };
       // A random draw can still be let go, so drawing is never worse than skipping.
-      return { type: 'companion.draw', decision };
+      return { type: 'recruit.draw', decision };
     }
 
-    case 'companion.place': {
-      if (!detail.mustReplace) return { type: 'companion.keep', decision, replace: null };
-      const all = [...t.me.companions, ...t.me.inactiveCompanions, ...t.me.resting];
-      const weakest = all.reduce((a, b) => (teamScore(t, a.def) <= teamScore(t, b.def) ? a : b));
-      return teamScore(t, detail.drawn.def) > teamScore(t, weakest.def)
-        ? { type: 'companion.keep', decision, replace: weakest.id }
-        : { type: 'companion.discard', decision };
+    case 'recruit.place': {
+      if (!detail.mustReplace) return { type: 'recruit.keep', decision, replace: null };
+      const all = t.heroesOf(t.me);
+      const swap = weakestFor(all, detail.drawn.def);
+      return swap.after > partyScore(all.map((c) => c.def))
+        ? { type: 'recruit.keep', decision, replace: swap.id }
+        : { type: 'recruit.discard', decision };
     }
 
     case 'activate': {
@@ -141,7 +127,6 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     case 'honk': case 'hiss': return flipWorthIt(t, a);
     // Free to use: the cards it turns up are only discarded.
     case 'flock': return level !== 'easy' || rand() < 0.6;
-    case 'queen': return magsWorthIt(t);
     case 'stonetouched': return miraWorthIt(t, level);
     // During bidding.
     case 'force': return bestForce(t, a.source.def, level).gain >= (level === 'hard' ? 1.5 : 2);
@@ -184,7 +169,7 @@ function fireWorthIt(t: Table, a: AbilityOptionView, level: BotLevel): boolean {
 }
 
 /**
- * Aelthir's silence: worth using when a rival who is actually in the running has a companion
+ * Aelthir's silence: worth using when a rival who is actually in the running has a hero
  * that is giving them something in this challenge (and more so if it would sink them).
  */
 function torchWorthIt(t: Table, level: BotLevel): boolean {
@@ -193,16 +178,16 @@ function torchWorthIt(t: Table, level: BotLevel): boolean {
   const mine = t.myEstimate();
   let best = 0;
   for (const p of t.others) {
-    if (!p.projection || p.hero?.def === 'high-thane-brunna-stonefast') continue; // Brunna ignores silences
+    if (!p.projection || p.party.some((c) => c.def === 'high-thane-brunna-stonefast')) continue; // Brunna ignores silences
     const est = t.estimate(p);
     const diff = t.difficultyFor(p);
     if (!(est >= mine - 4 && est >= diff - 2)) continue; // not a rival this turn
-    const top = Math.max(0, ...p.companions.map((c) => companionDef(c).stats[stat]));
+    const top = Math.max(0, ...p.party.map((c) => heroDef(c).stats[stat]));
     let gain = top;
-    if (est >= diff && est - top < diff) gain += 3; // it would make their hero fall
+    if (est >= diff && est - top < diff) gain += 3; // it would make them lose a hero
     best = Math.max(best, gain);
   }
-  return best >= (level === 'hard' ? 3 : 4);
+  return best >= (level === 'hard' ? 2 : 3);
 }
 
 /** Grukka and Barnaby look at upcoming locations: worth doing when this one is not much of a prize. */
@@ -235,10 +220,10 @@ function flipWorthIt(t: Table, a: AbilityOptionView): boolean {
 function restWorthIt(t: Table, a: AbilityOptionView, level: BotLevel): boolean {
   const stat = t.stat;
   if (!stat || level === 'easy') return false;
-  const tova = t.me.companions.find((c) => c.id === a.source.id);
+  const tova = t.me.party.find((c) => c.id === a.source.id);
   if (!tova) return false;
-  const gives = companionDef(tova).stats[stat];
-  if (gives >= 5 || t.me.renown + t.prize >= t.target) return false;
+  const gives = heroDef(tova).stats[stat];
+  if (gives >= 4 || t.me.renown + t.prize >= t.target) return false;
   const mine = t.myEstimate();
   const diff = t.difficultyFor(t.me);
   const hand = t.view.hand.map((h) => t.handValue(h.card.id)).sort((x, y) => y - x);
@@ -254,56 +239,45 @@ function restWorthIt(t: Table, a: AbilityOptionView, level: BotLevel): boolean {
   return hand.length >= 3 && (hand[0] ?? 0) >= gap && holdsLead; // one card makes up for her; she returns with two
 }
 
-function magsWorthIt(t: Table): boolean {
-  if (!t.stat) return false;
-  const { mine, best, diff, winning } = standing(t);
-  const boost = heroDef(t.me.hero).stats[t.stat];
-  const after = mine + boost;
-  if (!winning && after > best && after >= diff && t.prize >= 3) return true;
-  return mine < diff && after >= diff && heroValue(t.me.hero?.def) >= KEEP_HERO;
-}
-
 function miraWorthIt(t: Table, level: BotLevel): boolean {
   const { winning } = standing(t);
   if (winning) return false;
   if (t.me.renown + t.prize >= t.target) return true; // wins the game outright
   if (level !== 'hard') return t.prize >= 6;
-  return t.prize >= 5 && heroValue(t.me.hero?.def) < KEEP_HERO && t.view.hand.length <= 2;
+  return t.prize >= 5 && t.view.hand.length <= 2;
 }
 
 /** Active effects hurting us whose source we could switch off (Aldric). */
 function harmfulEffectsOnMe(t: Table) {
   return t.view.turn.effects.filter((e) => e.active && e.owner !== t.me.id && e.targetPlayer === t.me.id
-    && (e.kind === 'forceCompanionStat' || e.kind === 'forceHeroStat' || e.kind === 'silenceCompanion' || e.kind === 'negateBid'));
+    && (e.kind === 'forceStat' || e.kind === 'silenceHero' || e.kind === 'negateBid'));
 }
 
 interface ForceChoice { value: string; gain: number }
 
 /** The best target for a forced-stat ability, and how much it helps us. */
 function bestForce(t: Table, sourceDef: string, level: BotLevel): ForceChoice {
-  const f = FORCE[sourceDef];
+  const forceTo = FORCE[sourceDef];
   const stat = t.stat;
-  if (!f || !stat) return { value: '', gain: 0 };
+  if (!forceTo || !stat) return { value: '', gain: 0 };
   const mine = t.myEstimate();
   let best: ForceChoice = { value: '', gain: 0 };
   // Targets already forced this turn gain nothing from being forced again.
-  const forced = new Set(t.view.turn.effects.filter((e) => e.active && (e.kind === 'forceHeroStat' || e.kind === 'forceCompanionStat'))
-    .map((e) => (e.kind === 'forceHeroStat' ? e.targetPlayer : e.targetCard?.id)));
+  const forced = new Set(t.view.turn.effects.filter((e) => e.active && e.kind === 'forceStat').map((e) => e.targetCard?.id));
+  // Mayor Hobby draws a card whenever anyone is forced: it costs us a little.
+  const hobbyCosts = t.view.players.some((x) => x.id !== t.me.id && x.party.some((c) => c.def === 'mayor-hobby-trickgrin'));
   for (const p of t.others) {
     if (!p.projection) continue;
-    if (p.hero?.def === 'high-thane-brunna-stonefast') continue; // Brunna ignores harmful forcing
+    if (p.party.some((c) => c.def === 'high-thane-brunna-stonefast')) continue; // Brunna ignores harmful forcing
     const est = t.estimate(p);
-    const candidates = f.on === 'hero'
-      ? [{ value: p.id, reduction: heroDef(p.hero).stats[stat] - heroDef(p.hero).stats[f.stat] }]
-      : p.companions.map((c) => ({ value: c.id, reduction: companionDef(c).stats[stat] - companionDef(c).stats[f.stat] }));
+    const candidates = p.party.map((c) => ({ value: c.id, reduction: heroDef(c).stats[stat] - heroDef(c).stats[forceTo] }));
     for (const c of candidates) {
       if (c.reduction <= 0 || forced.has(c.value)) continue;
       let gain = 0;
-      // Mayor Hobby draws a card whenever anyone is forced: it costs us a little.
-      if (t.view.players.some((x) => x.hero?.def === 'mayor-hobby-trickgrin' && x.id !== t.me.id)) gain -= 1;
+      if (hobbyCosts) gain -= 1;
       const competing = est >= mine - 4 && est >= t.difficultyFor(p) - 2;
       if (competing) gain += c.reduction;
-      // Knocking a rival below the difficulty makes their hero fall: real sabotage.
+      // Knocking a rival below the difficulty makes them lose a hero: real sabotage.
       if (est >= t.difficultyFor(p) && est - c.reduction < t.difficultyFor(p)) gain += level === 'hard' ? 4 : 2;
       if (level === 'hard') gain *= 1 + Math.max(0, t.threat(p)) / 20;
       if (gain > best.gain) best = { value: c.value, gain };
@@ -320,7 +294,7 @@ function bestForce(t: Table, sourceDef: string, level: BotLevel): ForceChoice {
  * need cards from the hand.
  */
 const CHALLENGE_ODDS: Record<Stat, { chance: number; difficulty: number }> = {
-  P: { chance: 0.36, difficulty: 10.8 }, M: { chance: 0.31, difficulty: 10.5 }, G: { chance: 0.34, difficulty: 11.7 },
+  P: { chance: 0.33, difficulty: 11.8 }, M: { chance: 0.33, difficulty: 11.6 }, G: { chance: 0.33, difficulty: 9.8 },
 };
 
 interface HandCard { id: string; worth: number }
@@ -338,36 +312,19 @@ function planSpend(hand: HandCard[], need: number): HandCard[] | null {
 }
 
 /**
- * What keeping our hero is worth (renown-equivalent). A fall just means
- * drafting a new hero (look at three, keep one), so a weak hero is nearly
- * free to lose; a strong one is the plan.
- */
-function heroKeepValue(t: Table): number {
-  const v = heroValue(t.me.hero?.def);
-  return v >= KEEP_HERO ? 2.5 : v >= KEEP_HERO - 3 ? 1.2 : 0.3;
-}
-
-/**
- * Everything a fall costs us (renown-equivalent): the hero, and with the
- * fall-cost rule our weakest companion (back to full strength only after a
- * companion phase) and our least useful resource card.
+ * Everything a fall costs us (renown-equivalent): we give up our least useful hero (back to full strength only
+ * after a recruit phase, and the replacement is a blind draw) and, losing, miss the location.
  */
 function fallPrice(t: Table): number {
-  let price = heroKeepValue(t);
-  if (!t.view.rules.fallCost) return price;
-  const mine = [...t.me.companions, ...t.me.inactiveCompanions, ...t.me.resting];
-  if (mine.length) {
-    const weakest = Math.min(...mine.map((c) => companionScore(c.def)));
-    price += Math.max(0.5, 1 + (weakest - AVG_COMPANION_SCORE) * 0.1);
-  }
-  const worths = t.view.hand.map((h) => t.handValue(h.card.id));
-  if (worths.length) price += 0.4 + Math.min(...worths) * 0.33;
-  return price;
+  const heroes = t.heroesOf(t.me);
+  if (!heroes.length) return 0;
+  const weakest = Math.min(...heroes.map((c) => heroValue(c.def)));
+  return Math.max(0.4, 1 + (weakest - AVG_HERO_VALUE) * 0.1);
 }
 
 /**
  * Cards worth keeping in hand for next turn: enough to cover the shortfall
- * our hero and companions would likely have in a typical challenge, less
+ * our party would likely have in a typical challenge, less
  * what we'll draw before bidding next turn.
  */
 function reserveCards(t: Table): number {
@@ -384,7 +341,7 @@ function reserveCards(t: Table): number {
 /**
  * The price of playing `cards` (renown-equivalent). Every card spent is one we
  * won't have for a later location (a little for the card, more for its points),
- * and dipping below the reserve risks failing next turn and losing the hero.
+ * and dipping below the reserve risks failing next turn and losing a hero.
  */
 function spendCost(t: Table, cards: HandCard[], level: BotLevel): number {
   const r = t.view.rules;
@@ -440,7 +397,7 @@ function holdChance(t: Table, total: number, level: BotLevel): number {
 
 /**
  * Bidding is a trade: renown now against cards later. Compare three plans:
- * pass; bid just enough to survive (and keep the hero); bid to take the
+ * pass; bid just enough to survive (and keep the party); bid to take the
  * location. Each plan's gain is weighed against the price of the cards it
  * needs (spendCost), and the best plan's next card is played.
  */
@@ -522,22 +479,18 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const worth = level !== 'easy' && user && (user === t.biggestThreat() || t.threat(user) > 8);
       return [worth ? 'counter' : 'allow'];
     }
-    case 'companionDraft': {
-      // Choose the strongest companions (easy bots pick at random).
-      const sorted = level === 'easy' ? [...values].sort(() => rand() - 0.5) : [...values].sort((a, b) => teamScore(t, optionCard(b)?.def ?? '') - teamScore(t, optionCard(a)?.def ?? ''));
-      return sorted.slice(0, c.max);
+    case 'partyDraft': {
+      // Pick the best party of the pool (easy bots pick at random).
+      if (level === 'easy') return [...values].sort(() => rand() - 0.5).slice(0, c.max);
+      return bestParty(values.map((v) => ({ value: v, def: optionCard(v)?.def ?? v })), c.max, t);
     }
-    case 'heroKeep': {
-      // One hero on offer: keep them unless they are clearly weaker than the average hero (then take the gamble).
-      const offered = c.options.find((o) => o.card)?.value;
-      const heroes = values.filter((v) => v !== 'redraw');
-      return [level !== 'easy' && offered && heroes.length && heroValue(offered) + teamFit(t, offered) < 21 ? 'redraw' : (offered ?? values[0]!)];
+    case 'discardHero': case 'faceDownHero': case 'heroMinion': case 'fallHero': {
+      // Give up the hero whose absence leaves the best party.
+      const mine = t.heroesOf(t.me);
+      const picks = values.map((v) => ({ v }));
+      const rest = (id: string) => partyScore(mine.filter((x) => x.id !== id).map((x) => x.def));
+      return [picks.sort((a, b) => rest(b.v) - rest(a.v))[0]?.v ?? values[0]!];
     }
-    case 'heroDraft':
-      // Look at three, keep one: the strongest (easy bots pick at random).
-      return [level === 'easy' ? random() : pickMax((v) => heroValue(v) + teamFit(t, v))];
-    case 'discardCompanion': case 'faceDownCompanion': case 'companionMinion':
-      return [pickMin((v) => teamScore(t, optionCard(v)?.def ?? ''))];
     case 'discardResource':
     case 'marenGive':
       return [pickMin((v) => t.handValue(v))];
@@ -545,20 +498,20 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const cheapest = pickMin((v) => t.handValue(v));
       return t.handValue(cheapest) < AVG_HERO_STAT ? [cheapest] : [];
     }
-    case 'rulingCompanion':
-    case 'silenceCompanion': {
-      // Hit the biggest threat's strongest companion: in the challenge stat if it's
+    case 'rulingHero':
+    case 'silenceHero': {
+      // Hit the biggest threat's strongest hero: in the challenge stat if it's
       // known yet, otherwise overall.
       if (level === 'easy') return [random()];
       return [pickMax((v) => {
         const owner = t.owner(v);
         const def = optionCard(v)?.def;
-        const stats = def ? companionDef({ def }).stats : { P: 0, M: 0, G: 0 };
+        const stats = def ? heroDef({ def }).stats : { P: 0, M: 0, G: 0 };
         const worth = t.stat ? stats[t.stat] * 3 : stats.P + stats.M + stats.G;
         return worth + (owner ? Math.max(0, t.threat(owner)) * 0.3 : 0);
       })];
     }
-    case 'forceCompanion': case 'forceHero': {
+    case 'forceHero': {
       if (level === 'easy') return [random()];
       // Recompute with the same logic used to decide to activate.
       const best = bestForce(t, defByName(c.source), level);
@@ -569,7 +522,8 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const cancel = values.find((v) => harmful.includes(v));
       if (cancel) return [cancel];
       const threat = t.biggestThreat();
-      return [values.find((v) => v === threat?.hero?.id) ?? values[0]!];
+      const theirs = values.filter((v) => threat?.party.some((c) => c.id === v));
+      return [(theirs.length ? theirs : values).sort((a, b) => heroValue(optionCard(b)?.def) - heroValue(optionCard(a)?.def))[0]!];
     }
     case 'marenTarget':
       return [pickMax((v) => {
@@ -645,11 +599,11 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       return [pickMax((v) => heroValue(v))];
     case 'gauntlet': {
       if (!values.length) return [];
-      const best = pickMax((v) => companionScore(optionCard(v)?.def ?? ''));
-      const mineAll = [...t.me.companions, ...t.me.inactiveCompanions, ...t.me.resting];
-      const room = mineAll.length < t.me.maxCompanions;
-      const weakest = mineAll.length ? Math.min(...mineAll.map((x) => companionScore(x.def))) : 0;
-      return room || companionScore(optionCard(best)?.def ?? '') > weakest ? [best] : [];
+      const best = pickMax((v) => heroValue(optionCard(v)?.def));
+      const mineAll = t.heroesOf(t.me);
+      const room = mineAll.length < t.me.partySize;
+      const weakest = mineAll.length ? Math.min(...mineAll.map((x) => heroValue(x.def))) : 0;
+      return room || heroValue(optionCard(best)?.def) > weakest ? [best] : [];
     }
     case 'sigrunPick': {
       // Take the best of the discarded cards if it beats an average draw (about 3), otherwise draw as usual.
@@ -662,11 +616,11 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
     case 'tobinPick': {
       const geese = values.filter((v) => v !== 'none');
       if (!geese.length) return ['none'];
-      const best = pickMax((v) => (v === 'none' ? -1 : companionScore(optionCard(v)?.def ?? '')));
-      const mineAll = [...t.me.companions, ...t.me.inactiveCompanions, ...t.me.resting];
-      const room = mineAll.length < t.me.maxCompanions;
-      const weakest = mineAll.length ? Math.min(...mineAll.map((x) => companionScore(x.def))) : 0;
-      return room || companionScore(optionCard(best)?.def ?? '') > weakest ? [best] : ['none'];
+      const best = pickMax((v) => (v === 'none' ? -1 : heroValue(optionCard(v)?.def)));
+      const mineAll = t.heroesOf(t.me);
+      const room = mineAll.length < t.me.partySize;
+      const weakest = mineAll.length ? Math.min(...mineAll.map((x) => heroValue(x.def))) : 0;
+      return room || heroValue(optionCard(best)?.def) > weakest ? [best] : ['none'];
     }
     case 'waystoneDraw':
       return ['draw'];
@@ -676,13 +630,21 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
   return one(values[0]);
 }
 
-/** A small bonus for heroes whose best stats match the companions we already have. */
-function teamFit(t: Table, heroDefId: string): number {
-  const h = heroDef({ def: heroDefId }).stats;
-  const team = { P: 0, M: 0, G: 0 };
-  for (const c of t.me.companions) { const s = companionDef(c).stats; team.P += s.P; team.M += s.M; team.G += s.G; }
-  const total = team.P + team.M + team.G || 1;
-  return ((h.P * team.P + h.M * team.M + h.G * team.G) / total - (h.P + h.M + h.G) / 3) * 0.5;
+/** The best `n` of the offered heroes as a party (scored together, so the stats cover each other). */
+function bestParty(options: { value: string; def: string }[], n: number, t: Table): string[] {
+  const have = partyDefs(t);
+  let best: { picks: string[]; score: number } = { picks: options.slice(0, n).map((o) => o.value), score: -Infinity };
+  const walk = (from: number, chosen: { value: string; def: string }[]): void => {
+    if (chosen.length === n || from === options.length) {
+      if (chosen.length < n) return;
+      const score = partyScore([...have, ...chosen.map((o) => o.def)]);
+      if (score > best.score) best = { picks: chosen.map((o) => o.value), score };
+      return;
+    }
+    for (let i = from; i < options.length; i++) walk(i + 1, [...chosen, options[i]!]);
+  };
+  walk(0, []);
+  return best.picks;
 }
 
 const DEF_BY_NAME = new Map(allDefs().map((d) => [d.name, d.id]));
@@ -695,9 +657,9 @@ function locationScore(t: Table, def: string | null): number {
   if (!def) return 0;
   const d = getDef(def);
   let s = locationRenown({ def });
-  // Hero goals: Barnaby draws when an Accord location enters, Grukka on Capitals, etc.
-  const heroTrigger = (heroDef(t.me.hero).abilityText + ' ' + heroDef(t.me.hero).triggerText);
-  for (const g of d.groups) if (heroTrigger.includes(`${g} location`)) s += 1;
+  // Capitals and the like draw a card for every hero of one kind in the party.
+  const per = d.kind === 'location' ? /every (\w+) hero they have in play/.exec(d.conditionText ?? '')?.[1] : undefined;
+  if (per) s += 0.7 * t.heroesOf(t.me).filter((c) => getDef(c.def).groups.includes(per)).length;
   return s;
 }
 

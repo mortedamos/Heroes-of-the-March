@@ -31,8 +31,8 @@ const table = (head: string[], rows: (string | number)[][]) =>
   [`| ${head.join(' | ')} |`, `|${head.map(() => '---').join('|')}|`, ...rows.map((r) => `| ${r.join(' | ')} |`)].join('\n');
 
 const nameOf = (id: string) => getDef(id).name;
-const statTotal = (id: string) => { const d = getDef(id); return d.kind === 'hero' || d.kind === 'companion' ? d.stats.P + d.stats.M + d.stats.G : 0; };
-const statStr = (id: string) => { const d = getDef(id); return d.kind === 'hero' || d.kind === 'companion' ? `${d.stats.P}/${d.stats.M}/${d.stats.G}` : ''; };
+const statTotal = (id: string) => { const d = getDef(id); return d.kind === 'hero' ? d.stats.P + d.stats.M + d.stats.G : 0; };
+const statStr = (id: string) => { const d = getDef(id); return d.kind === 'hero' ? `${d.stats.P}/${d.stats.M}/${d.stats.G}` : ''; };
 
 function mech(id: string): string {
   const i = describeAbility(id);
@@ -40,9 +40,9 @@ function mech(id: string): string {
   return `${i.status} / ${kind}`;
 }
 
-function perCard(exp: Shard | null, ab: Shard | null, kind: 'hero' | 'companion', out: string[]): { id: string; r: number; se: number; worth: number | null }[] {
+function perCard(exp: Shard | null, ab: Shard | null, out: string[]): { id: string; r: number; se: number; worth: number | null }[] {
   if (!exp) { out.push('_no data_'); return []; }
-  const ids = allDefs().filter((d) => d.kind === kind).map((d) => d.id);
+  const ids = allDefs().filter((d) => d.kind === 'hero').map((d) => d.id);
   const ns = [...new Set(Object.keys(exp.cells).map((k) => Number(k.split('|')[1])))].sort();
   const rows: { id: string; r: number; se: number; worth: number | null; cells: Cell[]; line: (string | number)[] }[] = [];
   for (const id of ids) {
@@ -80,15 +80,13 @@ function perCard(exp: Shard | null, ab: Shard | null, kind: 'hero' | 'companion'
 }
 
 const out: string[] = [];
-const hero = load('hero'), heroAb = load('hero-ablate'), comp = load('comp'), compAb = load('comp-ablate'), nat = load('nat');
+const card = load('card'), cardAb = load('card-ablate'), nat = load('nat');
 
-out.push('## Heroes (controlled: each hero dealt to a rotating seat, other seats dealt random heroes)', '');
-perCard(hero, heroAb, 'hero', out);
-out.push('', '## Companions (controlled: each companion forced into a rotating seat\'s opening pair; all opening drafts random)', '');
-perCard(comp, compAb, 'companion', out);
+out.push('## Heroes (controlled: each hero forced into a rotating seat\'s opening party; all opening drafts random)', '');
+perCard(card, cardAb, out);
 
 // --- position check ---------------------------------------------------------------
-for (const [label, sh] of [['hero', hero], ['comp', comp]] as const) {
+for (const [label, sh] of [['card', card]] as const) {
   if (!sh) continue;
   out.push('', `### Turn-order check (${label} experiment): win rate by seat relative to first player`, '');
   const rows: (string | number)[][] = [];
@@ -115,8 +113,8 @@ if (nat) {
           (c.bids / (c.turns * n)).toFixed(2), `${pct(c.sabTurns / c.turns)}%`, `${pct(c.close / c.games)}%`, (c.gap / c.games).toFixed(1)];
       })));
   }
-  for (const kind of ['hero', 'companion'] as const) {
-    out.push('', `### ${kind === 'hero' ? 'Heroes' : 'Companions'} in the final roster of winners vs. fair share`, '');
+  for (const kind of ['hero'] as const) {
+    out.push('', '### Heroes in the final party of winners vs. fair share', '');
     const rows = allDefs().filter((d) => d.kind === kind).map((d) => {
       const a = nat.cards[d.id] as CardAgg | undefined;
       if (!a || !a.finalPg) return null;
@@ -135,7 +133,7 @@ if (nat) {
     const info = describeAbility(d.id);
     const a = nat.cards[d.id] as CardAgg | undefined;
     const triggerable = info.hooks.length + info.activations.length > 0;
-    if (d.kind === 'hero' || d.kind === 'companion') {
+    if (d.kind === 'hero') {
       if (!a) { dead.push([d.name, d.kind, info.status, 'never held', '', '', '', '']); continue; }
       const eff = a.turns ? (a.produced + a.used) / a.turns : 0;
       dead.push([d.name, d.kind, `${info.status}${triggerable ? '' : ' (static only)'}`, a.turns, eff.toFixed(3), a.eligible ? pct(a.zero / a.eligible, 0) + '%' : '–', a.offered ? `${a.used}/${a.offered}` : '–', a.calls ? `${a.produced}/${a.calls}` : '–']);
@@ -147,7 +145,7 @@ if (nat) {
   out.push('', '### Locations, encounters and resources with abilities', '');
   const rows2: (string | number)[][] = [];
   for (const d of allDefs()) {
-    if (d.kind === 'hero' || d.kind === 'companion') continue;
+    if (d.kind === 'hero') continue;
     const info = describeAbility(d.id);
     const a = nat.cards[d.id] as CardAgg | undefined;
     const text = d.conditionText;

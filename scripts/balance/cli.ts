@@ -1,6 +1,6 @@
 // Usage (after `npm run balance:build`):
-//   node _build/balance/cli.mjs run <hero|comp|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--only id,id] [--out file.json]
-//   (--only keeps just the companions whose id contains one of the given fragments; comp experiment only)
+//   node _build/balance/cli.mjs run <card|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--only id,id] [--out file.json]
+//   (--only keeps just the heroes whose id contains one of the given fragments; card experiment only)
 // Experiments are fully determined by (seed, game index): rerunning gives identical numbers.
 
 import { spawn } from 'node:child_process';
@@ -8,8 +8,7 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BotLevel } from '../../src/bots/heuristic';
-import { getDef } from '../../src/engine/cards';
-import { addGameMetrics, companionIds, heroIds, merge, mix, mulberry, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
+import { addGameMetrics, heroIds, merge, mix, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
 
 
 function parseArgs(argv: string[]): { pos: string[]; opt: Record<string, string> } {
@@ -43,55 +42,18 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
   };
   const only = (opt.only ?? '').split(',').filter(Boolean);
   const pick = (ids: string[]) => (only.length ? ids.filter((id) => only.some((o) => id.includes(o))) : ids);
-  const heroes = heroIds(), comps = pick(companionIds());
-  const heroFocus = pick(heroes); // --only also narrows which heroes are measured (the others still sit at the table)
+  const cardsFocus = pick(heroIds());
 
-  if (experiment === 'hero') {
-    for (const h of heroFocus) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
-      const seed = mix(base, hashStr(h), n, g);
-      const r = mulberry(mix(seed, 1));
-      const others = heroes.filter((x) => x !== h);
-      for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [others[i], others[j]] = [others[j]!, others[i]!]; }
-      const seat = g % n;
-      const dealt: Record<number, string> = {};
-      let k = 0;
-      for (let s = 0; s < n; s++) dealt[s] = s === seat ? h : others[k++]!;
-      const restore = ablate ? strip(h) : () => {};
-      try {
-        const spec: GameSpec = { n, seed, level, heroes: dealt, rules: { heroDraft: 1 } };
-        record(`${h}|${n}`, playGame(spec, cards), seat);
-      } finally { restore(); }
-      played++;
-    }
-  } else if (experiment === 'comp') {
-    for (const c of comps) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
+  if (experiment === 'card') {
+    // Each hero is forced into a rotating seat's opening party; everyone drafts at random so preferences don't skew it.
+    for (const c of cardsFocus) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
       const seed = mix(base, hashStr(c), n, g);
       const seat = g % n;
       const restore = ablate ? strip(c) : () => {};
       try {
-        const spec: GameSpec = { n, seed, level, rules: { heroDraft: 1 }, force: { seat, def: c }, randomDraft: true };
+        const spec: GameSpec = { n, seed, level, force: { seat, def: c }, randomDraft: true };
         record(`${c}|${n}`, playGame(spec, cards), seat);
       } finally { restore(); }
-      played++;
-    }
-  } else if (experiment === 'mono') {
-    // One seat plays a hero of kingdom K and recruits kin whenever it can; everyone else plays normally.
-    const kingdoms = ['Human', 'Elf', 'Dwarf', 'Orc', 'Halfellow'];
-    const kin = (k: string) => heroes.filter((h) => getDef(h).groups.includes(k));
-    for (const k of kingdoms) for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
-      const pool = kin(k);
-      const h = pool[g % pool.length]!;
-      const seed = mix(base, hashStr(k), n, g);
-      const r = mulberry(mix(seed, 1));
-      const others = heroes.filter((x) => x !== h);
-      for (let i = others.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [others[i], others[j]] = [others[j]!, others[i]!]; }
-      const seat = g % n;
-      const dealt: Record<number, string> = {};
-      let q = 0;
-      for (let s = 0; s < n; s++) dealt[s] = s === seat ? h : others[q++]!;
-      const rec = playGame({ n, seed, level, heroes: dealt, rules: { heroDraft: 1 }, monoSeat: seat }, cards);
-      record(`${k}|${n}`, rec, seat);
-      record(`${h}|${n}`, rec, seat);
       played++;
     }
   } else if (experiment === 'nat') {
@@ -137,7 +99,7 @@ async function main(): Promise<void> {
     return;
   }
   if (pos[0] === 'inspect') { console.log(Object.keys(JSON.parse(readFileSync(pos[1]!, 'utf8')))); return; }
-  console.error('usage: cli.mjs run <hero|comp|nat> [options]');
+  console.error('usage: cli.mjs run <card|nat> [options]');
   process.exit(1);
 }
 

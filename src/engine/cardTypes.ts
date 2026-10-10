@@ -7,7 +7,7 @@ export const STAT_NAMES: Record<Stat, string> = { P: 'Physical', M: 'Mental', G:
 
 export type StatBlock = Record<Stat, number>;
 
-export type CardKind = 'hero' | 'companion' | 'location' | 'encounter' | 'resource';
+export type CardKind = 'hero' | 'location' | 'encounter' | 'resource';
 
 interface BaseDef {
   /** Stable, human-readable id (slug of the card name). Public information. */
@@ -24,18 +24,9 @@ interface BaseDef {
   revision?: string;
 }
 
+/** A member of an adventuring party. (The old hero triggers and Kin bonuses are set aside: data/set-aside.json.) */
 export interface HeroDef extends BaseDef {
   kind: 'hero';
-  stats: StatBlock;
-  abilityName: string;
-  abilityText: string;
-  triggerText: string;
-  /** The hero's Kin bonus (A, B or C), for the card face. */
-  kinText?: string;
-}
-
-export interface CompanionDef extends BaseDef {
-  kind: 'companion';
   stats: StatBlock;
   abilityName: string;
   abilityText: string;
@@ -72,12 +63,11 @@ export interface ResourceDef extends BaseDef {
   conditionText: string | null;
 }
 
-export type CardDef = HeroDef | CompanionDef | LocationDef | EncounterDef | ResourceDef;
+export type CardDef = HeroDef | LocationDef | EncounterDef | ResourceDef;
 
 export interface CardDatabase {
   version: string;
   heroes: HeroDef[];
-  companions: CompanionDef[];
   locations: LocationDef[];
   encounters: EncounterDef[];
   resources: ResourceDef[];

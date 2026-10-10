@@ -2,14 +2,14 @@
 // its own GameView (never the secret state).
 
 import { CARDS, getDef } from '../engine/cards';
-import type { CompanionDef, HeroDef, LocationDef, Stat } from '../engine/cardTypes';
+import type { HeroDef, LocationDef, Stat } from '../engine/cardTypes';
 import type { CardRef } from '../engine/types';
 import type { GameView, PlayerPublicView } from '../engine/view';
 
 /** Average value of an unseen face-down bid (from the card data: ~3.1). */
 export const HIDDEN_BID_ESTIMATE = 3.1;
 /** Average hero stat, used to value Council cards. */
-export const AVG_HERO_STAT = 6.8;
+export const AVG_HERO_STAT = 3.5;
 
 /** Bot-side estimates for resources whose printed value understates them. */
 export const SPECIAL_VALUE: Record<string, number> = {
@@ -27,15 +27,9 @@ const HERO_ABILITY: Record<string, number> = {
   'pip-wanderfoot': 4, 'kazra-emberdeep': 2, 'ysolde-of-the-wellspring': 5, 'mayor-hobby-trickgrin': 2,
   'lord-paladin-aldric-ashcroft': 3, 'high-thane-brunna-stonefast': 1, 'loremaster-oskar-grimgate': 3,
   'queen-maren-ashcroft': 3, 'archmage-corvin-varro': 5, 'professor-barnaby-pickwort': 3, 'urzha-half-tusk': 2,
-};
-
-/** How much a companion's ability is worth on top of its stats. */
-const COMPANION_ABILITY: Record<string, number> = {
   'liriel-nightbloom': 2, 'thessaly-of-the-grove': 2, 'kesh-the-bog-huntress': 2,
-  'hobart-thimblewick-moot-surgeon': 2, 'caelan-the-exile': 2, 'brisa-blastcap-bombardier': 2, 'grumma-ladlejaw-camp-cook': 1.5,
   'nettle-burrows-trouble-maker': 2, 'sister-aurelie-dane-physician': 2, 'gnash-the-butcher-of-bloodmire': 2,
-  'sir-osric-vane-marshal-of-the-old-guard': 2, 'rosalind-marchwell-marchguard-clerk': 2,
-  'elder-ilvena-of-the-conclave': 3, 'hesk-of-two-homes': 2, 'mags-tolliver-market-trader': 2,
+  'elder-ilvena-of-the-conclave': 3, 'hesk-of-two-homes': 2,
   'dagny-coldhearth-the-grudge-bearer': 2, 'torvi-cinderkeg-master-gunner': 2, 'moss-dire-wolf': 1, 'gimlet-a-very-good-dog': 1.5, 'goldie-trickgrin-keeper-of-the-goose-and-kettle': 1, 'pell-quillon-collegium-prodigy': 2,
   'seraphine-moonveil-warden-scholar': 1, 'varg-ironjaw': 1, 'tansy-brambleby-barmaid-and-volunteer': 1.5,
   'fennick-puffcap-mycomancer': 1, 'captain-rook-halloran-skyship-captain': 1, 'marshal-hedda-ironvow': 1,
@@ -44,25 +38,32 @@ const COMPANION_ABILITY: Record<string, number> = {
   'honk-the-goose-rout-veteran': 1.5, 'duchess-the-pub-goose': 1.5, 'sergeant-waddle': 1, 'cobra-chicken': 0.5,
 };
 
-/** Stand-in for an empty hero slot (only during the opening hero draft). */
-const NO_HERO_DEF = { stats: { P: 0, M: 0, G: 0 }, abilityText: '', triggerText: '' } as unknown as HeroDef;
+export function heroDef(ref: { def: string }): HeroDef { return getDef(ref.def) as HeroDef; }
 
-export function heroDef(ref: { def: string } | null): HeroDef { return ref ? getDef(ref.def) as HeroDef : NO_HERO_DEF; }
-export function companionDef(ref: { def: string }): CompanionDef { return getDef(ref.def) as CompanionDef; }
-
+/** A hero's worth to its party: stat total plus a rough price for its ability. */
 export function heroValue(defId: string | undefined): number {
   if (!defId) return 0;
   const d = getDef(defId) as HeroDef;
   return d.stats.P + d.stats.M + d.stats.G + (HERO_ABILITY[defId] ?? 0);
 }
 
-export function companionScore(defId: string): number {
-  const d = getDef(defId) as CompanionDef;
-  return d.stats.P + d.stats.M + d.stats.G + (COMPANION_ABILITY[defId] ?? 0);
-}
+/** What a blind hero draw is worth on average. */
+export const AVG_HERO_VALUE = CARDS.heroes.reduce((a, c) => a + heroValue(c.id), 0) / CARDS.heroes.length;
 
-/** What a blind companion draw is worth on average. */
-export const AVG_COMPANION_SCORE = CARDS.companions.reduce((a, c) => a + companionScore(c.id), 0) / CARDS.companions.length;
+/**
+ * A party's score: the heroes' value, plus a premium for having no weak stat (every stat comes up as the
+ * challenge about a third of the time, so a lopsided party fails the ones it is bad at).
+ */
+export function partyScore(defIds: string[]): number {
+  const t = { P: 0, M: 0, G: 0 };
+  let value = 0;
+  for (const id of defIds) {
+    const s = (getDef(id) as HeroDef).stats;
+    t.P += s.P; t.M += s.M; t.G += s.G;
+    value += heroValue(id);
+  }
+  return value + 0.6 * Math.min(t.P, t.M, t.G);
+}
 
 export function locationRenown(ref: CardRef | { def: string } | null): number {
   if (!ref) return 0;
@@ -102,7 +103,7 @@ export class Table {
   /** Pell's bonus only shows once the cards are revealed; until then, count it for whoever has her and has played enough. */
   pellBonus(p: PlayerPublicView): number {
     if (this.view.turn.step !== 'bidding' || p.bids.length < 2) return 0;
-    return p.companions.some((c) => c.def === 'pell-quillon-collegium-prodigy') ? 2 * p.bids.length : 0;
+    return p.party.some((c) => c.def === 'pell-quillon-collegium-prodigy') ? 2 * p.bids.length : 0;
   }
 
   difficultyFor(p: PlayerPublicView): number { return p.projection?.difficulty ?? this.view.turn.challenge?.difficulty.total ?? 0; }
@@ -140,18 +141,23 @@ export class Table {
 
   owner(cardId: string): PlayerPublicView | null {
     return this.view.players.find((p) =>
-      p.hero?.id === cardId || p.companions.some((c) => c.id === cardId) || p.inactiveCompanions.some((c) => c.id === cardId)
+      p.party.some((c) => c.id === cardId) || p.inactive.some((c) => c.id === cardId)
       || p.resting.some((c) => c.id === cardId) || p.bids.some((b) => !b.hidden && b.card.id === cardId)) ?? null;
   }
 
-  /** A companion's current contribution in `stat` (approximate: ignores forced/silence effects). */
-  companionIn(ref: { def: string }, stat: Stat): number {
-    return companionDef(ref).stats[stat];
+  /** A hero's printed contribution in `stat` (approximate: ignores forced/silence effects). */
+  heroIn(ref: { def: string }, stat: Stat): number {
+    return heroDef(ref).stats[stat];
   }
 
-  /** Base (hero + companions) strength of a player in a stat. */
+  /** Base (party) strength of a player in a stat. */
   base(p: PlayerPublicView, stat: Stat): number {
-    return heroDef(p.hero).stats[stat] + p.companions.reduce((a, c) => a + this.companionIn(c, stat), 0);
+    return p.party.reduce((a, c) => a + this.heroIn(c, stat), 0);
+  }
+
+  /** Every hero in a player's party, face up or not. */
+  heroesOf(p: PlayerPublicView): CardRef[] {
+    return [...p.party, ...p.inactive, ...p.resting];
   }
 
   handValue(cardId: string): number {

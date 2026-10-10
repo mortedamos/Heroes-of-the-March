@@ -14,8 +14,8 @@ import { CARDS, getDef } from './cards';
 import type { CardKind, EncounterDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import {
-  addEffect, cardOption, companionsInPlay, councilHeroes, discardCompanion, drawResources, fire, hasGroup, kingdomsOf,
-  ownerOf, peekOption, revealTop, sharesKingdom, statName,
+  addEffect, cardOption, councilHeroes, discardHero, drawResources, hasGroup, heroesInPlay, kingdomsOf,
+  peekOption, revealTop, statName,
 } from './effects';
 import { nextInt } from './rng';
 import { baseStrength, challengeStat } from './totals';
@@ -25,26 +25,25 @@ import { DECKS } from './types';
 export interface Source { card: CardId; owner: PlayerId | null; kind: CardKind }
 export interface OwnedSource extends Source { owner: PlayerId }
 
-export type TriggerName = 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'companionEntered' | 'heroFell' | 'locationWon' | 'statForced' | 'turnStart'
-  | 'minionDrawn' | 'locationReplaced' | 'companionLeft' | 'resourceEntered';
+export type TriggerName = 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'heroEntered' | 'locationWon' | 'statForced' | 'turnStart'
+  | 'minionDrawn' | 'locationReplaced' | 'heroLeft' | 'resourceEntered';
 export interface TriggerPayload {
   /** The turn's encounter challenge was announced (stat as modified by the location); player is the active player. */
   challengeFaced: { stat: Stat; player: PlayerId };
   encounterReplaced: { player: PlayerId };
   locationEntered: { card: CardId };
   encounterEntered: { card: CardId; asMinion: boolean };
-  companionEntered: { card: CardId; player: PlayerId };
-  heroFell: { player: PlayerId };
+  heroEntered: { card: CardId; player: PlayerId };
   locationWon: { player: PlayerId; margin: number };
   statForced: { player: PlayerId; target: CardId };
-  /** The start of `player`'s turn (after resting companions return and cards are drawn). */
+  /** The start of `player`'s turn (after resting heroes return and cards are drawn). */
   turnStart: { player: PlayerId };
   /** A minion was drawn for the encounter. */
   minionDrawn: { card: CardId };
   /** The location was replaced by another (Wayfinder's Die, Mine Now...). */
   locationReplaced: { from: CardId; to: CardId };
-  /** A companion was replaced or discarded; `player` controlled it. */
-  companionLeft: { card: CardId; player: PlayerId };
+  /** A hero was replaced, discarded or fell; `player` controlled it. */
+  heroLeft: { card: CardId; player: PlayerId };
   /** A resource was revealed or played face up under `player`'s control (face-down bids do not count until then). */
   resourceEntered: { card: CardId; player: PlayerId };
 }
@@ -68,34 +67,28 @@ export interface Ability {
   status: ImplStatus;
   note?: string;
   on?: { [K in TriggerName]?: (ctx: Ctx, self: Source, e: TriggerPayload[K]) => void };
-  /** This card itself enters play (companions, locations). */
+  /** This card itself enters play (heroes, locations). */
   onEnter?: (ctx: Ctx, self: Source) => void;
   /** A resource is revealed or played face up. */
   onReveal?: (ctx: Ctx, self: Source) => void;
   activations?: Activation[];
 
   // Static modifiers read by totals.ts / flow.ts -----------------------------
-  maxCompanions?: number;
-  /** May use the hero's X stat in place of the challenge stat (applied when higher). */
-  heroStatSub?: Stat;
-  /** This companion may contribute its X stat in place of another (applied when higher). */
+  /** Ysolde: the party may have this many more heroes. */
+  partyBonus?: number;
+  /** This hero may contribute its X stat in place of another (applied when higher). */
   selfStatSub?: Stat;
   /** Corvin: draw one more whenever you draw ('ownTurn': only on your own turn). */
   extraDrawOnDraw?: boolean | 'ownTurn' | 'oncePerTurn';
   /** Aldric: may counter another player's activated ability as it is used (once per turn, shared with Shield of the Dawn). */
   counter?: boolean;
-  /** Flat bonus to your total in every challenge (balance option). */
-  flatBonus?: number;
   /** Pip: a claimed face-down card is replaced by a random card from your hand (balance option). */
   claimSwapsCard?: boolean;
   /** Opponents' silences, forced stats and negations don't affect your cards (balance option). */
   ignoreHostileEffects?: boolean;
-  /** With more than two companions, your weakest one (in the tested stat) counts half (balance option). */
-  extraCompanionHalf?: boolean;
-  ignorePositiveMinionBonus?: boolean;
-  /** Once per game, a fall of this hero is prevented and its player draws 3 resources (Thorgar). */
+  /** Once per game, a fall of this hero's player is prevented and they draw 3 resources (Thorgar). */
   unburied?: boolean;
-  /** Every resource this hero's player bids is worth this much more (Kazra). */
+  /** Every Dwarf resource this hero's player bids is worth this much more (Kazra). */
   bidBonus?: number;
   /** If you play at least `cards` resources, each gains `bonus`. */
   multiBidBonus?: { cards: number; bonus: number };
@@ -103,23 +96,19 @@ export interface Ability {
   resourceValue?: (ctx: Ctx, owner: PlayerState, base: number) => number;
   /** Sigrun: once per turn, a draw may instead take one of three random discarded cards. */
   drawFromDiscardChoice?: boolean;
-  /** Posy, Osric: when the hero's stat swap (heroStatSub) is used, this companion gains this much for the encounter. */
-  heroSubBonus?: number;
   /** Brunna: forced-stat effects on your cards apply only if they help you. */
   ignoreForcedStat?: boolean;
   /** Hobby: your first bid may be face down too. */
   mayBidFaceDown?: boolean;
-  /** Hesk: one extra use per turn of another companion's once-per-turn ability. */
-  reuseCompanionAbility?: boolean;
-  /** Heroes' Kin bonus: A (+1 per kin companion), B (draw when a kin companion enters play), C (opposing kin companions get -1). */
-  kin?: 'A' | 'B' | 'C';
-  /** Bonus pair (Varg and Moss, Goldie and Gimlet): with both in the party the companion limit is one higher. */
+  /** Hesk: one extra use per turn of another hero's once-per-turn ability. */
+  reuseHeroAbility?: boolean;
+  /** Bonus pair (Varg and Moss, Goldie and Gimlet): with both in the party the party size is one higher. */
   pair?: string;
-  /** +amount to every stat while the named companion is in the same party (Varg and Sigrun). */
+  /** +amount to every stat while the named hero is in the same party (Varg and Sigrun). */
   partnerBonus?: { with: string; amount: number };
   /** +amount to every stat while the named encounter card is part of the encounter (Gimlet and Destiny). */
   encounterBonus?: { def: string; amount: number };
-  /** Hedda: once per turn, an opponent's ability that would affect one of your companions is cancelled. */
+  /** Hedda: once per turn, an opponent's ability that would affect one of your heroes is cancelled. */
   holdTheLine?: boolean;
   /** Encounter: when it comes into play as the encounter, an encounter of this group is drawn instead and this card becomes its minion (Destiny). */
   fetchesGroup?: string;
@@ -131,7 +120,7 @@ export interface Ability {
   hidesFaceDown?: boolean;
   /** Location: if the encounter is in this group it draws one extra minion of that group (Barrowdeep). */
   extraMinion?: string;
-  /** Tova: when this resting companion returns, draw a resource. */
+  /** Tova: when this resting hero returns, draw a resource. */
   restReturnDraw?: boolean;
   // Location statics
   challengeStat?: Stat;
@@ -156,28 +145,6 @@ function encounterEntered(group: string) {
   };
 }
 
-function locationEntered(group: string) {
-  return (ctx: Ctx, self: Source, e: TriggerPayload['locationEntered']) => {
-    if (hasGroup(ctx.def(e.card), group)) drawFor(ctx, self);
-  };
-}
-
-/** "When a <tag> card enters play, draw a resource": locations, encounters and minions, companions and resources (revealed or played face up) of any player. */
-function cardEnters(group: string, draws = 1): NonNullable<Ability['on']> {
-  const hit = (ctx: Ctx, self: Source, card: CardId) => { if (hasGroup(ctx.def(card), group)) drawFor(ctx, self, draws); };
-  return {
-    locationEntered: (ctx, self, e) => hit(ctx, self, e.card),
-    encounterEntered: (ctx, self, e) => { if (e.asMinion && !ctx.s.rules.minionsTriggerEntersPlay) return; hit(ctx, self, e.card); },
-    companionEntered: (ctx, self, e) => hit(ctx, self, e.card),
-    resourceEntered: (ctx, self, e) => hit(ctx, self, e.card),
-  };
-}
-
-/** "When a <stat> challenge is faced, draw a resource" (on any turn; also when another effect changes the challenge to that stat). */
-const onChallenge = (stat: Stat) => (ctx: Ctx, self: Source, e: TriggerPayload['challengeFaced']) => {
-  if (e.stat === stat) drawFor(ctx, self);
-};
-
 /** Once a turn per card, "the first time anyone is forced to use a different stat". */
 const firstForcedStat = (key: string) => (ctx: Ctx, self: Source) => {
   const used = ctx.s.turn.used;
@@ -187,8 +154,8 @@ const firstForcedStat = (key: string) => (ctx: Ctx, self: Source) => {
   drawFor(ctx, self);
 };
 
-/** A location drawing a resource per companion of one kingdom in each player's party (the capitals). */
-const drawPerKin = (kingdom: string): Ability => drawPerOwn((ctx, p) => p.companions.filter((c) => kingdomsOf(ctx.def(c)).includes(kingdom)).length);
+/** A location drawing a resource per hero of one kingdom in each player's party (the capitals). */
+const drawPerKin = (kingdom: string): Ability => drawPerOwn((ctx, p) => p.party.filter((c) => kingdomsOf(ctx.def(c)).includes(kingdom)).length);
 
 /** Location: all players draw one resource per matching card they have in play. */
 function drawPerOwn(pred: (ctx: Ctx, p: PlayerState) => number): Ability {
@@ -250,17 +217,17 @@ const curse = (): Ability => ({
 
 const others = (ctx: Ctx, self: OwnedSource) => ctx.s.players.filter((p) => p.id !== self.owner);
 
-/** Companions of other players that are in play (and not resting). */
-const opposingCompanions = (ctx: Ctx, self: OwnedSource) => others(ctx, self).flatMap((p) => p.companions.map((c) => ({ c, p })));
+/** Heroes of other players that are in play (and not resting). */
+const opposingHeroes = (ctx: Ctx, self: OwnedSource) => others(ctx, self).flatMap((p) => p.party.map((c) => ({ c, p })));
 
 /**
- * How much a companion would lose if forced onto `stat` ('weakest': its lowest stat) in the
+ * How much a hero would lose if forced onto `stat` ('weakest': its lowest stat) in the
  * current challenge (what it gives now in the challenge stat, less what it would give).
  */
 function forceLoss(ctx: Ctx, card: CardId, owner: PlayerState, stat: Stat | 'weakest'): number {
   const cs = challengeStat(ctx, owner);
   const d = ctx.def(card);
-  if (!cs || d.kind !== 'companion') return 0;
+  if (!cs || d.kind !== 'hero') return 0;
   const forced = stat === 'weakest' ? Math.min(d.stats.P, d.stats.M, d.stats.G) : d.stats[stat];
   return d.stats[cs] - forced;
 }
@@ -271,37 +238,20 @@ function highlightWorst<T extends object>(options: T[], losses: number[]): (T & 
   return options.map((o, i) => (best > 0 && losses[i] === best ? { ...o, highlight: true } : o));
 }
 
-/** Liriel / Thessaly / Kesh: force another player's companion to contribute a stat. */
-function forceCompanion(stat: Stat): Ability {
+/** Liriel / Thessaly / Kesh: force another player's hero to contribute a stat. */
+function forceHero(stat: Stat): Ability {
   return {
     status: 'full',
     activations: [{
-      id: 'force', label: `Force a companion to use ${statName(stat)}`, windows: ['bidding'], per: 'turn',
-      canUse: (ctx, self) => opposingCompanions(ctx, self).length > 0,
-      use: (ctx, self) => ctx.queueFirst({
-        t: 'choose', purpose: 'forceCompanion', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: `${shortName(ctx, self.card)}: choose another player's companion to contribute ${statName(stat)}`,
-        options: (() => {
-          const list = opposingCompanions(ctx, self);
-          return highlightWorst(list.map(({ c, p }) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`)), list.map(({ c, p }) => forceLoss(ctx, c, p, stat)));
-        })(),
-        min: 1, max: 1, data: { stat, source: self.card },
-      }),
-    }],
-  };
-}
-
-/** Hugo / Caelan / Brisa / Clemence: force another player's hero to contribute a stat. */
-function forceHero(stat: Stat, turn?: 'own'): Ability {
-  return {
-    status: 'full',
-    activations: [{
-      id: 'force', label: `Force a hero to use ${statName(stat)}`, windows: ['bidding'], per: 'turn', ...(turn ? { turn } : {}),
-      canUse: (ctx, self) => others(ctx, self).length > 0,
+      id: 'force', label: `Force a hero to use ${statName(stat)}`, windows: ['bidding'], per: 'turn',
+      canUse: (ctx, self) => opposingHeroes(ctx, self).length > 0,
       use: (ctx, self) => ctx.queueFirst({
         t: 'choose', purpose: 'forceHero', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: `${shortName(ctx, self.card)}: choose a player whose hero must contribute ${statName(stat)}`,
-        options: others(ctx, self).map((p) => ({ value: p.id, label: `${p.name}: ${shortName(ctx, p.hero)} (${stat} ${(getDef(ctx.defId(p.hero)) as { stats: Record<Stat, number> }).stats[stat]})`, card: { def: ctx.defId(p.hero), id: p.hero } })),
+        prompt: `${shortName(ctx, self.card)}: choose another player's hero to contribute ${statName(stat)}`,
+        options: (() => {
+          const list = opposingHeroes(ctx, self);
+          return highlightWorst(list.map(({ c, p }) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`)), list.map(({ c, p }) => forceLoss(ctx, c, p, stat)));
+        })(),
         min: 1, max: 1, data: { stat, source: self.card },
       }),
     }],
@@ -357,10 +307,9 @@ const TODO = (note?: string): Ability => ({ status: 'todo', ...(note ? { note } 
 // --- registry ---------------------------------------------------------------
 
 export const ABILITIES: Record<string, Ability> = {
-  // Heroes
+  // Heroes (the former heroes' triggers and Kin bonuses are set aside: data/set-aside.json)
   'warchief-grukka-ironjaw': {
     status: 'full',
-    on: cardEnters('Capital', 2),
     activations: [{
       id: 'mineNow', label: 'Look at the next location; you may swap it in', windows: ['afterLocation'], per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.location) && hasLocationsToPeek(ctx),
@@ -381,24 +330,22 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'thorgar-twice-buried': { status: 'full', unburied: true, on: cardEnters('Undead') },
+  'thorgar-twice-buried': { status: 'full', unburied: true },
   'aelthir-moonveil': {
     status: 'full',
-    on: { challengeFaced: onChallenge('G') },
     activations: [{
-      id: 'torch', label: "Silence an opponent's companion this turn", windows: ['beforeBidding'], per: 'turn',
-      canUse: (ctx, self) => opposingCompanions(ctx, self).length > 0,
+      id: 'torch', label: "Silence an opponent's hero this turn", windows: ['beforeBidding'], per: 'turn',
+      canUse: (ctx, self) => opposingHeroes(ctx, self).length > 0,
       use: (ctx, self) => ctx.queueFirst({
-        t: 'choose', purpose: 'silenceCompanion', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: 'I Held the Torch: choose an opponent\'s companion. It contributes no stats this turn.',
-        options: opposingCompanions(ctx, self).map(({ c, p }) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`)),
+        t: 'choose', purpose: 'silenceHero', player: self.owner, source: nameOf(ctx, self.card),
+        prompt: 'I Held the Torch: choose an opponent\'s hero. It contributes no stats this turn.',
+        options: opposingHeroes(ctx, self).map(({ c, p }) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`)),
         min: 1, max: 1, data: { source: self.card },
       }),
     }],
   },
   'lord-vaelis-nightbloom': {
     status: 'full',
-    on: { heroFell: (ctx, self) => drawFor(ctx, self, 3) },
     activations: [{
       id: 'shadowsteeds', label: 'Draw the next encounter; use its minion bonus or give it to another player', windows: ['beforeBidding'], per: 'turn',
       canUse: (ctx) => ctx.s.decks.encounter.length + ctx.s.discards.encounter.length > 0,
@@ -420,7 +367,6 @@ export const ABILITIES: Record<string, Ability> = {
   },
   'pip-wanderfoot': {
     status: 'full', claimSwapsCard: true,
-    on: { locationReplaced: (ctx, self) => drawFor(ctx, self) },
     activations: [{
       id: 'pockets', label: "Claim another player's face-down bid", windows: ['beforeReveal'], per: 'turn',
       canUse: (ctx, self) => others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
@@ -435,30 +381,27 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'kazra-emberdeep': { status: 'full', bidBonus: 1, on: cardEnters('Ironbound') },
-  'ysolde-of-the-wellspring': { status: 'full', maxCompanions: 3, on: cardEnters('Beast') },
+  'kazra-emberdeep': { status: 'full', bidBonus: 1 },
+  'ysolde-of-the-wellspring': { status: 'full', partyBonus: 1 },
   'mayor-hobby-trickgrin': {
     status: 'full', mayBidFaceDown: true,
     note: 'Face-down cards still reveal in the normal reveal step.',
-    on: { statForced: firstForcedStat('hobby') },
   },
   'lord-paladin-aldric-ashcroft': {
     status: 'full', counter: true,
-    on: cardEnters('Marchguard'),
     activations: [{
-      id: 'shield', label: "Disable another player's hero or companion ability this turn", windows: ['bidding'], per: 'turn',
+      id: 'shield', label: "Disable another player's hero ability this turn", windows: ['bidding'], per: 'turn',
       use: (ctx, self) => ctx.queueFirst({
         t: 'choose', purpose: 'disableAbility', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: "Shield of the Dawn: disable a hero's or companion's ability for the rest of the turn (cancels its effects)",
-        options: others(ctx, self).flatMap((p) => [p.hero, ...p.companions].map((c) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`))),
+        prompt: "Shield of the Dawn: disable a hero's ability for the rest of the turn (cancels its effects)",
+        options: others(ctx, self).flatMap((p) => p.party.map((c) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`))),
         min: 1, max: 1, data: { source: self.card },
       }),
     }],
   },
-  'high-thane-brunna-stonefast': { status: 'full', ignoreForcedStat: true, ignoreHostileEffects: true, on: { challengeFaced: onChallenge('P') } },
+  'high-thane-brunna-stonefast': { status: 'full', ignoreForcedStat: true, ignoreHostileEffects: true },
   'queen-maren-ashcroft': {
     status: 'full',
-    on: cardEnters('Wardhouse'),
     activations: [{
       id: 'requisition', label: 'Trade a card from your hand for a random card from another hand', windows: ['beforeBidding'], turn: 'own', per: 'turn',
       canUse: (ctx, self) => ctx.player(self.owner).hand.length > 0 && others(ctx, self).some((p) => p.hand.length > 0),
@@ -470,10 +413,9 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'archmage-corvin-varro': { status: 'full', extraDrawOnDraw: 'oncePerTurn', on: { challengeFaced: onChallenge('M') } },
+  'archmage-corvin-varro': { status: 'full', extraDrawOnDraw: 'oncePerTurn' },
   'professor-barnaby-pickwort': {
     status: 'full',
-    on: cardEnters('Accord'),
     activations: [{
       id: 'maps', label: 'Look at the next two locations; you may swap one in', windows: ['afterLocation', 'beforeBidding', 'bidding', 'endOfBidding'], turn: 'own', per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.location) && hasLocationsToPeek(ctx),
@@ -498,7 +440,6 @@ export const ABILITIES: Record<string, Ability> = {
   },
   'urzha-half-tusk': {
     status: 'full',
-    on: { minionDrawn: (ctx, self) => drawFor(ctx, self) },
     activations: [{
       id: 'pickFight', label: 'Look at the next encounter; you may replace this one with it', windows: ['beforeBidding'], per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.encounter) && ctx.s.decks.encounter.length + ctx.s.discards.encounter.length > 0,
@@ -519,22 +460,20 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  // Oskar: before bidding, name an opponent; whenever they use an ability against his hero or companions this turn, he draws a resource.
+  // Oskar: before bidding, name an opponent; whenever they use an ability against his player's heroes this turn, he draws a resource.
   'loremaster-oskar-grimgate': {
     status: 'full',
-    on: cardEnters('Oathbreaker'),
     activations: [{
       id: 'grudge', label: 'Name an opponent: when they use an ability against you, draw a resource', windows: ['beforeBidding'], per: 'turn',
       canUse: (ctx, self) => others(ctx, self).length > 0,
       use: (ctx, self) => ctx.queueFirst({
         t: 'choose', purpose: 'oskarGrudge', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: 'Entered in the Book of Grudges: choose an opponent. When they use an ability against your hero or companions this turn, you draw a resource.',
+        prompt: 'Entered in the Book of Grudges: choose an opponent. When they use an ability against your heroes this turn, you draw a resource.',
         options: others(ctx, self).map((p) => ({ value: p.id, label: p.name })), min: 1, max: 1, data: { source: self.card },
       }),
     }],
   },
 
-  // Companions
   // Goldie: once per turn, during bidding, look at all of one other player's face-down bids.
   'goldie-trickgrin-keeper-of-the-goose-and-kettle': {
     status: 'full', pair: 'gimlet-a-very-good-dog',
@@ -582,23 +521,23 @@ export const ABILITIES: Record<string, Ability> = {
         const p = ctx.player(self.owner);
         const hunt = p.bids.some((b) => b.visible && ctx.defId(b.card) === 'mhorgrims-hunt');
         const amount = hunt ? 6 : 4;
-        discardCompanion(ctx, p, self.card, 'Fire in the Hole');
+        discardHero(ctx, p, self.card, 'Fire in the Hole');
         for (const o of others(ctx, self)) addEffect(ctx, { kind: 'statBonus', source: self.card, owner: p.id, target: o.id, stat: 'all', amount: -amount });
         ctx.log(p.id, nameOf(ctx, self.card), `Fire in the Hole! Every opponent has -${amount}`);
       },
     }],
   },
   'moss-dire-wolf': { status: 'full', pair: 'varg-ironjaw' },
-  'hesk-of-two-homes': { status: 'full', reuseCompanionAbility: true },
+  'hesk-of-two-homes': { status: 'full', reuseHeroAbility: true },
   'tova-emberdeep-keeper-of-the-underway-door': {
     status: 'full', restReturnDraw: true,
     activations: [{
       id: 'rest', label: 'Rest this turn (no stats); draw two extra cards on your next turn', windows: ['beforeBidding'], per: 'turn',
       use: (ctx, self) => {
         const p = ctx.player(self.owner);
-        p.companions = p.companions.filter((c) => c !== self.card);
+        p.party = p.party.filter((c) => c !== self.card);
         p.resting.push(self.card);
-        ctx.emit({ type: 'companionFaceDown', player: p.id, card: ctx.ref(self.card), faceDown: true });
+        ctx.emit({ type: 'heroFaceDown', player: p.id, card: ctx.ref(self.card), faceDown: true });
       },
     }],
   },
@@ -608,7 +547,7 @@ export const ABILITIES: Record<string, Ability> = {
     on: {
       turnStart: (ctx, self, e) => {
         if (e.player !== self.owner) return;
-        const orcs = ctx.player(self.owner).companions.filter((c) => c !== self.card && kingdomsOf(ctx.def(c)).includes('Orc')).length;
+        const orcs = ctx.player(self.owner).party.filter((c) => c !== self.card && kingdomsOf(ctx.def(c)).includes('Orc')).length;
         if (orcs > 0) drawFor(ctx, self, orcs);
       },
     },
@@ -619,7 +558,7 @@ export const ABILITIES: Record<string, Ability> = {
     on: {
       turnStart: (ctx, self, e) => {
         if (e.player !== self.owner) return;
-        const geese = companionsInPlay(ctx).filter((c) => hasGroup(ctx.def(c.card), 'Goose')).length;
+        const geese = heroesInPlay(ctx).filter((c) => hasGroup(ctx.def(c.card), 'Goose')).length;
         if (geese > 0) drawFor(ctx, self, geese);
       },
     },
@@ -648,18 +587,9 @@ export const ABILITIES: Record<string, Ability> = {
   'sister-aurelie-dane-physician': { status: 'full', selfStatSub: 'M' },
   'gnash-the-butcher-of-bloodmire': { status: 'full', selfStatSub: 'P' },
   'sigrun-stonefast-metal-singer': { status: 'full', drawFromDiscardChoice: true, partnerBonus: { with: 'varg-ironjaw', amount: 2 } },
-  'liriel-nightbloom': forceCompanion('G'),
-  'thessaly-of-the-grove': forceCompanion('M'),
-  'kesh-the-bog-huntress': { ...forceCompanion('P'), on: { encounterEntered: encounterEntered('Beast') } },
-  'mags-tolliver-market-trader': {
-    status: 'full',
-    activations: [{
-      id: 'queen', label: "Double your hero's stats this encounter (Mags is then discarded)", windows: ['endOfBidding'], per: 'turn',
-      use: (ctx, self) => addEffect(ctx, { kind: 'heroMultiplier', source: self.card, owner: self.owner, target: self.owner, amount: 2 }),
-    }],
-  },
-  'hobart-thimblewick-moot-surgeon': forceHero('G'),
-  'caelan-the-exile': forceHero('M'),
+  'liriel-nightbloom': forceHero('G'),
+  'thessaly-of-the-grove': forceHero('M'),
+  'kesh-the-bog-huntress': { ...forceHero('P'), on: { encounterEntered: encounterEntered('Beast') } },
   'elowen-leafwatch-treetop-warden': {
     status: 'full',
     activations: [{
@@ -673,21 +603,18 @@ export const ABILITIES: Record<string, Ability> = {
       }),
     }],
   },
-  'sir-osric-vane-marshal-of-the-old-guard': { status: 'full', heroStatSub: 'G' },
-  'rosalind-marchwell-marchguard-clerk': { status: 'full', heroStatSub: 'M' },
-  'brisa-blastcap-bombardier': forceHero('P'),
   'dagny-coldhearth-the-grudge-bearer': {
     status: 'full',
     activations: [{
-      id: 'stonetouched', label: 'Win this location outright; discard your hand and your hero falls (once per game)', windows: ['endOfBidding'], per: 'game',
+      id: 'stonetouched', label: 'Win this location outright; discard your hand and one of your heroes falls (once per game)', windows: ['endOfBidding'], per: 'game',
       canUse: (ctx) => Boolean(ctx.s.turn.location),
       use: (ctx, self) => addEffect(ctx, { kind: 'autoWin', source: self.card, owner: self.owner, target: self.owner }),
     }],
   },
-  // Seraphine: when one of your companions is replaced or discarded, draw a resource.
+  // Seraphine: when one of your heroes is replaced or discarded, draw a resource.
   'seraphine-moonveil-warden-scholar': {
     status: 'full',
-    on: { companionLeft: (ctx, self, e) => { if (e.player === self.owner && e.card !== self.card) drawFor(ctx, self); } },
+    on: { heroLeft: (ctx, self, e) => { if (e.player === self.owner && e.card !== self.card) drawFor(ctx, self); } },
   },
   'honk-the-goose-rout-veteran': honk,
   'duchess-the-pub-goose': duchess,
@@ -696,15 +623,15 @@ export const ABILITIES: Record<string, Ability> = {
   'elder-ilvena-of-the-conclave': {
     status: 'full',
     activations: [{
-      id: 'ruling', label: 'Force an opposing companion to use its weakest stat', windows: ['beforeBidding'], per: 'turn',
-      canUse: (ctx, self) => opposingCompanions(ctx, self).length > 0,
+      id: 'ruling', label: 'Force an opposing hero to use its weakest stat', windows: ['beforeBidding'], per: 'turn',
+      canUse: (ctx, self) => opposingHeroes(ctx, self).length > 0,
       use: (ctx, self) => {
         const p = ctx.player(self.owner);
         ctx.queueFirst({
-          t: 'choose', purpose: 'rulingCompanion', player: p.id, source: nameOf(ctx, self.card),
-          prompt: "Ruling of the Conclave: choose another player's companion to use its weakest stat",
+          t: 'choose', purpose: 'rulingHero', player: p.id, source: nameOf(ctx, self.card),
+          prompt: "Ruling of the Conclave: choose another player's hero to use its weakest stat",
           options: (() => {
-            const list = opposingCompanions(ctx, self);
+            const list = opposingHeroes(ctx, self);
             return highlightWorst(list.map(({ c, p: o }) => cardOption(ctx, c, `${shortName(ctx, c)} (${o.name})`)), list.map(({ c, p: o }) => forceLoss(ctx, c, o, 'weakest')));
           })(),
           min: 1, max: 1, data: { source: self.card },
@@ -717,18 +644,18 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full',
     on: { locationWon: (ctx, self, e) => { if (e.player === self.owner) drawFor(ctx, self); } },
   },
-  // Tobin: once per turn before bidding, reveal three companions; a Goose among them may join you, the rest are discarded.
+  // Tobin: once per turn before bidding, reveal three heroes; a Goose among them may join you, the rest are discarded.
   'tobin-quill-goose-keeper': {
     status: 'full',
     activations: [{
-      id: 'flock', label: 'Reveal the top 3 companions; you may put a Goose among them into play, the rest are discarded', windows: ['beforeBidding'], per: 'turn',
-      canUse: (ctx) => ctx.s.decks.companion.length + ctx.s.discards.companion.length > 0,
+      id: 'flock', label: 'Reveal the top 3 heroes; you may put a Goose among them into play, the rest are discarded', windows: ['beforeBidding'], per: 'turn',
+      canUse: (ctx) => ctx.s.decks.hero.length + ctx.s.discards.hero.length > 0,
       use: (ctx, self) => {
         const t = ctx.s.turn;
-        const revealed = revealTop(ctx, self.owner, 'companion', 3, nameOf(ctx, self.card));
+        const revealed = revealTop(ctx, self.owner, 'hero', 3, nameOf(ctx, self.card));
         const geese = revealed.filter((c) => hasGroup(ctx.def(c), 'Goose'));
         if (!geese.length) {
-          for (const c of revealed) ctx.discard('companion', c);
+          for (const c of revealed) ctx.discard('hero', c);
           ctx.log(self.owner, nameOf(ctx, self.card), 'No Goose among them; all discarded');
           return;
         }
@@ -742,18 +669,16 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'grumma-ladlejaw-camp-cook': forceHero('P', 'own'),
-
   // Locations
   'the-goose-and-kettle': {
     status: 'full',
     onEnter: (ctx, self) => {
-      if (ctx.s.decks.companion.length + ctx.s.discards.companion.length === 0) return;
+      if (ctx.s.decks.hero.length + ctx.s.discards.hero.length === 0) return;
       for (const p of ctx.clockwise()) {
         ctx.queue({
           t: 'choose', purpose: 'waystoneDraw', player: p.id, source: nameOf(ctx, self.card),
-          prompt: 'The Goose & Kettle: draw a companion into play (then discard one of your companions)?',
-          options: [{ value: 'draw', label: 'Draw a companion' }, { value: 'skip', label: 'No thanks' }], min: 1, max: 1,
+          prompt: 'The Goose & Kettle: draw a hero into play (then discard one of your heroes)?',
+          options: [{ value: 'draw', label: 'Draw a hero' }, { value: 'skip', label: 'No thanks' }], min: 1, max: 1,
         });
       }
     },
@@ -769,8 +694,8 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full',
     onEnter: (ctx, self) => {
       for (const p of ctx.clockwise()) {
-        if (p.companions.length === 0) continue;
-        ctx.queue({ t: 'choose', purpose: 'faceDownCompanion', player: p.id, prompt: 'The Storybook Glade: choose a companion to turn face down', options: p.companions.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        if (p.party.length === 0) continue;
+        ctx.queue({ t: 'choose', purpose: 'faceDownHero', player: p.id, prompt: 'The Storybook Glade: choose a hero to turn face down', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
       }
     },
   },
@@ -784,16 +709,15 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full',
     onEnter: (ctx, self) => {
       for (const p of ctx.clockwise()) {
-        if (p.companions.length === 0) continue;
-        ctx.queue({ t: 'choose', purpose: 'discardCompanion', player: p.id, prompt: 'The Crack in the Marchstone: discard a companion', options: p.companions.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        if (p.party.length === 0) continue;
+        ctx.queue({ t: 'choose', purpose: 'discardHero', player: p.id, prompt: 'The Crack in the Marchstone: discard a hero', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
       }
       ctx.queue({ t: 'replaceLocation', mode: 'shuffleBack', source: nameOf(ctx, self.card) });
     },
   },
-  'the-wardens-hall': drawPerOwn((ctx, p) =>
-    (hasGroup(ctx.def(p.hero), 'Warden') ? 1 : 0) + p.companions.filter((c) => hasGroup(ctx.def(c), 'Warden')).length),
-  'the-mage-college-vaults': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Collegium')).length),
-  'marchguard-keep': drawPerOwn((ctx, p) => p.companions.filter((c) => hasGroup(ctx.def(c), 'Marchguard')).length),
+  'the-wardens-hall': drawPerOwn((ctx, p) => p.party.filter((c) => hasGroup(ctx.def(c), 'Warden')).length),
+  'the-mage-college-vaults': drawPerOwn((ctx, p) => p.party.filter((c) => hasGroup(ctx.def(c), 'Collegium')).length),
+  'marchguard-keep': drawPerOwn((ctx, p) => p.party.filter((c) => hasGroup(ctx.def(c), 'Marchguard')).length),
   'the-hollow-hills': { status: 'full', hidesFaceDown: true }, // Fog of the Fey
   'parting-strand': {
     status: 'full',
@@ -801,8 +725,8 @@ export const ABILITIES: Record<string, Ability> = {
       locationWon: (ctx, self, e) => {
         if (ctx.s.turn.location !== self.card) return;
         const p = ctx.player(e.player);
-        if (p.companions.length === 0) return;
-        ctx.queue({ t: 'choose', purpose: 'discardCompanion', player: p.id, prompt: 'Parting Strand: discard a companion', options: p.companions.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        if (p.party.length === 0) return;
+        ctx.queue({ t: 'choose', purpose: 'discardHero', player: p.id, prompt: 'Parting Strand: discard a hero', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
       },
     },
   },
@@ -830,16 +754,16 @@ export const ABILITIES: Record<string, Ability> = {
     },
   },
   'destiny-the-frog': { status: 'full', fetchesGroup: 'Skarra' },
-  'runeforged-titan': { status: 'full', difficultyByStat: { M: 10, G: 10 } },
+  'runeforged-titan': { status: 'full', difficultyByStat: { M: 7, G: 7 } },
   'iron-mites': {
     status: 'full',
-    note: 'The player whose resource card is lowest gives up one of their own companions as a minion.',
+    note: 'The player whose resource card is lowest gives up one of their own heroes as a minion.',
     on: {
       encounterEntered: (ctx, self, e) => {
         if (e.card !== self.card) return;
-        // Every player with a companion turns up the top resource card; the lowest value gives up a companion
+        // Every player with a hero turns up the top resource card; the lowest value gives up a hero
         // (ties draw again). The cards turned up are discarded.
-        let rollers = ctx.clockwise().filter((p) => p.companions.length > 0);
+        let rollers = ctx.clockwise().filter((p) => p.party.length > 0);
         let guard = 0;
         while (rollers.length > 1 && guard++ < 20) {
           const draws = rollers.map((p) => {
@@ -854,9 +778,9 @@ export const ABILITIES: Record<string, Ability> = {
         const loser = rollers[0];
         if (!loser) return;
         ctx.queue({
-          t: 'choose', purpose: 'companionMinion', player: loser.id, source: 'Infectious Zombie',
-          prompt: 'Infectious Zombie: choose one of your companions to join the encounter as a minion',
-          options: loser.companions.map((c) => cardOption(ctx, c)), min: 1, max: 1,
+          t: 'choose', purpose: 'heroMinion', player: loser.id, source: 'Infectious Zombie',
+          prompt: 'Infectious Zombie: choose one of your heroes to join the encounter as a minion',
+          options: loser.party.map((c) => cardOption(ctx, c)), min: 1, max: 1,
         });
       },
     },
@@ -887,7 +811,7 @@ export const ABILITIES: Record<string, Ability> = {
       ctx.queue({ t: 'choose', purpose: 'discardForCouncil', player: p.id, prompt: 'Crossed Paths: discard a resource to call a hero (or skip)', options: p.hand.map((c) => cardOption(ctx, c)), min: 0, max: 1, source: nameOf(ctx, self.card) });
     },
   },
-  'the-hall-of-rest': { status: 'full' }, // flow.ts: resolve marks, heroFalls lets you choose
+  'the-hall-of-rest': { status: 'full' }, // flow.ts: resolve marks, the fallHero choice lets you pick a replacement
   'the-gathering-of-heroes': {
     status: 'full',
     onReveal: (ctx, self) => {
@@ -919,13 +843,13 @@ export const ABILITIES: Record<string, Ability> = {
   // The Golden Egg: +1, and +2 for every Goose in play anywhere this encounter.
   'the-golden-egg': {
     status: 'full',
-    resourceValue: (ctx, _owner, base) => base + 2 * (companionsInPlay(ctx).map((c) => c.card).concat(ctx.s.turn.encounter ? [ctx.s.turn.encounter] : [], ctx.s.turn.minions)).filter((c) => hasGroup(ctx.def(c), 'Goose')).length,
+    resourceValue: (ctx, _owner, base) => base + 2 * (heroesInPlay(ctx).map((c) => c.card).concat(ctx.s.turn.encounter ? [ctx.s.turn.encounter] : [], ctx.s.turn.minions)).filter((c) => hasGroup(ctx.def(c), 'Goose')).length,
   },
   'the-rosepearl': {
     status: 'full',
-    resourceValue: (ctx) => Math.max(0, ...companionsInPlay(ctx).map((c) => {
+    resourceValue: (ctx) => Math.max(0, ...heroesInPlay(ctx).map((c) => {
       const d = ctx.def(c.card);
-      return d.kind === 'companion' ? d.stats.M : 0;
+      return d.kind === 'hero' ? d.stats.M : 0;
     })),
   },
   'hourglass-of-undoing': {
@@ -940,7 +864,7 @@ export const ABILITIES: Record<string, Ability> = {
   // The Book of Grudges: +1 for Oskar's player; the grudge itself is applied when the encounter is resolved (flow.ts).
   'the-book-of-grudges': {
     status: 'full',
-    resourceValue: (ctx, owner, base) => base + (owner.hero && ctx.defId(owner.hero) === 'loremaster-oskar-grimgate' ? 1 : 0),
+    resourceValue: (ctx, owner, base) => base + (owner.party.some((c) => ctx.defId(c) === 'loremaster-oskar-grimgate') ? 1 : 0),
   },
   'skarras-hexwand': { status: 'full' },
   'rotten-apple': curse(), 'misdirecting-missive': curse(), 'grudge-marker': curse(),
@@ -961,34 +885,6 @@ for (const n of ['i', 'ii', 'iii', 'iv', 'v', 'vi']) {
       drawFor(ctx, self, count);
     },
   };
-}
-
-// --- Kin bonuses (see docs/KINGDOM-REDESIGN.md) --------------------------------------
-//   A: +1 to all your hero's stats for each companion of its kingdom you control (totals.ts)
-//   B: when a card of its kingdom (a companion, or a resource revealed or played face up) enters play under your control, draw a resource
-//   C: while an opponent controls a companion of its kingdom, that companion gets -1 to all stats (totals.ts)
-export const KIN: Record<string, 'A' | 'B' | 'C'> = {
-  'queen-maren-ashcroft': 'B', 'lord-paladin-aldric-ashcroft': 'A', 'archmage-corvin-varro': 'B',
-  'aelthir-moonveil': 'B', 'ysolde-of-the-wellspring': 'A', 'lord-vaelis-nightbloom': 'C',
-  'high-thane-brunna-stonefast': 'A', 'kazra-emberdeep': 'B', 'thorgar-twice-buried': 'C', 'loremaster-oskar-grimgate': 'C',
-  'warchief-grukka-ironjaw': 'A', 'urzha-half-tusk': 'C',
-  'professor-barnaby-pickwort': 'B', 'mayor-hobby-trickgrin': 'C', 'pip-wanderfoot': 'A',
-};
-for (const [id, kin] of Object.entries(KIN)) {
-  const a = ABILITIES[id];
-  if (!a) throw new Error(`abilities.ts: no ability for kin hero ${id}`);
-  a.kin = kin;
-  if (kin === 'B') {
-    const prev = a.on?.companionEntered;
-    const kinCard = (ctx: Ctx, self: Source, e: { card: CardId; player: PlayerId }) => {
-      if (self.owner && e.player === self.owner && sharesKingdom(ctx.def(self.card), ctx.def(e.card))) drawFor(ctx, self);
-    };
-    a.on = {
-      ...a.on,
-      companionEntered: (ctx, self, e) => { prev?.(ctx, self, e); kinCard(ctx, self, e); },
-      resourceEntered: kinCard,
-    };
-  }
 }
 
 function addExtraLocation(ctx: Ctx): void {
@@ -1018,7 +914,7 @@ export function cardStatus(defId: string): CardStatus {
   const a = abilityOf(defId);
   if (a) return a.status;
   const d = getDef(defId);
-  const hasText = d.kind === 'hero' || d.kind === 'companion' ? Boolean(d.abilityText)
+  const hasText = d.kind === 'hero' ? Boolean(d.abilityText)
     : d.kind === 'location' || d.kind === 'encounter' || d.kind === 'resource' ? Boolean(d.conditionText)
     : false;
   if (d.kind === 'encounter' && d.minions.count > 0 && /minion/.test(d.conditionText ?? '')) return 'full';
@@ -1027,7 +923,7 @@ export function cardStatus(defId: string): CardStatus {
 
 export function statusReport(): Record<CardStatus, string[]> {
   const out: Record<CardStatus, string[]> = { full: [], partial: [], todo: [], vanilla: [] };
-  for (const list of [CARDS.heroes, CARDS.companions, CARDS.locations, CARDS.encounters, CARDS.resources]) {
+  for (const list of [CARDS.heroes, CARDS.locations, CARDS.encounters, CARDS.resources]) {
     for (const c of list) out[cardStatus(c.id)].push(c.id);
   }
   return out;

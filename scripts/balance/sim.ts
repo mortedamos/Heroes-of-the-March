@@ -120,19 +120,15 @@ export interface GameSpec {
   seed: number;
   level?: BotLevel;
   rules?: Record<string, unknown>;
-  /** Dealt heroes by seat index (def ids). Needs heroDraft 1. */
-  heroes?: Record<number, string>;
-  /** Companion to force into this seat's opening pair (others never take it in the opening draft). */
+  /** Hero to force into this seat's opening party (others never take it in the opening draft). */
   force?: { seat: number; def: string };
-  /** Everyone drafts opening companions at random (neutral) instead of by bot preference. */
+  /** Everyone drafts their opening party at random (neutral) instead of by bot preference. */
   randomDraft?: boolean;
-  /** This seat is a "mono-kingdom" player: its bot is strongly pulled toward companions of its hero's kingdom. */
-  monoSeat?: number;
 }
 
 export interface PlayerRecord {
   seat: number; pos: number; won: boolean; renown: number;
-  startHero: string; finalHero: string; falls: number;
+  startParty: string[]; finalParty: string[]; falls: number;
   /** Turn number of this player's first fall, or null if they never fell. */
   firstFall: number | null;
 }
@@ -148,32 +144,28 @@ export interface GameRecord {
 
 /** Effect kinds that hurt another player (old and new engine names). */
 const HOSTILE_EFFECTS = new Set([
-  'silenceCompanion', 'forceCompanionStat', 'forceHeroStat', 'negateBid', 'disableAbilities',
-  'silenceHero', 'forceStat',
+  'silenceHero', 'forceStat', 'negateBid', 'disableAbilities',
 ]);
 const HOSTILE_EVENTS = new Set(['bidClaimed', 'cursePlaced', 'bidsSwapped', 'cardsTraded', 'abilityCountered']);
 
 const heroIds = () => allDefs().filter((d) => d.kind === 'hero').map((d) => d.id);
-const companionIds = () => allDefs().filter((d) => d.kind === 'companion').map((d) => d.id);
-export { heroIds, companionIds };
+export { heroIds };
 
 export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   installCounters();
   live.calls.clear();
   const n = spec.n;
   const seats = Array.from({ length: n }, (_, i) => ({ id: `p${i}`, name: `P${i + 1}` }));
-  const heroes: Record<string, string> = {};
-  for (const [s, h] of Object.entries(spec.heroes ?? {})) heroes[`p${s}`] = h;
   const { state: s0, events } = createGame({
     players: seats, seed: [spec.seed, spec.seed * 7 + 1, spec.seed * 13 + 2, spec.seed * 31 + 3],
-    rules: spec.rules as never, ...(spec.heroes ? { heroes } : {}),
+    rules: spec.rules as never,
   });
   let state: GameState = s0;
   const all: GameEvent[] = [...events];
   const rand = mulberry(mix(spec.seed, 0xb07));
   const pickRand = mulberry(mix(spec.seed, 0xd4af7));
   const start = state.turn.active;
-  const startHero = state.players.map((p) => state.cards[p.hero] ?? '');
+  let startParty: string[][] = [];
   const level = spec.level ?? 'normal';
 
   // per-player-game tallies
@@ -190,7 +182,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   const snapshot = () => {
     for (const p of state.players) {
       const m = held[p.id]!;
-      for (const c of [p.hero, ...p.companions]) {
+      for (const c of p.party) {
         const def = state.cards[c]; if (!def) continue;
         m.set(def, (m.get(def) ?? 0) + 1);
       }
@@ -198,7 +190,10 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   };
   const scan = (evs: GameEvent[]) => {
     for (const e of evs) {
-      if (e.type === 'turnStarted') { snapshot(); if (sabThisTurn) sabTurns++; sabThisTurn = false; turnNo = e.turn; }
+      if (e.type === 'turnStarted') {
+        if (!startParty.length) startParty = state.players.map((p) => p.party.map((c) => state.cards[c]!));
+        snapshot(); if (sabThisTurn) sabTurns++; sabThisTurn = false; turnNo = e.turn;
+      }
       else if (e.type === 'locationRevealed') bump(seen.loc, e.card.def);
       else if (e.type === 'locationReplaced') bump(seen.loc, e.to.def);
       else if (e.type === 'encounterRevealed') bump(seen.enc, e.card.def);
@@ -221,11 +216,11 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
     if (++steps > 40_000) throw new Error('game did not finish');
     const d = state.pending;
     if (!d) throw new Error(`no pending decision at ${state.turn.step}`);
-    // Controlled drafts: patch the offered pool so the measured companion is on the table.
-    if (d.kind === 'choose' && d.purpose === 'companionDraft' && spec.force) {
+    // Controlled drafts: patch the offered pool so the measured hero is on the table.
+    if (d.kind === 'choose' && d.purpose === 'partyDraft' && spec.force) {
       const seatId = `p${spec.force.seat}`;
       const have = d.options.some((o) => o.value === spec.force!.def);
-      if (d.player === seatId && !have && state.decks.companion.some((c) => state.cards[c] === spec.force!.def)) {
+      if (d.player === seatId && !have && state.decks.hero.some((c) => state.cards[c] === spec.force!.def)) {
         const last = d.options[d.options.length - 1]!;
         d.options[d.options.length - 1] = { ...last, value: spec.force.def, label: spec.force.def, card: { def: spec.force.def } };
       }
@@ -234,7 +229,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       for (const a of d.abilities) bump(offered, `${d.player}|${state.cards[a.source]}`);
     }
     let cmd: Command | null;
-    if (d.kind === 'choose' && d.purpose === 'companionDraft' && (spec.randomDraft || spec.force)) {
+    if (d.kind === 'choose' && d.purpose === 'partyDraft' && (spec.randomDraft || spec.force)) {
       let pool = d.options.map((o) => o.value);
       const forced = spec.force && d.player === `p${spec.force.seat}` && pool.includes(spec.force.def) ? spec.force.def : null;
       if (spec.force) pool = pool.filter((v) => v !== spec.force!.def);
@@ -242,7 +237,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       const picks = forced ? [forced, ...pool.slice(0, d.max - 1)] : pool.slice(0, d.max);
       cmd = { type: 'choose', decision: d.id, picks };
     } else {
-      cmd = botDecide(viewFor(state, d.player), level, rand, spec.monoSeat !== undefined && d.player === `p${spec.monoSeat}` ? 6 : 0);
+      cmd = botDecide(viewFor(state, d.player), level, rand);
     }
     if (!cmd) throw new Error(`bot had no answer for ${d.kind}`);
     if (cmd.type === 'ability.use') bump(used, `${d.player}|${state.cards[cmd.source]}`);
@@ -260,7 +255,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   const players: PlayerRecord[] = [];
   state.players.forEach((p, i) => {
     const won = p.id === winnerId;
-    const finalRoster = new Set([p.hero, ...p.companions, ...p.inactiveCompanions, ...p.resting].map((c) => state.cards[c]!));
+    const finalRoster = new Set([...p.party, ...p.inactive, ...p.resting].map((c) => state.cards[c]!));
     for (const [def, turns] of held[p.id]!) {
       const a = aggOf(cards, def);
       const hook = live.calls.get(`${p.id}|${def}`) ?? { calls: 0, produced: 0 };
@@ -272,7 +267,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       if (turns >= 3) { a.eligible++; if (eff === 0) a.zero++; }
       if (won) { a.winEff += eff; a.winTurns += turns; } else { a.loseEff += eff; a.loseTurns += turns; }
     }
-    players.push({ seat: i, pos: (i - start + n) % n, won, renown: p.renown, startHero: startHero[i]!, finalHero: state.cards[p.hero] ?? '', falls: falls.get(p.id) ?? 0, firstFall: firstFall.get(p.id) ?? null });
+    players.push({ seat: i, pos: (i - start + n) % n, won, renown: p.renown, startParty: startParty[i] ?? [], finalParty: [...p.party, ...p.inactive, ...p.resting].map((c) => state.cards[c]!), falls: falls.get(p.id) ?? 0, firstFall: firstFall.get(p.id) ?? null });
   });
   if (sabThisTurn) sabTurns++;
   const winnerIdx = winnerId ? state.players.findIndex((p) => p.id === winnerId) : -1;

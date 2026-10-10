@@ -93,7 +93,7 @@ describe('GameHost', () => {
     for (let i = 0; i < 50 && !host.unsafeStateForTests().hold; i++) {
       const s = host.unsafeStateForTests();
       const d = s.pending!;
-      const cmd = d.kind === 'companion.offer' ? { type: 'companion.skip', decision: d.id }
+      const cmd = d.kind === 'recruit.offer' ? { type: 'recruit.skip', decision: d.id }
         : d.kind === 'choose' ? { type: 'choose', decision: d.id, picks: d.options.slice(0, d.min).map((o) => o.value) }
         : d.kind === 'activate' ? { type: 'ability.done', decision: d.id }
         : { type: 'bid.pass', decision: d.id };

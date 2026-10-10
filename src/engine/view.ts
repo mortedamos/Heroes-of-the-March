@@ -3,7 +3,7 @@
 // SECURITY: views are built by ALLOWLIST. Each field below is copied on
 // purpose; a new field in GameState is never exposed unless it's added here.
 // Hidden cards (other hands, face-down bids, deck contents, the drawn-but-
-// undecided companion, face-down bonus locations) are represented by counts
+// undecided hero, face-down bonus locations) are represented by counts
 // or placeholders WITHOUT ids, so ids can't be used to track them.
 // Peeked cards (Grukka, Barnaby, Wren, The Hall of Rest) are shown only to
 // the chooser, by definition, never by instance id. A choice's `data` holds
@@ -13,7 +13,7 @@
 import { cardStatus } from './abilities';
 import type { Stat } from './cardTypes';
 import { Ctx } from './context';
-import { isIgnored, maxCompanions, PLAYER_TARGET_KINDS } from './effects';
+import { isIgnored, partySize, PLAYER_TARGET_KINDS } from './effects';
 import { challengeStat, currentChallenge, difficultyFor, resourceValue, totalFor, visibleTo, type DifficultyBreakdown } from './totals';
 import {
   DECKS, type AbilityWindow, type CardId, type CardRef, type ChoiceOption, type ChoosePurpose, type DeckName, type EffectKind,
@@ -26,17 +26,16 @@ export interface PlayerPublicView {
   id: PlayerId;
   name: string;
   seat: number;
-  /** Null only during the opening hero draft. */
-  hero: CardRef | null;
-  companions: CardRef[];
-  inactiveCompanions: CardRef[];
+  /** The adventuring party (empty during the opening party draft). */
+  party: CardRef[];
+  inactive: CardRef[];
   resting: CardRef[];
-  maxCompanions: number;
+  partySize: number;
   handCount: number;
   claimed: CardRef[];
   renown: number;
   bids: BidView[];
-  councilHeroes: CardRef[];
+  borrowed: CardRef[];
   statOverride: Stat | null;
   /** Penalty to this player's total in the current encounter, and the one that starts with the next. */
   penalty: number;
@@ -44,7 +43,7 @@ export interface PlayerPublicView {
   /** Total computed only from what the viewer can see. */
   projection: {
     stat: Stat; total: number; difficulty: number; hiddenBids: number;
-    /** What each hero, companion and council hero adds in that stat right now. */
+    /** What each hero in the party and each borrowed hero adds in that stat right now. */
     contributions: { card: CardId; value: number }[];
   } | null;
 }
@@ -70,11 +69,11 @@ export interface AbilityOptionView { source: CardRef; ability: string; label: st
 export interface PendingView {
   id: number;
   player: PlayerId;
-  kind: 'companion.offer' | 'companion.place' | 'bid' | 'activate' | 'choose';
+  kind: 'recruit.offer' | 'recruit.place' | 'bid' | 'activate' | 'choose';
   /** Present only for the deciding player. */
   detail?:
-    | { kind: 'companion.offer' }
-    | { kind: 'companion.place'; drawn: CardRef; mustReplace: boolean }
+    | { kind: 'recruit.offer' }
+    | { kind: 'recruit.place'; drawn: CardRef; mustReplace: boolean }
     | { kind: 'bid'; faceUp: boolean; canFaceDown: boolean; abilities: AbilityOptionView[] }
     | { kind: 'activate'; window: AbilityWindow; abilities: AbilityOptionView[] }
     | { kind: 'choose'; purpose: ChoosePurpose; source: string; prompt: string; options: ChoiceOption[]; min: number; max: number };
@@ -83,8 +82,8 @@ export interface PendingView {
 /** House rules every player may know. */
 export interface PublicRules {
   renownToWin: number;
-  fallCost: boolean;
-  heroDraft: number;
+  partySize: number;
+  draftPool: number;
   handModel: 'refill' | 'steady';
   activeDraw: number;
   othersDraw: number;
@@ -105,7 +104,7 @@ export interface GameView {
     extraLocations: number;
     encounter: CardRef | null;
     minions: CardRef[];
-    companionMinions: CardRef[];
+    heroMinions: CardRef[];
     setAside: CardRef[];
     challenge: { stat: Stat; difficulty: DifficultyBreakdown } | null;
     bidder: PlayerId | null;
@@ -125,7 +124,7 @@ export interface GameView {
 
 function ownerOfCard(state: GameState, card: CardId): PlayerId | null {
   for (const p of state.players) {
-    if (p.hero === card || p.companions.includes(card) || p.inactiveCompanions.includes(card) || p.resting.includes(card) || p.bids.some((b) => b.card === card)) return p.id;
+    if (p.party.includes(card) || p.inactive.includes(card) || p.resting.includes(card) || p.bids.some((b) => b.card === card)) return p.id;
   }
   return null;
 }
@@ -144,22 +143,21 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       id: p.id,
       name: p.name,
       seat,
-      hero: p.hero ? ref(p.hero) : null,
-      companions: p.companions.map(ref),
-      inactiveCompanions: p.inactiveCompanions.map(ref),
+      party: p.party.map(ref),
+      inactive: p.inactive.map(ref),
       resting: p.resting.map(ref),
-      maxCompanions: maxCompanions(ctx, p),
+      partySize: partySize(ctx, p),
       handCount: p.hand.length,
       claimed: p.claimed.map(ref),
       renown: p.renown,
       bids: p.bids.map((b): BidView => (vis(p, b) ? { hidden: false, card: ref(b.card), faceUp: b.visible } : { hidden: true })),
-      councilHeroes: p.councilHeroes.map(ref),
+      borrowed: p.borrowed.map(ref),
       statOverride: p.statOverride,
       penalty: p.penalty,
       penaltyNext: p.penaltyNext,
       projection: tb && diff ? {
         stat: tb.stat, total: tb.total, difficulty: diff.total, hiddenBids: tb.hiddenBids,
-        contributions: [{ card: p.hero, value: tb.hero }, ...tb.companions, ...tb.council].map((c) => ({ card: 'card' in c ? c.card : c.source, value: c.value })),
+        contributions: [...tb.party, ...tb.council].map((c) => ({ card: c.source, value: c.value })),
       } : null,
     };
   });
@@ -187,8 +185,8 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
     pending = { id: d.id, player: d.player, kind: d.kind };
     if (d.player === viewer) {
       switch (d.kind) {
-        case 'companion.offer': pending.detail = { kind: d.kind }; break;
-        case 'companion.place': pending.detail = { kind: d.kind, drawn: ref(d.drawn), mustReplace: d.mustReplace }; break;
+        case 'recruit.offer': pending.detail = { kind: d.kind }; break;
+        case 'recruit.place': pending.detail = { kind: d.kind, drawn: ref(d.drawn), mustReplace: d.mustReplace }; break;
         case 'bid': pending.detail = { kind: d.kind, faceUp: d.faceUp, canFaceDown: d.canFaceDown, abilities: abilityViews(d.abilities) }; break;
         case 'activate': pending.detail = { kind: d.kind, window: d.window, abilities: abilityViews(d.abilities) }; break;
         case 'choose':
@@ -217,7 +215,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
     you: me ? me.id : null,
     version: state.version,
     rules: {
-      renownToWin: state.rules.renownToWin, fallCost: state.rules.fallCost, heroDraft: state.rules.heroDraft,
+      renownToWin: state.rules.renownToWin, partySize: state.rules.partySize, draftPool: state.rules.draftPool,
       handModel: state.rules.handModel, activeDraw: state.rules.activeDraw,
       othersDraw: state.rules.othersDraw, handLimit: state.rules.handLimit,
       drawSize: state.rules.drawSize === 'playerCount' ? state.players.length : state.rules.drawSize,
@@ -231,7 +229,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       extraLocations: t.extraLocations.length,
       encounter: t.encounter ? ref(t.encounter) : null,
       minions: t.minions.map(ref),
-      companionMinions: t.companionMinions.map(ref),
+      heroMinions: t.heroMinions.map(ref),
       setAside: t.setAside.map(ref),
       challenge: ch ? { stat: challengeStat(ctx, null) ?? ch.stat, difficulty: difficultyFor(ctx, null)! } : null,
       bidder: t.step === 'bidding' ? state.players[t.bidder]?.id ?? null : null,
@@ -262,9 +260,9 @@ export type ClientEvent =
  * until someone decides whether it is public, so nothing leaks by default.
  */
 const EVENT_POLICY: Record<GameEvent['type'], 'public' | 'redact'> = {
-  gameStarted: 'public', turnStarted: 'public', shuffled: 'public', heroChanged: 'public',
-  companionPlayed: 'public', companionDiscarded: 'public', companionDeclined: 'public',
-  companionSkipped: 'public', companionFaceDown: 'public', companionMinion: 'public', locationRevealed: 'public',
+  gameStarted: 'public', turnStarted: 'public', shuffled: 'public',
+  heroJoined: 'public', heroLeft: 'public', heroDeclined: 'public',
+  recruitSkipped: 'public', heroFaceDown: 'public', heroMinion: 'public', locationRevealed: 'public',
   locationReplaced: 'public', extraLocation: 'public', encounterRevealed: 'public', encounterReplaced: 'public',
   minionDrawn: 'public', challengeSelected: 'public', passed: 'public',
   revealed: 'public', resourceDiscarded: 'public', councilHero: 'public', ability: 'public',

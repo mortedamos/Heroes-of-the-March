@@ -9,7 +9,7 @@
 // Errors returned to clients are short codes and never include internals.
 
 import { Ctx, IllegalMove } from './context';
-import { companionCount, companionEnters, maxCompanions, noteMultiBid } from './effects';
+import { heroEnters, noteMultiBid, partyCount, partySize } from './effects';
 import { advance, applyChoice, resolveBid, useActivation } from './flow';
 import type { CardId, Command, GameEvent, GameState, PlayerId } from './types';
 
@@ -30,10 +30,10 @@ const isPicks: Check = (v) =>
   Array.isArray(v) && v.length <= MAX_PICKS && v.every((x) => typeof x === 'string' && PICK.test(x)) && new Set(v).size === v.length;
 
 const SCHEMAS: Record<Command['type'], Schema> = {
-  'companion.draw': { required: { decision: isDecision } },
-  'companion.skip': { required: { decision: isDecision } },
-  'companion.keep': { required: { decision: isDecision, replace: isCardIdOrNull } },
-  'companion.discard': { required: { decision: isDecision } },
+  'recruit.draw': { required: { decision: isDecision } },
+  'recruit.skip': { required: { decision: isDecision } },
+  'recruit.keep': { required: { decision: isDecision, replace: isCardIdOrNull } },
+  'recruit.discard': { required: { decision: isDecision } },
   'bid.play': { required: { decision: isDecision, card: isCardId }, optional: { faceDown: isBool } },
   'bid.pass': { required: { decision: isDecision } },
   'ability.use': { required: { decision: isDecision, source: isCardId, ability: isAbilityId } },
@@ -125,8 +125,8 @@ export function resume(state: GameState): ApplyResult {
 }
 
 const KIND_FOR: Record<Command['type'], ReadonlyArray<string>> = {
-  'companion.draw': ['companion.offer'], 'companion.skip': ['companion.offer'],
-  'companion.keep': ['companion.place'], 'companion.discard': ['companion.place'],
+  'recruit.draw': ['recruit.offer'], 'recruit.skip': ['recruit.offer'],
+  'recruit.keep': ['recruit.place'], 'recruit.discard': ['recruit.place'],
   'bid.play': ['bid'], 'bid.pass': ['bid'],
   'ability.use': ['bid', 'activate'], 'ability.done': ['activate'],
   'choose': ['choose'],
@@ -140,33 +140,33 @@ function handle(ctx: Ctx, seat: PlayerId, cmd: Command): void {
   s.pending = null;
 
   switch (cmd.type) {
-    case 'companion.draw': {
-      // One companion at random: keep it (replacing one at the limit) or let it go.
-      const card = ctx.take('companion');
+    case 'recruit.draw': {
+      // One hero at random: keep it (replacing one at the party size) or let it go.
+      const card = ctx.take('hero');
       if (!card) { s.turn.cursor += 1; return; }
-      ctx.emit({ type: 'drew', player: p.id, deck: 'companion', cards: [ctx.ref(card)], reason: 'Companion phase' });
-      ctx.decide({ kind: 'companion.place', player: p.id, drawn: card, mustReplace: companionCount(p) >= maxCompanions(ctx, p, card) });
+      ctx.emit({ type: 'drew', player: p.id, deck: 'hero', cards: [ctx.ref(card)], reason: 'Recruit phase' });
+      ctx.decide({ kind: 'recruit.place', player: p.id, drawn: card, mustReplace: partyCount(p) >= partySize(ctx, p, card) });
       return;
     }
-    case 'companion.skip':
-      ctx.emit({ type: 'companionSkipped', player: p.id });
+    case 'recruit.skip':
+      ctx.emit({ type: 'recruitSkipped', player: p.id });
       s.turn.cursor += 1;
       return;
-    case 'companion.keep': {
-      if (d.kind !== 'companion.place') throw new IllegalMove('wrong_command_for_decision');
+    case 'recruit.keep': {
+      if (d.kind !== 'recruit.place') throw new IllegalMove('wrong_command_for_decision');
       const replace = cmd.replace;
-      if (replace !== null && !p.companions.includes(replace) && !p.inactiveCompanions.includes(replace) && !p.resting.includes(replace)) {
-        throw new IllegalMove('not_your_companion');
+      if (replace !== null && !p.party.includes(replace) && !p.inactive.includes(replace) && !p.resting.includes(replace)) {
+        throw new IllegalMove('not_your_hero');
       }
       if (d.mustReplace && replace === null) throw new IllegalMove('must_replace');
-      companionEnters(ctx, p, d.drawn, replace);
+      heroEnters(ctx, p, d.drawn, replace);
       s.turn.cursor += 1;
       return;
     }
-    case 'companion.discard': {
-      if (d.kind !== 'companion.place') throw new IllegalMove('wrong_command_for_decision');
-      ctx.discard('companion', d.drawn);
-      ctx.emit({ type: 'companionDeclined', player: p.id, card: ctx.ref(d.drawn) });
+    case 'recruit.discard': {
+      if (d.kind !== 'recruit.place') throw new IllegalMove('wrong_command_for_decision');
+      ctx.discard('hero', d.drawn);
+      ctx.emit({ type: 'heroDeclined', player: p.id, card: ctx.ref(d.drawn) });
       s.turn.cursor += 1;
       return;
     }

@@ -4,19 +4,20 @@ import { describe, expect, it } from 'vitest';
 import { botDecide } from '../bots/heuristic';
 import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
-import { companionEnters, discardCompanion, drawResources, fire, maxCompanions, replaceLocation } from './effects';
+import { discardHero, drawResources, fire, heroEnters, partyCount, partySize, replaceLocation } from './effects';
 import { difficultyFor, totalFor } from './totals';
-import { abilityOf } from './abilities';
-import { getDef } from './cards';
+import { ABILITIES, abilityOf } from './abilities';
+import { CARDS, getDef, hasDef } from './cards';
+import setAside from '../../data/set-aside.json';
 import { createGame } from './setup';
 import type { HouseRules } from './rules';
 import { checkInvariants, seats, seed } from './testUtils';
 import type { CardId, Command, Decision, DeckName, GameEvent, GameState, PlayerId } from './types';
 import { redactEvents, viewFor } from './view';
 
-// Two plain stand-ins for the retired Iron Beetles (Ironbound, Mental 10, minion 3) and The Grave-Hunger (Undead, Mental 15, minion 2): same numbers, so these tests keep their arithmetic.
-Object.assign(getDef('ironbound-vanguard'), { stat: 'M', difficulty: 10, minionValue: 3 });
-Object.assign(getDef('crawling-remnant'), { stat: 'M', difficulty: 15, minionValue: 2 });
+// Two plain stand-ins for the retired Iron Beetles (Ironbound, minion 3) and The Grave-Hunger (Undead, minion 2): fixed numbers, so these tests keep their arithmetic.
+Object.assign(getDef('ironbound-vanguard'), { stat: 'M', difficulty: 8, minionValue: 3 });
+Object.assign(getDef('crawling-remnant'), { stat: 'M', difficulty: 12, minionValue: 2 });
 
 // --- rigging helpers -------------------------------------------------------------
 
@@ -26,7 +27,7 @@ function idOf(s: GameState, def: string): CardId {
   return e[0];
 }
 
-/** Remove a card from wherever it is (not from a hero slot). */
+/** Remove a card from wherever it is (a hero in another player's party leaves a gap there). */
 function detach(s: GameState, id: CardId): void {
   for (const pile of [...Object.values(s.decks), ...Object.values(s.discards)]) {
     const i = pile.indexOf(id);
@@ -37,29 +38,38 @@ function detach(s: GameState, id: CardId): void {
   s.turn.minions = s.turn.minions.filter((c) => c !== id);
   s.turn.setAside = s.turn.setAside.filter((c) => c !== id);
   for (const p of s.players) {
-    for (const k of ['companions', 'inactiveCompanions', 'resting', 'hand', 'claimed', 'councilHeroes'] as const) {
+    for (const k of ['party', 'inactive', 'resting', 'hand', 'claimed', 'borrowed'] as const) {
       p[k] = p[k].filter((c) => c !== id);
     }
     p.bids = p.bids.filter((b) => b.card !== id);
-    if (p.hero === id) throw new Error('detaching a hero');
   }
 }
 
-function give(s: GameState, pid: PlayerId, opts: { hero?: string; companions?: string[]; hand?: string[] }): void {
+/**
+ * Rig a player's party and hand. The legacy argument names are kept to keep the tests readable: `hero` is the first slot of
+ * the party and `companions` are the other slots (a party of three is hero + two); `party` replaces the whole party.
+ * A hero taken from another player's party is replaced there by one of the cards this player gives up, so parties stay full.
+ */
+function give(s: GameState, pid: PlayerId, opts: { hero?: string; companions?: string[]; party?: string[]; hand?: string[] }): void {
   const p = s.players.find((x) => x.id === pid)!;
-  if (opts.hero) {
-    const id = idOf(s, opts.hero);
-    const holder = s.players.find((x) => x.hero === id);
-    if (holder !== p) {
-      if (holder) holder.hero = p.hero;
-      else { detach(s, id); s.decks.hero.push(p.hero); }
-      p.hero = id;
+  if (opts.hero || opts.companions || opts.party) {
+    const now = p.party.map((c) => s.cards[c]!);
+    const want = opts.party ?? [opts.hero ?? now[0]!, ...(opts.companions ?? now.slice(1).filter((d) => d !== opts.hero))].filter(Boolean);
+    const displaced = p.party.filter((c) => !want.includes(s.cards[c]!));
+    p.party = p.party.filter((c) => want.includes(s.cards[c]!));
+    for (const d of want) {
+      if (p.party.some((c) => s.cards[c] === d)) continue;
+      const id = idOf(s, d);
+      const holder = s.players.find((x) => x !== p && x.party.includes(id));
+      if (holder) {
+        const back = displaced.shift();
+        holder.party = holder.party.map((c) => (c === id ? back ?? '' : c)).filter(Boolean);
+      } else detach(s, id);
+      p.party.push(id);
     }
-  }
-  if (opts.companions) {
-    s.decks.companion.push(...p.companions);
-    p.companions = [];
-    for (const d of opts.companions) { const id = idOf(s, d); detach(s, id); p.companions.push(id); }
+    // Keep the requested order.
+    p.party.sort((x, y) => want.indexOf(s.cards[x]!) - want.indexOf(s.cards[y]!));
+    s.decks.hero.push(...displaced);
   }
   if (opts.hand) {
     s.decks.resource.push(...p.hand);
@@ -79,10 +89,10 @@ function onTop(s: GameState, deck: DeckName, defs: string[]): void {
 
 interface Game { s: GameState; events: GameEvent[]; A: PlayerId; B: PlayerId; C?: PlayerId }
 
-/** Answer every opening companion draft with the first cards on offer. */
+/** Answer every opening party draft with the first cards on offer. */
 function finishOpeningDraft(state: GameState): GameState {
   let st = state;
-  while (st.pending?.kind === 'choose' && st.pending.purpose === 'companionDraft') {
+  while (st.pending?.kind === 'choose' && st.pending.purpose === 'partyDraft') {
     const d = st.pending;
     const r = applyCommand(st, d.player, { type: 'choose', decision: d.id, picks: d.options.slice(0, d.min).map((o) => o.value) });
     if (!r.ok) throw new Error(r.error);
@@ -92,12 +102,10 @@ function finishOpeningDraft(state: GameState): GameState {
 }
 
 function newGame(n = 2, sd = 1, rules?: Partial<HouseRules>): Game {
-  // Card-mechanic tests deal heroes blind and use the v0.3 hand rule and printed
-  // difficulties (no fall cost) so card counts and survival are predictable; the
-  // house rules have their own tests.
+  // Card-mechanic tests use the v0.3 hand rule so card counts are predictable; the house rules have their own tests.
   const state = finishOpeningDraft(createGame({
     players: seats(n), seed: seed(sd),
-    rules: { heroDraft: 1, handModel: 'refill', fallCost: false, ...rules },
+    rules: { handModel: 'refill', ...rules },
   }).state);
   const A = state.players[state.turn.active]!.id;
   const others = state.players.filter((p) => p.id !== A).map((p) => p.id);
@@ -114,15 +122,15 @@ function restart(g: Game): void {
   if (t.location) s.discards.location.push(t.location);
   s.decks.location.push(...t.extraLocations);
   s.discards.encounter.push(...(t.encounter ? [t.encounter] : []), ...t.minions, ...t.setAside);
-  s.discards.companion.push(...t.companionMinions);
+  s.discards.hero.push(...t.heroMinions);
   for (const p of s.players) {
     s.discards.resource.push(...p.bids.map((b) => b.card));
-    s.decks.hero.push(...p.councilHeroes);
+    s.decks.hero.push(...p.borrowed);
     p.bids = [];
-    p.councilHeroes = [];
+    p.borrowed = [];
     p.statOverride = null;
   }
-  t.location = null; t.extraLocations = []; t.encounter = null; t.minions = []; t.setAside = []; t.companionMinions = [];
+  t.location = null; t.extraLocations = []; t.encounter = null; t.minions = []; t.setAside = []; t.heroMinions = [];
   t.failed = []; t.effects = []; t.used = {}; t.wandsDisabled = false; t.noFalls = false;
   s.turn.step = 'turnStart';
   s.turn.number = 0;
@@ -135,8 +143,8 @@ function restart(g: Game): void {
 
 function defaultAnswer(d: Decision): Command {
   switch (d.kind) {
-    case 'companion.offer': return { type: 'companion.skip', decision: d.id };
-    case 'companion.place': return { type: 'companion.discard', decision: d.id };
+    case 'recruit.offer': return { type: 'recruit.skip', decision: d.id };
+    case 'recruit.place': return { type: 'recruit.discard', decision: d.id };
     case 'activate': return { type: 'ability.done', decision: d.id };
     case 'bid': return { type: 'bid.pass', decision: d.id };
     case 'choose': return { type: 'choose', decision: d.id, picks: d.options.slice(0, d.min).map((o) => o.value) };
@@ -176,10 +184,12 @@ const use = (g: Game, source: string, ability: string) => act(g, { type: 'abilit
 const pick = (g: Game, ...picks: string[]) => act(g, { type: 'choose', decision: g.s.pending!.id, picks });
 const total = (g: Game, viewer: PlayerId, who: PlayerId) => viewFor(g.s, viewer).players.find((p) => p.id === who)!.projection!.total;
 const player = (g: Game, pid: PlayerId) => g.s.players.find((p) => p.id === pid)!;
+/** A hero's printed stat (for arithmetic that follows the card data). */
+const stat = (def: string, s: 'P' | 'M' | 'G') => (getDef(def) as { stats: Record<'P' | 'M' | 'G', number> }).stats[s];
 
-/** A typical rig: known heroes/companions, Physical challenge via The Silverwood Hunt. */
-function standard(g: Game, a: { hero?: string; companions?: string[]; hand?: string[] }, b: { hero?: string; companions?: string[]; hand?: string[] } = {}): void {
-  give(g.s, g.A, { hero: 'archmage-corvin-varro', companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'], ...a });
+/** A typical rig: known parties, Physical challenge via The Silverwood Hunt. */
+function standard(g: Game, a: { hero?: string; companions?: string[]; party?: string[]; hand?: string[] }, b: { hero?: string; companions?: string[]; party?: string[]; hand?: string[] } = {}): void {
+  give(g.s, g.A, { hero: 'archmage-corvin-varro', companions: ['moss-dire-wolf', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'], ...a });
   give(g.s, g.B, { hero: 'queen-maren-ashcroft', companions: ['sergeant-waddle', 'tobin-quill-goose-keeper'], hand: ['feathered-cap'], ...b });
   onTop(g.s, 'location', ['the-silverwood-hunt', 'kingsford', 'clover-hollow', 'the-hollow-between']);
   onTop(g.s, 'encounter', ['ironbound-vanguard', 'wyrmkin-warband', 'bridge-trolls']);
@@ -229,9 +239,9 @@ describe('forced stats', () => {
     expect(total(g, g.A, g.B)).toBe(before);
   });
 
-  it('Mayor Hobby draws when someone is forced', () => {
+  it('Fennick draws when someone is forced', () => {
     const g = newGame();
-    standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] }, { hero: 'mayor-hobby-trickgrin' });
+    standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] }, { companions: ['fennick-puffcap-mycomancer', 'sergeant-waddle'] });
     restart(g);
     until(g, bidFor(g.A));
     const hand = player(g, g.B).hand.length;
@@ -239,6 +249,7 @@ describe('forced stats', () => {
     pick(g, card(g, 'sergeant-waddle'));
     expect(player(g, g.B).hand.length).toBe(hand + 1);
   });
+
 
   it('Hesk (a companion) lets another companion ability be used twice in a turn', () => {
     const g = newGame(3);
@@ -256,18 +267,6 @@ describe('forced stats', () => {
     expect(d2.kind === 'bid' && d2.abilities.some((a) => a.ability === 'force')).toBe(false);
   });
 
-  it('forced hero stat (Brisa: Physical)', () => {
-    const g = newGame();
-    standard(g, { companions: ['brisa-blastcap-bombardier', 'pell-quillon-collegium-prodigy'] }, { hero: 'professor-barnaby-pickwort' });
-    onTop(g.s, 'location', ['tomb-of-the-first-wardens']); // Guile challenge; Barnaby G7 -> P4
-    restart(g);
-    until(g, bidFor(g.A));
-    const before = total(g, g.A, g.B);
-    use(g, 'brisa-blastcap-bombardier', 'force');
-    // Only one opponent: a single forced option resolves without asking.
-    expect(g.s.pending?.kind).toBe('bid');
-    expect(total(g, g.A, g.B)).toBe(before - 3); // Barnaby G7 -> P4
-  });
 });
 
 describe('silence, steal, negate, swap', () => {
@@ -318,12 +317,12 @@ describe('silence, steal, negate, swap', () => {
 
   it('a tie discards the location; each tied player draws and claims a new one with no effects', () => {
     const g = newGame();
-    // Kazra P8 + Waddle 4 = 12 against Maren P4 + Cobra 4 + a 4-point resource = 12.
-    standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: ['the-axe-of-doom'] });
+    // Kazra P4 + Waddle 4 = 8 against Maren P2 + Cobra 4 + a 2-point resource = 8.
+    standard(g, { hero: 'kazra-emberdeep', companions: ['sergeant-waddle'], hand: [] }, { hero: 'queen-maren-ashcroft', companions: ['cobra-chicken'], hand: ['sprig-of-heather'] });
     onTop(g.s, 'encounter', ['ironbound-vanguard']);
     restart(g);
     until(g, bidFor(g.B));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'sprig-of-heather') });
     finishTurn(g);
     const outcome = g.events.find((e) => e.type === 'outcome');
     const res = outcome?.type === 'outcome' ? outcome.result : undefined;
@@ -440,15 +439,15 @@ describe('peeks stay private', () => {
     const d = g.s.pending!;
     expect(d.kind === 'choose' && d.options.every((o) => o.card && !o.card.id)).toBe(true);
     pick(g, 'lord-paladin-aldric-ashcroft');
-    expect(g.s.cards[player(g, g.A).hero]).toBe('lord-paladin-aldric-ashcroft');
+    expect(player(g, g.A).party.map((c) => g.s.cards[c])).toContain('lord-paladin-aldric-ashcroft');
   });
 });
 
 describe('end of bidding', () => {
-  it('Dagny wins the location outright, at the cost of the hand and the hero', () => {
+  it('Dagny wins the location outright, at the cost of the hand and a hero', () => {
     const g = newGame();
     standard(g, { companions: ['dagny-coldhearth-the-grudge-bearer', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'feathered-cap'] }, { companions: ['gnash-the-butcher-of-bloodmire', 'kesh-the-bog-huntress'] });
-    const heroBefore = player(g, g.A).hero;
+    const partyBefore = player(g, g.A).party.length;
     restart(g);
     until(g, activateFor(g.A, 'endOfBidding'));
     use(g, 'dagny-coldhearth-the-grudge-bearer', 'stonetouched');
@@ -456,40 +455,31 @@ describe('end of bidding', () => {
     const outcome = g.events.find((e) => e.type === 'outcome');
     expect(outcome?.type === 'outcome' && outcome.result.winner).toBe(g.A);
     expect(outcome?.type === 'outcome' && outcome.result.byEffect).toBe('Dagny Coldhearth, the Grudge-Bearer');
-    expect(player(g, g.A).hero).not.toBe(heroBefore);
+    expect(player(g, g.A).party).toHaveLength(partyBefore - 1);
+    expect(g.events.some((e) => e.type === 'heroLeft' && e.player === g.A && e.reason === 'Fell')).toBe(true);
   });
 
-  it('Mags doubles the hero, then leaves', () => {
-    const g = newGame();
-    standard(g, { companions: ['mags-tolliver-market-trader', 'pell-quillon-collegium-prodigy'], hand: [] });
-    restart(g);
-    until(g, activateFor(g.A, 'endOfBidding'));
-    const before = total(g, g.A, g.A);
-    use(g, 'mags-tolliver-market-trader', 'queen');
-    expect(total(g, g.A, g.A)).toBe(before + (getDef('archmage-corvin-varro') as { stats: { P: number } }).stats.P); // Corvin's Physical doubled
-    const mags = card(g, 'mags-tolliver-market-trader');
-    finishTurn(g);
-    expect(g.s.discards.companion).toContain(mags);
-  });
+
 });
 
 describe('several forcing abilities in one turn', () => {
-  it('Hugo and Clemence can both be used on the same turn', () => {
+  it('Liriel and Thessaly can both be used on the same turn', () => {
     const g = newGame(4);
-    standard(g, { companions: ['hobart-thimblewick-moot-surgeon', 'grumma-ladlejaw-camp-cook'] });
+    standard(g, { companions: ['liriel-nightbloom', 'thessaly-of-the-grove'] });
     restart(g);
     until(g, bidFor(g.A));
     const offered = () => { const d = g.s.pending!; return d.kind === 'bid' ? d.abilities.map((a) => a.ability + '@' + a.source) : []; };
     expect(offered()).toHaveLength(2);
-    use(g, 'hobart-thimblewick-moot-surgeon', 'force');
-    pick(g, g.B);
+    use(g, 'liriel-nightbloom', 'force');
+    pick(g, card(g, 'sergeant-waddle'));
     expect(g.s.pending?.kind).toBe('bid');
     expect(offered()).toHaveLength(1);
-    use(g, 'grumma-ladlejaw-camp-cook', 'force');
-    pick(g, g.B);
-    expect(g.s.turn.effects.filter((e) => e.kind === 'forceHeroStat')).toHaveLength(2);
+    use(g, 'thessaly-of-the-grove', 'force');
+    pick(g, card(g, 'tobin-quill-goose-keeper'));
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(2);
   });
 });
+
 
 describe('Hesk and Brunna', () => {
   it('Hesk re-uses a companion\x27s once-per-turn ability exactly once more', () => {
@@ -505,7 +495,7 @@ describe('Hesk and Brunna', () => {
     use(g, 'liriel-nightbloom', 'force');
     pick(g, card(g, 'tobin-quill-goose-keeper'));
     expect(offered()).toBe(0); // and no further
-    expect(g.s.turn.effects.filter((e) => e.kind === 'forceCompanionStat')).toHaveLength(2);
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(2);
   });
 
   it('Brunna announces that her hero shrugs off an opponent\x27s effect', () => {
@@ -517,7 +507,7 @@ describe('Hesk and Brunna', () => {
     pick(g, card(g, 'sergeant-waddle'));
     const ev = g.events.find((e) => e.type === 'abilityIgnored');
     expect(ev && ev.type === 'abilityIgnored' && ev.player === g.B).toBe(true);
-    expect(viewFor(g.s, g.A).turn.effects.find((e) => e.kind === 'forceCompanionStat')?.ignored).toBe(true);
+    expect(viewFor(g.s, g.A).turn.effects.find((e) => e.kind === 'forceStat')?.ignored).toBe(true);
   });
 });
 
@@ -546,43 +536,51 @@ describe('Aldric counters abilities as they are used', () => {
     until(g, bidFor(g.A));
     use(g, 'liriel-nightbloom', 'force');
     pick(g, 'allow');
-    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'forceCompanion').toBe(true);
+    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'forceHero').toBe(true);
   });
 });
 
 describe('the opening turn', () => {
-  it('drafted companions enter play, and trigger draws, only when every player has picked', () => {
-    const { state } = createGame({ players: seats(2), seed: seed(1), rules: { heroDraft: 1, handModel: 'refill', fallCost: false } });
-    const g: Game = { s: state, events: [], A: '', B: '' };
-    const sera = card(g, 'pell-quillon-collegium-prodigy'); // a Human: Maren draws when one enters play
-    give(g.s, g.s.players[g.s.turn.active]!.id, { hero: 'queen-maren-ashcroft' });
-    // Rig her onto the top of the companion stack and redo the draft step.
-    onTop(g.s, 'companion', ['pell-quillon-collegium-prodigy']);
-    g.s.pending = null;
-    g.s.tasks = [];
-    for (const p of g.s.players) { delete p.used['companionDraft']; p.companions = []; }
-    g.s.turn.step = 'companionDraft';
-    g.s.hold = 'encounter';
-    const r = resume(g.s);
-    if (!r.ok) throw new Error(r.error);
-    g.s = r.state;
-    const first = g.s.pending!;
-    if (first.kind !== 'choose') throw new Error('expected a companion draft');
-    const a = first.player;
-    const handBefore = player(g, a).hand.length;
-    const seraOption = first.options.find((o) => o.card?.def === 'pell-quillon-collegium-prodigy')!;
-    expect(seraOption).toBeTruthy();
-    act(g, { type: 'choose', decision: first.id, picks: [seraOption.value, first.options.find((o) => o !== seraOption)!.value] });
-    // A has picked, but B has not: nothing has entered play yet.
-    const second = g.s.pending!;
-    expect(second.kind === 'choose' && second.purpose).toBe('companionDraft');
-    expect(second.player).not.toBe(a);
-    expect(player(g, a).companions).toContain(sera);
-    expect(player(g, a).hand.length).toBe(handBefore);
-    g.s = finishOpeningDraft(g.s);
-    expect(player(g, a).hand.length).toBeGreaterThanOrEqual(handBefore + 1);
+  it('drafted heroes enter play, and trigger, only when every player has picked', () => {
+    // No card with an enter-play trigger is left in the hero set, so rig one: Pell draws when a hero joins her player's party.
+    const pell = ABILITIES['pell-quillon-collegium-prodigy']!;
+    const saved = pell.on;
+    pell.on = { heroEntered: (ctx, self, e) => { if (e.player === self.owner) drawResources(ctx, self.owner!, 1, 'test'); } };
+    try {
+      const { state } = createGame({ players: seats(2), seed: seed(1), rules: { handModel: 'refill' } });
+      const g: Game = { s: state, events: [], A: '', B: '' };
+      // Put her on top of the hero stack and redo the draft step.
+      onTop(g.s, 'hero', ['pell-quillon-collegium-prodigy']);
+      g.s.pending = null;
+      g.s.tasks = [];
+      for (const p of g.s.players) { delete p.used['partyDraft']; p.party = []; }
+      g.s.turn.step = 'partyDraft';
+      g.s.hold = 'encounter';
+      const r = resume(g.s);
+      if (!r.ok) throw new Error(r.error);
+      g.s = r.state;
+      const first = g.s.pending!;
+      if (first.kind !== 'choose') throw new Error('expected a party draft');
+      const a = first.player;
+      const handBefore = player(g, a).hand.length;
+      const pellOption = first.options.find((o) => o.card?.def === 'pell-quillon-collegium-prodigy')!;
+      expect(pellOption).toBeTruthy();
+      const others = first.options.filter((o) => o !== pellOption).slice(0, 2).map((o) => o.value);
+      act(g, { type: 'choose', decision: first.id, picks: [pellOption.value, ...others] });
+      // A has picked, but B has not: nothing has entered play yet.
+      const second = g.s.pending!;
+      expect(second.kind === 'choose' && second.purpose).toBe('partyDraft');
+      expect(second.player).not.toBe(a);
+      expect(player(g, a).party).toContain(card(g, 'pell-quillon-collegium-prodigy'));
+      expect(player(g, a).hand.length).toBe(handBefore);
+      g.s = finishOpeningDraft(g.s);
+      expect(player(g, a).hand.length).toBeGreaterThanOrEqual(handBefore + 1);
+    } finally {
+      if (saved) pell.on = saved; else delete pell.on;
+    }
   });
 });
+
 
 describe('challenge and encounter control', () => {
   it('every encounter is faced on its single stat, with no roll', () => {
@@ -594,7 +592,7 @@ describe('challenge and encounter control', () => {
     until(g, bidFor(g.A));
     const ch = viewFor(g.s, g.B).turn.challenge!;
     expect(ch.stat).toBe('G');
-    expect(ch.difficulty.base).toBe(15); // printed 13, +2 in this edition
+    expect(ch.difficulty.base).toBe((getDef('the-deathless-captain') as { difficulty: number }).difficulty);
   });
 
   it('Ilvena: force an opposing companion onto its weakest stat (no cost)', () => {
@@ -606,20 +604,10 @@ describe('challenge and encounter control', () => {
     use(g, 'elder-ilvena-of-the-conclave', 'ruling');
     pick(g, card(g, 'sergeant-waddle'));
     expect(player(g, g.A).hand.length).toBe(hand);
-    const forced = g.s.turn.effects.find((e) => e.kind === 'forceCompanionStat')!;
+    const forced = g.s.turn.effects.find((e) => e.kind === 'forceStat')!;
     expect(forced.stat).toBe('G'); // Sergeant Waddle: P4 M3 G2
   });
 
-  it("Aelthir draws when a Guile challenge is faced, on any turn", () => {
-    const g = newGame();
-    standard(g, {}, { hero: 'aelthir-moonveil' });
-    onTop(g.s, 'location', ['kingsford']);
-    onTop(g.s, 'encounter', ['the-deathless-captain']);
-    const hand = player(g, g.B).hand.length;
-    restart(g);
-    until(g, bidFor(g.A));
-    expect(player(g, g.B).hand.length).toBeGreaterThan(hand);
-  });
 
   it('Urzha (Pick Your Fight) looks at the next encounter and may swap it in, once per turn', () => {
     const g = newGame();
@@ -639,35 +627,24 @@ describe('challenge and encounter control', () => {
     expect(next.kind === 'activate' && next.abilities.some((a) => a.ability === 'pickFight')).toBe(false);
   });
 
-  it('Urzha draws whenever a minion is drawn, but not when he swaps encounters', () => {
-    const g = newGame();
-    standard(g, { hero: 'urzha-half-tusk' });
-    onTop(g.s, 'encounter', ['the-iron-colossus', 'bone-colossus']); // draws an Ironbound minion
-    onTop(g.s, 'location', ['kingsford']);
-    const hand = player(g, g.A).hand.length;
-    restart(g);
-    until(g, activateFor(g.A, 'beforeBidding'));
-    expect(g.s.turn.minions.length).toBeGreaterThan(0);
-    expect(player(g, g.A).hand.length).toBeGreaterThan(hand);
-  });
 
-  it('Infectious Zombie takes a companion as a minion', () => {
+  it('Infectious Zombie takes a hero as a minion', () => {
     const g = newGame();
     standard(g, {});
     onTop(g.s, 'encounter', ['iron-mites']);
     onTop(g.s, 'location', ['kingsford']);
     restart(g);
-    until(g, (s) => s.turn.companionMinions.length > 0 || s.turn.step === 'bidding');
-    expect(g.s.turn.companionMinions).toHaveLength(1);
+    until(g, (s) => s.turn.heroMinions.length > 0 || s.turn.step === 'bidding');
+    expect(g.s.turn.heroMinions).toHaveLength(1);
     // No dice: each player with a companion turned up a resource card, and those cards were discarded.
     const shown = g.events.filter((e) => e.type === 'cardShown' && e.reason === 'Infectious Zombie');
     expect(shown.length).toBeGreaterThanOrEqual(2);
     for (const e of shown) if (e.type === 'cardShown') expect(g.s.discards.resource).toContain(e.card.id);
     const ctx = new Ctx(g.s);
-    const minion = ctx.def(g.s.turn.companionMinions[0]!);
+    const minion = ctx.def(g.s.turn.heroMinions[0]!);
     const diff = difficultyFor(ctx, null)!;
     const stat = ctx.encounter!.stat;
-    expect(diff.minions).toBe(minion.kind === 'companion' ? minion.stats[stat] : -1);
+    expect(diff.minions).toBe(minion.kind === 'hero' ? minion.stats[stat] : -1);
   });
 
   it('Vaelis sets aside an encounter and adds its minion bonus to every stat', () => {
@@ -701,7 +678,7 @@ describe('challenge and encounter control', () => {
 describe('Pell Quillon and Tova are shown when they trigger', () => {
   it('Pell adds +2 to each resource card once two are revealed, and announces it once', () => {
     const g = newGame();
-    standard(g, { companions: ['pell-quillon-collegium-prodigy', 'rosalind-marchwell-marchguard-clerk'], hand: ['honey-biscuit', 'mask-of-many-faces'] });
+    standard(g, { companions: ['pell-quillon-collegium-prodigy', 'moss-dire-wolf'], hand: ['honey-biscuit', 'mask-of-many-faces'] });
     restart(g);
     until(g, bidFor(g.A));
     const base = (n: number) => total(g, g.A, g.A) - n;
@@ -743,14 +720,14 @@ describe('companion movement', () => {
     const tova = card(g, 'tova-emberdeep-keeper-of-the-underway-door');
     expect(player(g, g.A).resting).toContain(tova);
     until(g, (s) => s.turn.number === 3 && s.players[s.turn.active]!.id === g.A);
-    expect(player(g, g.A).companions).toContain(tova);
+    expect(player(g, g.A).party).toContain(tova);
     const tovaDraw = g.events.find((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Tova'));
     expect(tovaDraw && tovaDraw.type === 'drew' && tovaDraw.cards.length).toBe(2);
   });
 
   it('Tova also returns when rested on another player\x27s turn, in a three-player game', () => {
     for (const onOwnTurn of [true, false]) {
-      const g = newGame(3);
+      const g = newGame(3, 1, { allPlayersFaceEncounter: false }); // nobody bids, so nobody loses a hero while she rests
       standard(g, { companions: ['tova-emberdeep-keeper-of-the-underway-door', 'pell-quillon-collegium-prodigy'] });
       restart(g);
       const tova = card(g, 'tova-emberdeep-keeper-of-the-underway-door');
@@ -765,7 +742,7 @@ describe('companion movement', () => {
       const startTurn = g.s.turn.number;
       until(g, (s) => s.turn.number > startTurn && s.players[s.turn.active]!.id === g.A);
       expect(player(g, g.A).resting).not.toContain(tova);
-      expect(player(g, g.A).companions).toContain(tova);
+      expect(player(g, g.A).party).toContain(tova);
       expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Tova'))).toBe(true);
     }
   });
@@ -775,28 +752,29 @@ describe('companion movement', () => {
     standard(g, { hand: ['gauntlet-of-returning'] });
     const gnash = idOf(g.s, 'gnash-the-butcher-of-bloodmire');
     detach(g.s, gnash);
-    g.s.discards.companion.push(gnash);
+    g.s.discards.hero.push(gnash);
     restart(g);
     until(g, bidFor(g.A));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'gauntlet-of-returning') });
     until(g, (_s, d) => d.kind === 'choose' && d.purpose === 'gauntlet');
     pick(g, gnash);
-    expect(player(g, g.A).companions).toContain(gnash);
+    expect(player(g, g.A).party).toContain(gnash);
   });
 
-  it('The Goose & Kettle lets everyone swap a companion', () => {
+  it('The Goose & Kettle lets everyone swap a hero', () => {
     const g = newGame();
     standard(g, {});
     onTop(g.s, 'location', ['the-goose-and-kettle']);
     restart(g);
     until(g, (_s, d) => d.kind === 'choose' && d.purpose === 'waystoneDraw' && d.player === g.A);
     pick(g, 'draw');
-    expect(player(g, g.A).companions).toHaveLength(3);
+    expect(player(g, g.A).party).toHaveLength(4);
     const d = g.s.pending!;
-    expect(d.kind === 'choose' && d.purpose === 'discardCompanion').toBe(true);
+    expect(d.kind === 'choose' && d.purpose === 'discardHero').toBe(true);
     act(g, { type: 'choose', decision: d.id, picks: [(d as Extract<Decision, { kind: 'choose' }>).options[0]!.value] });
-    expect(player(g, g.A).companions).toHaveLength(2);
+    expect(player(g, g.A).party).toHaveLength(3);
   });
+
 
   it('Sigrun may take one of the discarded cards instead of drawing', () => {
     const g = newGame();
@@ -850,122 +828,126 @@ describe('bidding options', () => {
   });
 });
 
-describe('hero draft: look at three, keep one', () => {
-  it('opens the game: each player in turn picks from three heroes nobody else sees', () => {
+describe('the opening party draft', () => {
+  it('each player in turn privately picks three of six heroes; the rest go back unseen', () => {
     const { state } = createGame({ players: seats(3), seed: seed(4) });
     const g: Game = { s: state, events: [], A: '', B: '' };
-    const picked: Record<string, string> = {};
+    const picked: Record<string, string[]> = {};
     for (let i = 0; i < 3; i++) {
       const d = g.s.pending!;
-      expect(d.kind === 'choose' && d.purpose).toBe('heroDraft');
-      if (d.kind !== 'choose') return;
-      expect(d.options).toHaveLength(3);
+      if (d.kind !== 'choose' || d.purpose !== 'partyDraft') throw new Error('expected a party draft');
+      expect(d.options).toHaveLength(6);
+      expect([d.min, d.max]).toEqual([3, 3]);
       expect(d.options.every((o) => o.card && !o.card.id)).toBe(true); // by card, never by instance id
       for (const other of g.s.players.filter((p) => p.id !== d.player)) {
         expect(viewFor(g.s, other.id).pending!.detail).toBeUndefined();
       }
-      expect(viewFor(g.s, d.player).players.find((p) => p.id === d.player)!.hero).toBeNull();
-      // Heroes come first: no companions or hands until everyone has chosen.
-      for (const p of g.s.players) expect([p.companions.length, p.hand.length]).toEqual([0, 0]);
-      picked[d.player] = d.options[1]!.value;
-      act(g, { type: 'choose', decision: d.id, picks: [d.options[1]!.value] });
+      expect(viewFor(g.s, d.player).players.find((p) => p.id === d.player)!.party).toHaveLength(0);
+      picked[d.player] = [d.options[0]!.value, d.options[2]!.value, d.options[5]!.value];
+      act(g, { type: 'choose', decision: d.id, picks: picked[d.player]! });
     }
-    for (const p of g.s.players) expect(g.s.cards[p.hero]).toBe(picked[p.id]);
-    // Then the companion draft: nobody is dealt companions, they pick them.
-    for (const p of g.s.players) expect(p.companions).toHaveLength(0);
-    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose).toBe('companionDraft');
-    expect(g.s.decks.hero).toHaveLength(15 - 3); // the passed-over heroes went back
+    for (const p of g.s.players) expect(p.party.map((c) => g.s.cards[c]).sort()).toEqual([...picked[p.id]!].sort());
+    // Nobody is dealt heroes and there is no first-turn recruit phase: the first decision is something else.
+    expect(g.s.pending?.kind).not.toBe('recruit.offer');
+    expect(g.s.turn.number).toBe(1);
+    expect(g.s.decks.hero).toHaveLength(CARDS.heroes.length - 9); // the passed-over heroes went back
     checkInvariants(g.s);
   });
 
-  it('with the draftOnReplace rule, a fallen hero is replaced by a draft of three (never offering the fallen one)', () => {
-    const g = newGame();
-    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['tova-emberdeep-keeper-of-the-underway-door', 'pell-quillon-collegium-prodigy'] });
-    onTop(g.s, 'encounter', ['the-sundered-warden']);
-    g.s.rules.heroDraft = 3;
-    g.s.rules.draftOnReplace = true;
-    const fallen = player(g, g.A).hero;
+  it('hands are dealt before the draft, so nothing else waits on it', () => {
+    const { state } = createGame({ players: seats(3), seed: seed(4) });
+    for (const p of state.players) expect(p.hand).toHaveLength(3);
+  });
+});
+
+describe('falling', () => {
+  /** Physical 12 (the Basilisk) against parties that cannot reach it, with nothing to spend. */
+  const fall = (a: string[], rules?: Partial<HouseRules>) => {
+    const g = newGame(2, 1, rules);
+    standard(g, { party: a, hand: ['honey-biscuit', 'mask-of-many-faces'] });
+    onTop(g.s, 'encounter', ['basilisk']);
     restart(g);
-    until(g, (_s, d) => d.kind === 'choose' && d.purpose === 'heroDraft' && d.player === g.A);
-    const d = g.s.pending!;
-    if (d.kind !== 'choose') throw new Error('expected a draft');
-    expect(d.options).toHaveLength(3);
-    expect(d.options.map((o) => o.value)).not.toContain('professor-barnaby-pickwort');
-    pick(g, d.options[2]!.value);
-    expect(g.s.cards[player(g, g.A).hero]).toBe(d.options[2]!.value);
-    expect(g.s.decks.hero).toContain(fallen);
+    return g;
+  };
+
+  it('a player who fails chooses which hero falls; it goes to the discard pile and costs nothing else', () => {
+    const g = fall(['archmage-corvin-varro', 'moss-dire-wolf', 'pell-quillon-collegium-prodigy']);
+    const n = g.s.turn.number;
+    const asked: string[] = [];
+    until(g, (s) => s.turn.number !== n, (_s, d) => {
+      if (d.kind === 'bid') return { type: 'bid.pass', decision: d.id };
+      if (d.kind === 'choose' && d.player === g.A && d.purpose === 'fallHero') {
+        asked.push(d.purpose);
+        return { type: 'choose', decision: d.id, picks: [card(g, 'moss-dire-wolf')] };
+      }
+      return undefined;
+    });
+    expect(asked).toEqual(['fallHero']);
+    const a = player(g, g.A);
+    expect(a.party.map((c) => g.s.cards[c])).toEqual(['archmage-corvin-varro', 'pell-quillon-collegium-prodigy']);
+    expect(g.s.discards.hero).toContain(card(g, 'moss-dire-wolf'));
+    expect(a.hand).toHaveLength(2); // the hand is not touched
+    expect(g.events.some((e) => e.type === 'heroFalls' && e.player === g.A)).toBe(true);
+    expect(g.events.some((e) => e.type === 'heroLeft' && e.player === g.A && e.reason === 'Fell')).toBe(true);
+    checkInvariants(g.s);
   });
 
-  it('by default a fallen hero is replaced by drawing one: keep it, or send it back and take the next', () => {
-    for (const choice of ['keep', 'redraw'] as const) {
-      const g = newGame();
-      standard(g, { hero: 'professor-barnaby-pickwort', companions: ['tova-emberdeep-keeper-of-the-underway-door', 'pell-quillon-collegium-prodigy'] });
-      onTop(g.s, 'encounter', ['the-sundered-warden']);
-      g.s.rules.heroDraft = 3;
-      restart(g);
-      until(g, (_s, d) => d.kind === 'choose' && d.purpose === 'heroKeep' && d.player === g.A);
-      const d = g.s.pending!;
-      if (d.kind !== 'choose') throw new Error('expected a choice');
-      expect(d.options).toHaveLength(2);
-      const offered = d.options[0]!.value;
-      pick(g, choice === 'keep' ? offered : 'redraw');
-      const now = g.s.cards[player(g, g.A).hero];
-      if (choice === 'keep') expect(now).toBe(offered);
-      else expect(now).not.toBe('professor-barnaby-pickwort');
-      checkInvariants(g.s);
-    }
+  it('with one hero left there is nothing to choose: that hero falls', () => {
+    const g = fall(['pell-quillon-collegium-prodigy']);
+    const n = g.s.turn.number;
+    let asked = false;
+    until(g, (s) => s.turn.number !== n, (_s, d) => {
+      if (d.kind === 'bid') return { type: 'bid.pass', decision: d.id };
+      if (d.kind === 'choose' && d.player === g.A && d.purpose === 'fallHero') asked = true;
+      return undefined;
+    });
+    expect(asked).toBe(false);
+    expect(player(g, g.A).party).toHaveLength(0);
+    expect(g.s.discards.hero).toContain(card(g, 'pell-quillon-collegium-prodigy'));
   });
 
-  it('everyone who fails falls at the end of that same turn, each drawing a different new hero', () => {
-    const g = newGame();
-    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['tova-emberdeep-keeper-of-the-underway-door', 'pell-quillon-collegium-prodigy'] },
-      { hero: 'lord-vaelis-nightbloom', companions: ['tobin-quill-goose-keeper', 'varg-ironjaw'] });
-    onTop(g.s, 'encounter', ['the-sundered-warden']);
-    g.s.rules.heroDraft = 3;
-    const before = { A: player(g, g.A).hero, B: player(g, g.B).hero };
-    restart(g);
+  it('everyone who fails falls at the end of that same turn, each choosing in turn', () => {
+    const g = fall(['archmage-corvin-varro', 'moss-dire-wolf', 'pell-quillon-collegium-prodigy']);
     const answered = new Set<string>();
     until(g, (s) => s.turn.number === 2, (_s, d) => {
-      if (d.kind === 'choose' && d.purpose === 'heroKeep') { answered.add(d.player); return { type: 'choose', decision: d.id, picks: [d.options[0]!.value] }; }
+      if (d.kind === 'choose' && d.purpose === 'fallHero') { answered.add(d.player); return { type: 'choose', decision: d.id, picks: [d.options[0]!.value] }; }
       return undefined;
     });
     expect([...answered].sort()).toEqual([g.A, g.B].sort());
-    expect(player(g, g.A).hero).not.toBe(before.A);
-    expect(player(g, g.B).hero).not.toBe(before.B);
-    expect(player(g, g.A).hero).not.toBe(player(g, g.B).hero);
+    expect(player(g, g.A).party).toHaveLength(2);
+    expect(player(g, g.B).party).toHaveLength(2);
     expect(g.events.filter((e) => e.type === 'heroFalls')).toHaveLength(2);
     checkInvariants(g.s);
   });
 
-  it('heroDraft 1 deals blind (v0.3)', () => {
-    const { state } = createGame({ players: seats(3), seed: seed(4), rules: { heroDraft: 1 } });
-    expect(state.players.every((p) => p.hero)).toBe(true);
-    expect(state.pending?.kind === 'choose' && state.pending.purpose === 'heroDraft').toBe(false);
+  it('the party refills in the recruit phase', () => {
+    const g = fall(['archmage-corvin-varro', 'moss-dire-wolf', 'pell-quillon-collegium-prodigy']);
+    until(g, (_s, d) => d.kind === 'recruit.offer' && d.player === g.A);
+    expect(player(g, g.A).party).toHaveLength(2);
+    const offer = g.s.pending!;
+    act(g, { type: 'recruit.draw', decision: offer.id });
+    const place = g.s.pending!;
+    expect(place.kind === 'recruit.place' && place.mustReplace).toBe(false);
+    act(g, { type: 'recruit.keep', decision: place.id, replace: null });
+    expect(player(g, g.A).party).toHaveLength(3);
+  });
+
+  it('Shield of Xorthalos and the Amulet of Aesia prevent a fall', () => {
+    for (const [def, source] of [['shield-of-xorthalos', 'Shield of Xorthalos'], ['the-amulet-of-aesia', 'The Amulet of Aesia']] as const) {
+      const g = newGame();
+      standard(g, { party: ['pell-quillon-collegium-prodigy'], hand: [def] });
+      onTop(g.s, 'encounter', ['basilisk']);
+      restart(g);
+      until(g, bidFor(g.A));
+      act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, def) });
+      finishTurn(g);
+      expect(g.events.some((e) => e.type === 'fallPrevented' && e.player === g.A && e.source === source)).toBe(true);
+      expect(player(g, g.A).party).toHaveLength(1);
+    }
   });
 });
 
-describe('the opening companion draft', () => {
-  it('starts everyone with no companions, lets them pick two of five, and skips the first-turn companion phase', () => {
-    const { state } = createGame({ players: seats(3), seed: seed(7), rules: { heroDraft: 1 } });
-    const g: Game = { s: state, events: [], A: '', B: '' };
-    for (const p of g.s.players) expect(p.companions).toHaveLength(0);
-    const picked: Record<string, string[]> = {};
-    for (let i = 0; i < 3; i++) {
-      const d = g.s.pending!;
-      if (d.kind !== 'choose' || d.purpose !== 'companionDraft') throw new Error('expected a companion draft');
-      expect(d.options).toHaveLength(5);
-      expect(d.min).toBe(2);
-      expect(d.max).toBe(2);
-      picked[d.player] = [d.options[0]!.value, d.options[3]!.value];
-      act(g, { type: 'choose', decision: d.id, picks: picked[d.player]! });
-    }
-    for (const p of g.s.players) expect(p.companions.map((c) => g.s.cards[c]).sort()).toEqual([...picked[p.id]!].sort());
-    // No blind draw, no offer: the first decision is something else than a companion offer.
-    expect(g.s.pending?.kind).not.toBe('companion.offer');
-    expect(g.s.turn.number).toBe(1);
-    checkInvariants(g.s);
-  });
-});
+
 
 describe('abilities that reach into a deck', () => {
   it('Corvin extra draw zaps the resource deck', () => {
@@ -978,110 +960,49 @@ describe('abilities that reach into a deck', () => {
   });
 });
 
-describe('the opening companion draft and Ysolde', () => {
-  it('gives a hero with a limit of three three slots from the same pool of five', () => {
-    const { state } = createGame({ players: seats(2), seed: seed(11), rules: { heroDraft: 1 } });
-    const g: Game = { s: state, events: [], A: '', B: '' };
-    // Hand the first player to draft Ysolde (limit 3); the other keeps a normal hero.
-    const first = g.s.players[g.s.turn.active]!;
-    const ysolde = idOf(g.s, 'ysolde-of-the-wellspring');
-    const swap = first.hero;
-    const holder = g.s.players.find((p) => p.hero === ysolde);
-    if (holder) holder.hero = swap; else for (const pile of Object.values(g.s.decks)) { const i = pile.indexOf(ysolde); if (i >= 0) pile.splice(i, 1, swap); }
-    first.hero = ysolde;
-    // Redo the draft step now that the hero is in place.
-    g.s.pending = null;
-    g.s.tasks = [];
-    for (const p of g.s.players) delete p.used['companionDraft'];
-    g.s.turn.step = 'companionDraft';
-    g.s.hold = 'encounter';
-    const r = resume(g.s);
-    if (!r.ok) throw new Error(r.error);
-    g.s = r.state;
-    const d = g.s.pending!;
-    if (d.kind !== 'choose' || d.purpose !== 'companionDraft') throw new Error('expected a companion draft');
-    expect(d.player).toBe(first.id);
-    expect(d.min).toBe(3);
-    expect(d.max).toBe(3);
-    expect(d.options).toHaveLength(5);
-  });
-});
 
-describe('the companion phase: one random companion, keep it or not', () => {
-  it('draws one at random, privately, and at the limit keeping it means replacing one', () => {
+describe('the recruit phase: one random hero, keep it or not', () => {
+  it('draws one at random, privately, and at the party size keeping it means replacing one', () => {
     const g = newGame();
-    until(g, (_s, d) => d.kind === 'companion.offer');
-    const offer = g.s.pending!;
-    const top = g.s.decks.companion[g.s.decks.companion.length - 1]!;
-    act(g, { type: 'companion.draw', decision: offer.id });
-    const place = g.s.pending!;
-    if (place.kind !== 'companion.place') throw new Error('expected placement');
-    expect(place.drawn).toBe(top);
-    expect(place.mustReplace).toBe(true);
-    expect(applyCommand(g.s, place.player, { type: 'companion.keep', decision: place.id, replace: null })).toEqual({ ok: false, error: 'must_replace' });
-    const old = player(g, place.player).companions[0]!;
-    act(g, { type: 'companion.keep', decision: place.id, replace: old });
-    expect(player(g, place.player).companions).toContain(place.drawn);
-    expect(player(g, place.player).companions).not.toContain(old);
-  });
-
-  it('can be let go, and under the limit it just joins', () => {
-    const g = newGame();
-    until(g, (_s, d) => d.kind === 'companion.offer');
+    until(g, (_s, d) => d.kind === 'recruit.offer');
     const offer = g.s.pending!;
     const p = player(g, offer.player);
-    g.s.decks.companion.push(p.companions.pop()!);
-    act(g, { type: 'companion.draw', decision: offer.id });
+    while (p.party.length < 3) p.party.push(g.s.decks.hero.shift()!); // a fall on turn 1 left a gap: top the party back up
+    const top = g.s.decks.hero[g.s.decks.hero.length - 1]!;
+    act(g, { type: 'recruit.draw', decision: offer.id });
     const place = g.s.pending!;
-    expect(place.kind === 'companion.place' && place.mustReplace).toBe(false);
-    act(g, { type: 'companion.discard', decision: place.id });
-    expect(g.s.discards.companion).toContain((place as { drawn: string }).drawn);
+    if (place.kind !== 'recruit.place') throw new Error('expected placement');
+    expect(place.drawn).toBe(top);
+    expect(place.mustReplace).toBe(true);
+    expect(applyCommand(g.s, place.player, { type: 'recruit.keep', decision: place.id, replace: null })).toEqual({ ok: false, error: 'must_replace' });
+    const old = player(g, place.player).party[0]!;
+    act(g, { type: 'recruit.keep', decision: place.id, replace: old });
+    expect(player(g, place.player).party).toContain(place.drawn);
+    expect(player(g, place.player).party).not.toContain(old);
+    expect(g.s.discards.hero).toContain(old);
+  });
+
+  it('can be let go, and under the size it just joins', () => {
+    const g = newGame();
+    until(g, (_s, d) => d.kind === 'recruit.offer');
+    const offer = g.s.pending!;
+    const p = player(g, offer.player);
+    g.s.decks.hero.push(p.party.pop()!);
+    act(g, { type: 'recruit.draw', decision: offer.id });
+    const place = g.s.pending!;
+    expect(place.kind === 'recruit.place' && place.mustReplace).toBe(false);
+    act(g, { type: 'recruit.discard', decision: place.id });
+    expect(g.s.discards.hero).toContain((place as { drawn: string }).drawn);
   });
 });
 
-describe('house rules: falling costs', () => {
-  it('a fall costs a companion chosen by the player, and no resource card', () => {
-    const g = newGame(2, 1, { fallCost: true });
-    // Physical 4 + 2 + 2 against the Basilisk (Physical 15): A fails and falls.
-    standard(g, { companions: ['nettle-burrows-trouble-maker', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'mask-of-many-faces'] });
-    onTop(g.s, 'encounter', ['basilisk']);
-    restart(g);
-    const n = g.s.turn.number;
-    const asked: string[] = [];
-    until(g, (s) => s.turn.number !== n, (_s, d) => {
-      if (d.kind === 'bid') return { type: 'bid.pass', decision: d.id };
-      if (d.kind !== 'choose' || d.player !== g.A) return undefined;
-      if (d.purpose !== 'discardCompanion' && d.purpose !== 'discardResource') return undefined;
-      asked.push(d.purpose);
-      return { type: 'choose', decision: d.id, picks: [d.options[0]!.value] };
-    });
-    expect(asked).toEqual(['discardCompanion']);
-    const a = player(g, g.A);
-    expect(a.companions.length + a.inactiveCompanions.length + a.resting.length).toBe(1);
-    expect(a.hand).toHaveLength(2);
-    const paid = g.events.filter((e) => (e.type === 'companionDiscarded' || e.type === 'resourceDiscarded') && e.player === g.A && e.reason === 'Fallen hero');
-    expect(paid.map((e) => e.type)).toEqual(['companionDiscarded']);
-  });
 
-  it('without the rule a fall only replaces the hero', () => {
-    const g = newGame(2, 1, { fallCost: false });
-    // Physical 4 + 2 + 2 against the Basilisk (Physical 15): A fails and falls.
-    standard(g, { companions: ['nettle-burrows-trouble-maker', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'mask-of-many-faces'] });
-    onTop(g.s, 'encounter', ['basilisk']);
-    restart(g);
-    const n = g.s.turn.number;
-    until(g, (s) => s.turn.number !== n, (_s, d) => (d.kind === 'bid' ? { type: 'bid.pass', decision: d.id } : undefined));
-    expect(g.events.some((e) => e.type === 'heroFalls' && e.player === g.A)).toBe(true);
-    expect(player(g, g.A).companions).toHaveLength(2);
-    expect(player(g, g.A).hand).toHaveLength(2);
-  });
-});
 
 describe('hand model', () => {
   it('steady: the current player draws 2 and everyone else 1, never past the hand limit', () => {
     const g = newGame(3, 1, { handModel: 'steady', activeDraw: 2, othersDraw: 1, handLimit: 4 });
     standard(g, { hero: 'thorgar-twice-buried', hand: ['honey-biscuit'] }, { hand: ['feathered-cap', 'jesters-cap', 'patchwork-coat', 'sprig-of-heather'] });
-    give(g.s, g.C!, { hand: ['bag-of-toffees'] });
+    give(g.s, g.C!, { party: ['gnash-the-butcher-of-bloodmire', 'nettle-burrows-trouble-maker', 'sister-aurelie-dane-physician'], hand: ['bag-of-toffees'] });
     const before = g.events.length;
     restart(g);
     // Count what each player drew at the start of the turn (later location effects may draw more).
@@ -1100,7 +1021,7 @@ describe('hand model', () => {
   });
 });
 
-describe('revised heroes (data/balance.json)', () => {
+describe('former heroes', () => {
   it('Pip swaps in a random card from his hand when he has one', () => {
     const g = newGame();
     standard(g, { hand: ['honey-biscuit', 'the-axe-of-doom', 'feathered-cap'] }, { hero: 'pip-wanderfoot', hand: ['jesters-cap'] });
@@ -1173,12 +1094,45 @@ describe('revised heroes (data/balance.json)', () => {
     drawResources(ctx, g.A, 1, 'test');
     expect(player(g, g.A).hand.length).toBe(before + 3); // only the first draw of the turn is doubled
   });
-  it('revised cards say so and carry the new stats; Kazra is unchanged', () => {
+  it('the former heroes carry their halved stats and say so; their triggers and Kin bonuses are set aside', () => {
     const barnaby = getDef('professor-barnaby-pickwort');
-    expect(barnaby.kind === 'hero' && barnaby.stats.P).toBe(4);
-    expect(barnaby.revision).toMatch(/Physical 2/);
-    expect(getDef('kazra-emberdeep').revision).toMatch(/Ironbound/);
+    expect(barnaby.kind === 'hero' && barnaby.stats).toEqual({ P: 2, M: 5, G: 4 });
+    expect(barnaby.revision).toMatch(/halved/);
+    expect(getDef('kazra-emberdeep').revision).toMatch(/halved/);
   });
+
+  it('every former hero is halved (rounded up) from the set-aside register and has no trigger or Kin text', () => {
+    expect(setAside.oldHeroes).toHaveLength(15);
+    for (const h of setAside.oldHeroes) {
+      const d = getDef(h.id);
+      expect(d.kind, h.name).toBe('hero');
+      if (d.kind !== 'hero') continue;
+      expect(d.stats, h.name).toEqual({ P: Math.ceil(h.originalStats.P / 2), M: Math.ceil(h.originalStats.M / 2), G: Math.ceil(h.originalStats.G / 2) });
+      expect('triggerText' in d, h.name).toBe(false);
+      expect('kinText' in d, h.name).toBe(false);
+      expect(h.triggerText, h.name).toBeTruthy(); // stored for later
+    }
+  });
+
+  it('the seven set-aside cards are out of the game but kept in the register', () => {
+    expect(setAside.setAsideCards).toHaveLength(7);
+    for (const c of setAside.setAsideCards) {
+      expect(hasDef(c.id), c.name).toBe(false);
+      expect(abilityOf(c.id), c.name).toBeUndefined();
+    }
+    expect(CARDS.heroes).toHaveLength(15 + 36 - 7);
+  });
+
+  it('no rules text anywhere still talks about companions', () => {
+    const re = /companion/i;
+    for (const kind of ['heroes', 'locations', 'encounters', 'resources'] as const) {
+      for (const c of CARDS[kind]) {
+        const text = 'abilityText' in c ? c.abilityText : 'conditionText' in c ? c.conditionText : '';
+        expect(re.test(text ?? ''), c.name).toBe(false);
+      }
+    }
+  });
+
 });
 
 describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
@@ -1199,7 +1153,7 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
       if (bonus) expect(bonuses[0]).toMatchObject({ stat: 'P', amount: bonus });
       expect(g.s.discards.resource).toContain(flipped);
       expect(g.events.some((e) => e.type === 'cardShown' && e.card.id === flipped)).toBe(true);
-      expect(player(g, g.A).companions).toContain(card(g, 'honk-the-goose-rout-veteran'));
+      expect(player(g, g.A).party).toContain(card(g, 'honk-the-goose-rout-veteran'));
     }
   });
 
@@ -1230,24 +1184,24 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     }
   });
 
-  it('Tobin reveals three companions; a Goose may join and the rest are discarded', () => {
+  it('Tobin reveals three heroes; a Goose may join and the rest are discarded', () => {
     const g = newGame();
     standard(g, { companions: ['tobin-quill-goose-keeper', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
-    onTop(g.s, 'companion', ['gnash-the-butcher-of-bloodmire', 'honk-the-goose-rout-veteran', 'varg-ironjaw']);
+    onTop(g.s, 'hero', ['gnash-the-butcher-of-bloodmire', 'honk-the-goose-rout-veteran', 'varg-ironjaw']);
     use(g, 'tobin-quill-goose-keeper', 'flock');
     const d = g.s.pending!;
     expect(d.kind === 'choose' && d.purpose === 'tobinPick').toBe(true);
     // Only the Goose is on offer (plus "none").
     expect((d as Extract<Decision, { kind: 'choose' }>).options.map((o) => o.value)).toEqual([card(g, 'honk-the-goose-rout-veteran'), 'none']);
     pick(g, card(g, 'honk-the-goose-rout-veteran'));
-    // A is at the companion limit, so the usual discard follows: let Pell go.
+    // A is at the party size, so the usual discard follows: let Pell go.
     const next = g.s.pending!;
-    expect(next.kind === 'choose' && next.purpose === 'discardCompanion').toBe(true);
+    expect(next.kind === 'choose' && next.purpose === 'discardHero').toBe(true);
     pick(g, card(g, 'pell-quillon-collegium-prodigy'));
-    expect(player(g, g.A).companions).toEqual([card(g, 'tobin-quill-goose-keeper'), card(g, 'honk-the-goose-rout-veteran')]);
-    expect(g.s.discards.companion).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'pell-quillon-collegium-prodigy')]));
+    expect(player(g, g.A).party).toEqual([card(g, 'archmage-corvin-varro'), card(g, 'tobin-quill-goose-keeper'), card(g, 'honk-the-goose-rout-veteran')]);
+    expect(g.s.discards.hero).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'pell-quillon-collegium-prodigy')]));
     expect(g.s.turn.setAside).not.toContain(card(g, 'gnash-the-butcher-of-bloodmire'));
   });
 
@@ -1256,10 +1210,10 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     standard(g, { companions: ['tobin-quill-goose-keeper', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
-    onTop(g.s, 'companion', ['gnash-the-butcher-of-bloodmire', 'varg-ironjaw', 'kesh-the-bog-huntress']);
+    onTop(g.s, 'hero', ['gnash-the-butcher-of-bloodmire', 'varg-ironjaw', 'kesh-the-bog-huntress']);
     use(g, 'tobin-quill-goose-keeper', 'flock');
     expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'tobinPick').toBe(false);
-    expect(g.s.discards.companion).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'kesh-the-bog-huntress')]));
+    expect(g.s.discards.hero).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'kesh-the-bog-huntress')]));
   });
 
   it("Tansy draws a resource at the start of her controller's turn for every Goose in play, anyone's", () => {
@@ -1289,24 +1243,6 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     expect(g.s.turn.used[`sigrun:${g.A}`]).toBe(1);
   });
 
-  it('Rosalind and Osric no longer gain anything when the hero swap is used', () => {
-    // Barnaby: P5 M10 G11. A Physical challenge: Mental 10 beats Physical 5, so Rosalind's swap is used and she gains +1.
-    const g = newGame();
-    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'], hand: [] });
-    restart(g);
-    until(g, bidFor(g.A));
-    const used = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(used.companions.find((c) => c.source === card(g, 'rosalind-marchwell-marchguard-clerk'))?.value).toBe(3);
-    // Osric swaps Guile 5 for Physical 4: also used (+1). Guile 5 does not beat a Guile challenge, so no swap there.
-    const h = newGame();
-    standard(h, { hero: 'professor-barnaby-pickwort', companions: ['sir-osric-vane-marshal-of-the-old-guard', 'pell-quillon-collegium-prodigy'], hand: [] });
-    restart(h);
-    until(h, bidFor(h.A));
-    const osric = totalFor(new Ctx(h.s), player(h, h.A), () => true)!;
-    expect(osric.companions.find((c) => c.source === card(h, 'sir-osric-vane-marshal-of-the-old-guard'))?.value).toBe(4);
-    const onGuile = totalFor(new Ctx(h.s), player(h, h.A), () => true, 'G')!;
-    expect(onGuile.companions.find((c) => c.source === card(h, 'sir-osric-vane-marshal-of-the-old-guard'))?.value).toBe(4);
-  });
 });
 
 describe('bots and Tova', () => {
@@ -1367,135 +1303,66 @@ function atBidding(g: Game): Ctx {
   return new Ctx(g.s);
 }
 
-describe('Kin bonuses', () => {
-  const heroTotal = (g: Game, who: PlayerId) => totalFor(new Ctx(g.s), player(g, who), () => true)!.hero;
 
-  it('A: +1 to every hero stat for each companion of the hero\'s kingdom (Aldric, Human)', () => {
-    const g = newGame();
-    standard(g, { hero: 'lord-paladin-aldric-ashcroft', companions: ['rosalind-marchwell-marchguard-clerk', 'pell-quillon-collegium-prodigy'] });
-    atBidding(g);
-    const p = (getDef('lord-paladin-aldric-ashcroft') as { stats: { P: number } }).stats.P;
-    expect(heroTotal(g, g.A)).toBe(p + 2); // two Humans
-    g.s.players.find((x) => x.id === g.A)!.companions = [card(g, 'rosalind-marchwell-marchguard-clerk'), card(g, 'liriel-nightbloom')];
-    expect(heroTotal(g, g.A)).toBe(p + 1); // an Elf does not count
-  });
-
-  it('A counts a half-breed for both of his kingdoms (Hesk is an Orc and a Human)', () => {
-    for (const hero of ['lord-paladin-aldric-ashcroft', 'warchief-grukka-ironjaw']) {
-      const g = newGame();
-      standard(g, { hero, companions: ['hesk-of-two-homes', 'liriel-nightbloom'] });
-      atBidding(g);
-      const base = (getDef(hero) as { stats: { P: number } }).stats.P;
-      expect(heroTotal(g, g.A)).toBe(base + 1);
-    }
-  });
-
-  it('B: draw when a companion of the hero\'s kingdom enters play under your control (Maren, Human)', () => {
-    const g = newGame();
-    standard(g, { hero: 'queen-maren-ashcroft' }, { hero: 'thorgar-twice-buried' });
-    const ctx = atBidding(g);
-    const hand = player(g, g.A).hand.length;
-    companionEnters(ctx, player(g, g.B), card(g, 'mags-tolliver-market-trader'), null); // a Human entering for B: not under her control
-    expect(player(g, g.A).hand.length).toBe(hand);
-    companionEnters(ctx, player(g, g.A), card(g, 'mags-tolliver-market-trader'), null); // a Human entering for A
-    expect(player(g, g.A).hand.length).toBe(hand + 1);
-    companionEnters(ctx, player(g, g.A), card(g, 'thessaly-of-the-grove'), null); // an Elf: nothing
-    expect(player(g, g.A).hand.length).toBe(hand + 1);
-  });
-
-  it('B: a resource of the hero\'s kingdom counts when revealed or played face up, under your control only', () => {
-    const g = newGame();
-    standard(g, { hero: 'queen-maren-ashcroft', hand: ['scrying-lenses', 'the-dawn-temple-bell', 'honey-biscuit'] }, { hero: 'warchief-grukka-ironjaw', hand: ['dowsing-rod'] });
-    restart(g);
-    until(g, bidFor(g.A));
-    const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Queen Maren')).length;
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'scrying-lenses') }); // Human + Collegium, face up
-    expect(drawn()).toBe(1);
-    until(g, bidFor(g.A));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-dawn-temple-bell') }); // Human, face down: hidden, so nothing yet
-    expect(drawn()).toBe(1);
-    until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve');
-    expect(drawn()).toBe(2); // turned face up at the reveal
-  });
-
-  it('B: a card of another kingdom, or one under an opponent\'s control, does nothing', () => {
-    const g = newGame();
-    standard(g, { hero: 'queen-maren-ashcroft', hand: ['honey-biscuit'] }, { hero: 'warchief-grukka-ironjaw', hand: ['the-dawn-temple-bell'] });
-    restart(g);
-    until(g, bidFor(g.A));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') }); // Halfellow
-    until(g, bidFor(g.B));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-dawn-temple-bell') }); // Human, but B's
-    until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve');
-    expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Queen Maren'))).toBe(false);
-  });
-
-  it('C: while an opponent controls a companion of the hero\'s kingdom it gets -1 (Vaelis, Elf)', () => {
-    const g = newGame();
-    standard(g, { hero: 'lord-vaelis-nightbloom' }, { companions: ['liriel-nightbloom', 'sergeant-waddle'] });
-    atBidding(g); // the Silverwood Hunt: Physical
-    const tb = totalFor(new Ctx(g.s), player(g, g.B), () => true)!;
-    expect(tb.companions.find((c) => c.source === card(g, 'liriel-nightbloom'))?.value).toBe((getDef('liriel-nightbloom') as { stats: { P: number } }).stats.P - 1);
-    expect(tb.companions.find((c) => c.source === card(g, 'sergeant-waddle'))?.value).toBe(4);
-    // Her own companions are not affected.
-    give(g.s, g.A, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] });
-    expect(totalFor(new Ctx(g.s), player(g, g.A), () => true)!.companions[0]!.value).toBe((getDef('liriel-nightbloom') as { stats: { P: number } }).stats.P);
-  });
-
-  it('every hero has a Kin bonus on its card that matches the rules', async () => {
-    const { KIN } = await import('./abilities');
-    const { CARDS } = await import('./cards');
-    for (const h of CARDS.heroes) {
-      expect(KIN[h.id], h.name).toBeTruthy();
-      expect(h.kinText, h.name).toContain(KIN[h.id] === 'A' ? '+1 to all stats' : KIN[h.id] === 'B' ? 'enters play under your control, draw' : '-1 to all stats');
-    }
-  });
-});
-
-describe('Bonus companions (Varg and Moss, Goldie and Gimlet)', () => {
-  it('a complete pair raises the companion limit by one, and the second card may be played above the limit', () => {
+describe('Bonus heroes (Varg and Moss, Goldie and Gimlet, Ysolde)', () => {
+  it('a complete pair raises the party size by one, and the second card may be played above the size', () => {
     const g = newGame();
     standard(g, { companions: ['varg-ironjaw', 'pell-quillon-collegium-prodigy'] });
     const ctx = atBidding(g);
     const p = player(g, g.A);
-    expect(maxCompanions(ctx, p)).toBe(2);
-    expect(maxCompanions(ctx, p, card(g, 'moss-dire-wolf'))).toBe(3); // Moss would complete the pair
-    expect(maxCompanions(ctx, p, card(g, 'gimlet-a-very-good-dog'))).toBe(2); // Gimlet's partner is not in play
+    expect(partySize(ctx, p)).toBe(3);
+    expect(partySize(ctx, p, card(g, 'moss-dire-wolf'))).toBe(4); // Moss would complete the pair
+    expect(partySize(ctx, p, card(g, 'gimlet-a-very-good-dog'))).toBe(3); // Gimlet's partner is not in play
   });
 
-  it('under Ysolde both pairs stack: five companions', () => {
+
+  it('Ysolde adds a fourth hero of her own, and under her both pairs stack: six heroes', () => {
     const g = newGame();
     standard(g, { hero: 'ysolde-of-the-wellspring', companions: ['varg-ironjaw', 'moss-dire-wolf'] });
     const ctx = atBidding(g);
     const p = player(g, g.A);
-    p.companions.push(card(g, 'goldie-trickgrin-keeper-of-the-goose-and-kettle'), card(g, 'gimlet-a-very-good-dog'), card(g, 'pell-quillon-collegium-prodigy'));
-    expect(maxCompanions(ctx, p)).toBe(5);
-    expect(p.companions).toHaveLength(5);
+    expect(partySize(ctx, p)).toBe(3 + 1 + 1); // three, Ysolde, the Varg-Moss pair
+    p.party.push(card(g, 'goldie-trickgrin-keeper-of-the-goose-and-kettle'), card(g, 'gimlet-a-very-good-dog'), card(g, 'pell-quillon-collegium-prodigy'));
+    expect(partySize(ctx, p)).toBe(6);
+    expect(p.party).toHaveLength(6);
   });
 
-  it('losing half of a pair drops the party to its limit at once (the player chooses who goes)', () => {
+  it('a face-down Ysolde still counts: the Storybook Glade does not shrink the party', () => {
+    const g = newGame();
+    standard(g, { hero: 'ysolde-of-the-wellspring' });
+    const ctx = atBidding(g);
+    const p = player(g, g.A);
+    const ysolde = card(g, 'ysolde-of-the-wellspring');
+    p.party = p.party.filter((c) => c !== ysolde);
+    p.inactive.push(ysolde);
+    expect(partySize(ctx, p)).toBe(4);
+  });
+
+
+  it('losing half of a pair drops the party to its size at once (the player chooses who goes)', () => {
     const g = newGame();
     standard(g, { companions: ['varg-ironjaw', 'goldie-trickgrin-keeper-of-the-goose-and-kettle'] });
     const ctx = atBidding(g);
     const p = player(g, g.A);
-    p.companions.push(card(g, 'moss-dire-wolf')); // the bonus companion
-    expect(p.companions).toHaveLength(3);
-    // Another companion replaces Varg: the pair is broken, so three is one too many.
-    companionEnters(ctx, p, card(g, 'pell-quillon-collegium-prodigy'), card(g, 'varg-ironjaw'));
-    const forced = g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardCompanion');
+    p.party.push(card(g, 'moss-dire-wolf')); // the bonus hero
+    expect(p.party).toHaveLength(4);
+    // Another hero replaces Varg: the pair is broken, so four is one too many.
+    heroEnters(ctx, p, card(g, 'pell-quillon-collegium-prodigy'), card(g, 'varg-ironjaw'));
+    const forced = g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardHero');
     expect(forced).toHaveLength(1);
-    // Discarding down to the limit does not queue a second one.
-    discardCompanion(ctx, p, card(g, 'moss-dire-wolf'), 'test');
-    expect(g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardCompanion')).toHaveLength(1);
+    // Discarding down to the size does not queue a second one.
+    discardHero(ctx, p, card(g, 'moss-dire-wolf'), 'test');
+    expect(g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardHero')).toHaveLength(1);
   });
+
 
   it('Varg and Sigrun each gain +2 while the other is in the party', () => {
     const g = newGame();
     standard(g, { companions: ['varg-ironjaw', 'sigrun-stonefast-metal-singer'] });
     atBidding(g); // Physical
     const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.companions.find((c) => c.source === card(g, 'varg-ironjaw'))?.value).toBe(5 + 2);
-    expect(tb.companions.find((c) => c.source === card(g, 'sigrun-stonefast-metal-singer'))?.value).toBe(2 + 2);
+    expect(tb.party.find((c) => c.source === card(g, 'varg-ironjaw'))?.value).toBe(5 + 2);
+    expect(tb.party.find((c) => c.source === card(g, 'sigrun-stonefast-metal-singer'))?.value).toBe(2 + 2);
   });
 
   it('Gimlet gains +1 while Destiny the Frog is part of the encounter', () => {
@@ -1504,7 +1371,7 @@ describe('Bonus companions (Varg and Moss, Goldie and Gimlet)', () => {
     onTop(g.s, 'encounter', ['destiny-the-frog']);
     atBidding(g);
     const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.companions.find((c) => c.source === card(g, 'gimlet-a-very-good-dog'))?.value).toBe(3 + 1);
+    expect(tb.party.find((c) => c.source === card(g, 'gimlet-a-very-good-dog'))?.value).toBe(3 + 1);
   });
 });
 
@@ -1514,10 +1381,10 @@ describe('New triggers', () => {
     standard(g, { hero: 'thorgar-twice-buried', companions: ['seraphine-moonveil-warden-scholar', 'pell-quillon-collegium-prodigy'] });
     const ctx = atBidding(g);
     const hand = player(g, g.A).hand.length;
-    discardCompanion(ctx, player(g, g.A), card(g, 'pell-quillon-collegium-prodigy'), 'test');
+    discardHero(ctx, player(g, g.A), card(g, 'pell-quillon-collegium-prodigy'), 'test');
     expect(player(g, g.A).hand.length).toBe(hand + 1);
     // Another player's companion leaving does nothing.
-    discardCompanion(ctx, player(g, g.B), card(g, 'sergeant-waddle'), 'test');
+    discardHero(ctx, player(g, g.B), card(g, 'sergeant-waddle'), 'test');
     expect(player(g, g.A).hand.length).toBe(hand + 1);
   });
 
@@ -1532,14 +1399,6 @@ describe('New triggers', () => {
     expect(player(g, g.A).hand.length).toBe(hand + 1);
   });
 
-  it('Pip draws when a location is replaced', () => {
-    const g = newGame();
-    standard(g, { hero: 'pip-wanderfoot' });
-    const ctx = atBidding(g);
-    const hand = player(g, g.A).hand.length;
-    replaceLocation(ctx, ctx.s.decks.location.pop()!, 'shuffleBack', 'test');
-    expect(player(g, g.A).hand.length).toBe(hand + 1);
-  });
 
   it('Kesh draws when a Beast encounter enters play', () => {
     const g = newGame();
@@ -1551,15 +1410,6 @@ describe('New triggers', () => {
     expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason.startsWith('Kesh'))).toBe(true);
   });
 
-  it('Aelthir draws again when a later location changes the challenge to Guile', () => {
-    const g = newGame();
-    standard(g, {}, { hero: 'aelthir-moonveil' });
-    const ctx = atBidding(g); // Physical (The Silverwood Hunt)
-    const hand = player(g, g.B).hand.length;
-    replaceLocation(ctx, idOf(g.s, 'tomb-of-the-first-wardens'), 'shuffleBack', 'test');
-    expect(ctx.events.some((e) => e.type === 'challengeSelected' && e.stat === 'G')).toBe(true);
-    expect(player(g, g.B).hand.length).toBe(hand + 1);
-  });
 
   it('Varg draws at the start of his controller\'s turn for each other Orc in the party', () => {
     const handAtTurnThree = (companions: string[]) => {
@@ -1650,11 +1500,11 @@ describe('Activated abilities of the redesign', () => {
     until(g, bidFor(g.A));
     use(g, 'liriel-nightbloom', 'force');
     pick(g, card(g, 'sergeant-waddle'));
-    expect(g.s.turn.effects.filter((e) => e.kind === 'forceCompanionStat')).toHaveLength(0);
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(0);
     expect(g.events.some((e) => e.type === 'abilityIgnored')).toBe(true);
     use(g, 'kesh-the-bog-huntress', 'force');
     pick(g, card(g, 'sergeant-waddle'));
-    expect(g.s.turn.effects.filter((e) => e.kind === 'forceCompanionStat')).toHaveLength(1); // her once per turn is spent
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(1); // her once per turn is spent
   });
 
   it('Torvi: Fire in the Hole discards him and takes 4 off every opponent (6 with Mhorgrim\'s Hunt)', () => {
@@ -1667,15 +1517,15 @@ describe('Activated abilities of the redesign', () => {
       until(g, activateFor(g.A, 'endOfBidding'));
       const before = total(g, g.A, g.B);
       use(g, 'torvi-cinderkeg-master-gunner', 'fire');
-      expect(g.s.discards.companion).toContain(card(g, 'torvi-cinderkeg-master-gunner'));
+      expect(g.s.discards.hero).toContain(card(g, 'torvi-cinderkeg-master-gunner'));
       expect(total(g, g.A, g.B)).toBe(before - amount);
     }
   });
 
-  it('Oskar watches an opponent: when they use an ability against his hero or companions, he draws', () => {
+  it('Oskar watches an opponent: when they use an ability against his heroes, he draws', () => {
     const g = newGame();
     standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: [] },
-      { hero: 'warchief-grukka-ironjaw', companions: ['brisa-blastcap-bombardier', 'kesh-the-bog-huntress'] });
+      { hero: 'warchief-grukka-ironjaw', companions: ['kesh-the-bog-huntress', 'gnash-the-butcher-of-bloodmire'] });
     onTop(g.s, 'encounter', ['crawling-remnant']);
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
@@ -1683,9 +1533,11 @@ describe('Activated abilities of the redesign', () => {
     const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Loremaster Oskar Grimgate').length;
     expect(drawn()).toBe(0);
     until(g, bidFor(g.B));
-    use(g, 'brisa-blastcap-bombardier', 'force'); // B forces A's hero to use Physical
+    use(g, 'kesh-the-bog-huntress', 'force'); // B forces one of A's heroes onto Physical
+    pick(g, card(g, 'pell-quillon-collegium-prodigy'));
     expect(drawn()).toBe(1);
   });
+
   it('The Book of Grudges: +3 (+4 for Oskar), and if its owner falls the winner has -3 next encounter', () => {
     const g = newGame();
     standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: ['the-book-of-grudges'] },
@@ -1804,7 +1656,7 @@ describe('Curses and the Golden Egg: later rulings', () => {
     restart(g);
     until(g, bidFor(g.A));
     const egg = () => viewFor(g.s, g.A).hand.find((h) => h.card.def === 'the-golden-egg')!.value;
-    const geeseInPlay = [...player(g, g.A).companions, ...player(g, g.B).companions].filter((c) => getDef(g.s.cards[c]!).groups.includes('Goose')).length;
+    const geeseInPlay = [...player(g, g.A).party, ...player(g, g.B).party].filter((c) => getDef(g.s.cards[c]!).groups.includes('Goose')).length;
     expect(egg()).toBe(1 + 2 * (geeseInPlay + 1));
   });
 });
@@ -1836,7 +1688,7 @@ describe('Encounters and locations of the redesign', () => {
     expect(g.s.discards.encounter).toContain(card(g, 'skarra-ironjaw-the-bog-mother'));
   });
 
-  it('The Runeforged Titan is Physical 18, but only 10 if the challenge is changed to Mental or Guile', () => {
+  it('The Runeforged Titan is hard on Physical, but only 7 if the challenge is changed to Mental or Guile', () => {
     const base = (loc: string) => {
       const g = newGame();
       standard(g, {});
@@ -1846,9 +1698,9 @@ describe('Encounters and locations of the redesign', () => {
       until(g, bidFor(g.A));
       return viewFor(g.s, g.A).turn.challenge!.difficulty.base;
     };
-    expect(base('the-silverwood-hunt')).toBe(18); // Physical
-    expect(base('the-sealed-archive')).toBe(10); // Mental
-    expect(base('tomb-of-the-first-wardens')).toBe(10); // Guile
+    expect(base('the-silverwood-hunt')).toBe((getDef('runeforged-titan') as { difficulty: number }).difficulty); // Physical
+    expect(base('the-sealed-archive')).toBe(7); // Mental
+    expect(base('tomb-of-the-first-wardens')).toBe(7); // Guile
   });
 
   it('The Treasure Trow: everyone draws when it enters, and each survivor draws when it is defeated', () => {

@@ -3,13 +3,13 @@
 
 import raw from '../data/cards.json';
 import type {
-  CardDatabase, CardDef, CompanionDef, EncounterDef, HeroDef, LocationDef, ResourceDef,
+  CardDatabase, CardDef, EncounterDef, HeroDef, LocationDef, ResourceDef,
 } from './cardTypes';
 
 const db = raw as unknown as CardDatabase;
 
 const byId = new Map<string, CardDef>();
-for (const list of [db.heroes, db.companions, db.locations, db.encounters, db.resources]) {
+for (const list of [db.heroes, db.locations, db.encounters, db.resources]) {
   for (const c of list as CardDef[]) {
     if (byId.has(c.id)) throw new Error(`duplicate card id ${c.id}`);
     byId.set(c.id, c);
@@ -37,7 +37,6 @@ function asKind<T extends CardDef>(kind: T['kind']) {
 }
 
 export const heroDef = asKind<HeroDef>('hero');
-export const companionDef = asKind<CompanionDef>('companion');
 export const locationDef = asKind<LocationDef>('location');
 export const encounterDef = asKind<EncounterDef>('encounter');
 export const resourceDef = asKind<ResourceDef>('resource');

@@ -2,8 +2,7 @@
 
 import { CARDS } from './cards';
 import { Ctx } from './context';
-import { advance, dealStartingTeams } from './flow';
-import { NO_HERO } from './types';
+import { advance, dealStartingHands } from './flow';
 import { randomSeed, nextInt, warmUp, type RngState } from './rng';
 import { DEFAULT_RULES, MAX_PLAYERS, MIN_PLAYERS, type HouseRules } from './rules';
 import type { DeckName, GameEvent, GameState, PlayerId } from './types';
@@ -15,8 +14,6 @@ export interface NewGameOptions {
   rules?: Partial<HouseRules>;
   /** Tests and replays only. Production games take a CSPRNG seed. */
   seed?: RngState;
-  /** Simulations only: deal these heroes (def ids by seat) instead of the top of the stack. Needs `heroDraft: 1`; other seats are dealt blind. */
-  heroes?: Record<PlayerId, string>;
   /** Pause at presentation checkpoints (the host resumes them). Off for simulations. */
   autoPause?: boolean;
 }
@@ -45,16 +42,13 @@ function sanitizeRules(r: Partial<HouseRules> | undefined): HouseRules {
   const int = (v: unknown, lo: number, hi: number, d: number) =>
     Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi ? (v as number) : d;
   out.renownToWin = int(r.renownToWin, 5, 100, out.renownToWin);
-  out.maxCompanions = int(r.maxCompanions, 0, 5, out.maxCompanions);
-  out.startingCompanions = int(r.startingCompanions, 0, out.maxCompanions, Math.min(out.startingCompanions, out.maxCompanions));
+  out.partySize = int(r.partySize, 1, 5, out.partySize);
+  out.draftPool = int(r.draftPool, out.partySize, 12, Math.max(out.draftPool, out.partySize));
   out.drawSize = r.drawSize === 'playerCount' ? 'playerCount' : int(r.drawSize, 1, 10, 0) || out.drawSize;
-  out.companionPhase = r.companionPhase === 'activeOnly' ? 'activeOnly' : 'everyone';
+  out.recruitPhase = r.recruitPhase === 'activeOnly' ? 'activeOnly' : 'everyone';
   if (typeof r.allPlayersFaceEncounter === 'boolean') out.allPlayersFaceEncounter = r.allPlayersFaceEncounter;
   if (typeof r.minionsTriggerEntersPlay === 'boolean') out.minionsTriggerEntersPlay = r.minionsTriggerEntersPlay;
   out.maxTurns = int(r.maxTurns, 10, 1000, out.maxTurns);
-  if (typeof r.fallCost === 'boolean') out.fallCost = r.fallCost;
-  out.heroDraft = int(r.heroDraft, 1, 5, out.heroDraft);
-  if (typeof r.draftOnReplace === 'boolean') out.draftOnReplace = r.draftOnReplace;
   if (r.handModel === 'refill' || r.handModel === 'steady') out.handModel = r.handModel;
   out.activeDraw = int(r.activeDraw, 0, 5, out.activeDraw);
   out.othersDraw = int(r.othersDraw, 0, 5, out.othersDraw);
@@ -73,7 +67,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
     ids.add(s.id);
   }
 
-  const empty = (): Record<DeckName, string[]> => ({ hero: [], companion: [], location: [], encounter: [], resource: [] });
+  const empty = (): Record<DeckName, string[]> => ({ hero: [], location: [], encounter: [], resource: [] });
   const state: GameState = {
     schema: 1,
     rules: sanitizeRules(opts.rules),
@@ -83,7 +77,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
     cards: Object.create(null) as Record<string, string>,
     turn: {
       number: 0, active: 0, step: 'turnStart', cursor: 0,
-      location: null, extraLocations: [], encounter: null, minions: [], companionMinions: [], setAside: [], chosenEncounter: null, openingEntrants: [],
+      location: null, extraLocations: [], encounter: null, minions: [], heroMinions: [], setAside: [], chosenEncounter: null, openingEntrants: [],
       bidder: 0, passesInARow: 0, revealCursor: 0,
       wandsDisabled: false, noFalls: false, failed: [], result: null, effects: [], effectSeq: 0, used: {},
     },
@@ -99,7 +93,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
   const ctx = new Ctx(state);
 
   const lists: [DeckName, { id: string }[]][] = [
-    ['hero', CARDS.heroes], ['companion', CARDS.companions], ['location', CARDS.locations],
+    ['hero', CARDS.heroes], ['location', CARDS.locations],
     ['encounter', CARDS.encounters], ['resource', CARDS.resources],
   ];
   for (const [deck, defs] of lists) {
@@ -109,29 +103,19 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
 
   for (const [i, s] of seats.entries()) {
     state.players.push({
-      // No hero yet: heroes are drafted (or dealt) below.
-      id: s.id, name: sanitizeName(s.name, `Player ${i + 1}`), hero: NO_HERO,
-      companions: [], inactiveCompanions: [], resting: [], hand: [], claimed: [], renown: 0,
-      bids: [], seen: [], councilHeroes: [], statOverride: null, used: {}, penalty: 0, penaltyNext: 0,
+      // Empty party: the opening party draft fills it (flow.ts).
+      id: s.id, name: sanitizeName(s.name, `Player ${i + 1}`),
+      party: [], inactive: [], resting: [], hand: [], claimed: [], renown: 0,
+      bids: [], seen: [], borrowed: [], statOverride: null, used: {}, penalty: 0, penaltyNext: 0,
     });
   }
   ctx.emit({ type: 'gameStarted', players: state.players.map((p) => p.id) });
 
   state.turn.active = nextInt(state.rng, state.players.length);
 
-  // Heroes first, then companions and hands (dealStartingTeams).
-  if (state.rules.heroDraft > 1) {
-    state.turn.step = 'draft'; // flow.ts: each player looks at N heroes and keeps one, then teams are dealt
-  } else {
-    for (const p of state.players) {
-      const want = opts.heroes?.[p.id];
-      const at = want ? state.decks.hero.findIndex((c) => state.cards[c] === want) : -1;
-      p.hero = at >= 0 ? state.decks.hero.splice(at, 1)[0]! : ctx.take('hero')!;
-      ctx.emit({ type: 'heroChanged', player: p.id, from: null, to: ctx.ref(p.hero), reason: 'setup' });
-    }
-    dealStartingTeams(ctx);
-    state.turn.step = 'companionDraft';
-  }
+  // Hands first, then the party draft: each player privately picks their heroes from a pool.
+  dealStartingHands(ctx);
+  state.turn.step = 'partyDraft';
   advance(ctx);
   return { state, events: ctx.events };
 }

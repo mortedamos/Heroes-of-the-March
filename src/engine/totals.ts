@@ -8,9 +8,9 @@
 
 import { abilityOf } from './abilities';
 import { getDef } from './cards';
-import type { Challenge, CompanionDef, HeroDef, ResourceDef, Stat } from './cardTypes';
+import type { Challenge, HeroDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
-import { activeAbility, activeEffects, bidsBeingRevealed, hasGroup, kinCount, sharesKingdom } from './effects';
+import { activeAbility, activeEffects, bidsBeingRevealed, hasGroup, playerHas } from './effects';
 import type { Bid, CardId, PlayerId, PlayerState } from './types';
 
 export type Visible = (owner: PlayerState, bid: Bid) => boolean;
@@ -41,9 +41,9 @@ function locationBoost(ctx: Ctx, card: CardId): number {
 }
 
 /** base: printed on the encounter card. */
-export interface DifficultyBreakdown { base: number; boost: number; minions: number; ignoredMinions: boolean; total: number }
+export interface DifficultyBreakdown { base: number; boost: number; minions: number; total: number }
 
-export function difficultyFor(ctx: Ctx, p: PlayerState | null): DifficultyBreakdown | null {
+export function difficultyFor(ctx: Ctx, _p: PlayerState | null): DifficultyBreakdown | null {
   const ch = currentChallenge(ctx);
   const t = ctx.s.turn;
   if (!ch || !t.encounter) return null;
@@ -56,21 +56,16 @@ export function difficultyFor(ctx: Ctx, p: PlayerState | null): DifficultyBreakd
     if (d.kind !== 'encounter') continue;
     minions += d.minionValue + locationBoost(ctx, m) + perMinion;
   }
-  // Companions pressed into service as minions (Infectious Zombie) add their stat for the challenge.
+  // Heroes pressed into service as minions (Infectious Zombie) add their stat for the challenge.
   const chStat = challengeStat(ctx, null) ?? ch.stat;
-  for (const c of t.companionMinions) {
+  for (const c of t.heroMinions) {
     const d = ctx.def(c);
-    if (d.kind === 'companion') minions += d.stats[chStat];
-  }
-  let ignoredMinions = false;
-  if (p && minions > 0 && activeAbility(ctx, p.hero)?.ignorePositiveMinionBonus) {
-    minions = 0;
-    ignoredMinions = true;
+    if (d.kind === 'hero') minions += d.stats[chStat];
   }
   // The Runeforged Titan is far easier if the challenge is not Physical.
-  const stat = challengeStat(ctx, p) ?? ch.stat;
+  const stat = challengeStat(ctx, _p) ?? ch.stat;
   const base = abilityOf(main.id)?.difficultyByStat?.[stat] ?? ch.difficulty;
-  return { base, boost, minions, ignoredMinions, total: base + boost + minions };
+  return { base, boost, minions, total: base + boost + minions };
 }
 
 // --- player totals ---------------------------------------------------------
@@ -78,15 +73,13 @@ export function difficultyFor(ctx: Ctx, p: PlayerState | null): DifficultyBreakd
 export interface Contribution { source: CardId; value: number }
 export interface TotalBreakdown {
   stat: Stat;
-  hero: number;
-  companions: Contribution[];
+  /** What each hero in the party adds in the tested stat. */
+  party: Contribution[];
   council: Contribution[];
   resources: Contribution[];
   bonus: number;
   /** Where `bonus` came from (cards' bonuses, penalties), for the result breakdown. */
   bonuses: { source: CardId | null; label: string; amount: number }[];
-  /** How much of `hero` is the Kin A bonus. */
-  kin: number;
   total: number;
   /** Bids not counted because the viewer can't see them. */
   hiddenBids: number;
@@ -95,70 +88,29 @@ export interface TotalBreakdown {
 /** Brunna: forced stats only apply to her player's cards if they help. */
 function applyForced(ctx: Ctx, p: PlayerState, normal: number, forced: number | null): number {
   if (forced === null) return normal;
-  const a = activeAbility(ctx, p.hero);
-  return a?.ignoreForcedStat || a?.ignoreHostileEffects ? Math.max(normal, forced) : forced;
+  return playerHas(ctx, p, (a) => a.ignoreForcedStat || a.ignoreHostileEffects) ? Math.max(normal, forced) : forced;
 }
 
-/** Does this effect count against `p`? (Ignored when their hero shrugs off opponents' effects.) */
+/** Does this effect count against `p`? (Ignored when one of their heroes shrugs off opponents' effects.) */
 function hostileApplies(ctx: Ctx, p: PlayerState, effectOwner: string): boolean {
-  return effectOwner === p.id || !activeAbility(ctx, p.hero)?.ignoreHostileEffects;
+  return effectOwner === p.id || !playerHas(ctx, p, (a) => a.ignoreHostileEffects);
 }
 
-function heroValue(ctx: Ctx, p: PlayerState, stat: Stat): number {
-  const hero = getDef(ctx.defId(p.hero)) as HeroDef;
-  let v = hero.stats[stat];
-  for (const c of p.companions) {
-    const sub = activeAbility(ctx, c)?.heroStatSub;
-    if (sub) v = Math.max(v, hero.stats[sub]);
-  }
-  const forced = activeEffects(ctx, 'forceHeroStat').filter((e) => e.target === p.id).at(-1);
-  v = applyForced(ctx, p, v, forced ? hero.stats[forced.stat as Stat] : null);
-  // Kin A: +1 to every stat for each companion of the hero's kingdom.
-  if (activeAbility(ctx, p.hero)?.kin === 'A') v += kinCount(ctx, p);
-  for (const e of activeEffects(ctx, 'heroMultiplier')) if (e.target === p.id) v *= e.amount ?? 1;
-  return v;
-}
-
-/**
- * Posy and Osric: when the hero's stat swap is used (the hero's Mental / Guile beats the hero's stat in this
- * challenge), the companion that provides it gains `heroSubBonus` for the encounter. If both are in play, the
- * one providing the better swap gets it. A silenced companion contributes nothing, bonus included.
- */
-function addSwapBonus(ctx: Ctx, p: PlayerState, stat: Stat, companions: Contribution[]): void {
-  const hero = getDef(ctx.defId(p.hero)) as HeroDef;
-  let best: Contribution | null = null;
-  let bestSub = hero.stats[stat];
-  let bonus = 0;
-  for (const c of companions) {
-    const a = activeAbility(ctx, c.source);
-    if (!a?.heroStatSub || !a.heroSubBonus) continue;
-    if (activeEffects(ctx, 'silenceCompanion').some((e) => e.target === c.source)) continue;
-    const sub = hero.stats[a.heroStatSub];
-    if (sub > bestSub) { best = c; bestSub = sub; bonus = a.heroSubBonus; }
-  }
-  if (best) best.value += bonus;
-}
-
-function companionValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat): number {
-  if (activeEffects(ctx, 'silenceCompanion').some((e) => e.target === card && hostileApplies(ctx, p, e.owner))) return 0;
-  const d = getDef(ctx.defId(card)) as CompanionDef;
+function heroValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat): number {
+  if (activeEffects(ctx, 'silenceHero').some((e) => e.target === card && hostileApplies(ctx, p, e.owner))) return 0;
+  const d = getDef(ctx.defId(card)) as HeroDef;
   let v = d.stats[stat];
   const sub = activeAbility(ctx, card)?.selfStatSub;
   if (sub) v = Math.max(v, d.stats[sub]);
-  const forced = activeEffects(ctx, 'forceCompanionStat').filter((e) => e.target === card).at(-1);
+  const forced = activeEffects(ctx, 'forceStat').filter((e) => e.target === card).at(-1);
   v = applyForced(ctx, p, v, forced ? d.stats[forced.stat as Stat] : null);
   const a = activeAbility(ctx, card);
-  // Varg and Sigrun: +1 while the other is in the party.
-  if (a?.partnerBonus && p.companions.some((c) => ctx.defId(c) === a.partnerBonus!.with)) v += a.partnerBonus.amount;
+  // Varg and Sigrun: +2 while the other is in the party.
+  if (a?.partnerBonus && p.party.some((c) => ctx.defId(c) === a.partnerBonus!.with)) v += a.partnerBonus.amount;
   // Gimlet: +1 while Destiny the Frog is part of the encounter.
   if (a?.encounterBonus) {
     const t = ctx.s.turn;
     if ([t.encounter, ...t.minions].some((e) => e && ctx.defId(e) === a.encounterBonus!.def)) v += a.encounterBonus.amount;
-  }
-  // Kin C: an opposing hero shaves 1 off each companion of its kingdom.
-  for (const o of ctx.s.players) {
-    if (o.id === p.id || !o.hero) continue;
-    if (activeAbility(ctx, o.hero)?.kin === 'C' && sharesKingdom(ctx.def(o.hero), d) && hostileApplies(ctx, p, o.id)) v -= 1;
   }
   return Math.max(0, v);
 }
@@ -170,8 +122,11 @@ export function resourceValue(ctx: Ctx, owner: PlayerState, card: CardId): numbe
   if (d.wand) {
     if (ctx.s.turn.wandsDisabled) return 0;
   }
-  // Kazra: every resource he bids is worth one more (a curse placed in front of him is not his bid).
-  if (d.groups.includes('Dwarf') && d.value >= 0 && owner.hero && activeAbility(ctx, owner.hero)?.bidBonus) v += activeAbility(ctx, owner.hero)!.bidBonus!;
+  // Kazra: every Dwarf resource he bids is worth one more (a curse placed in front of him is not his bid).
+  if (d.groups.includes('Dwarf') && d.value >= 0) {
+    const kazra = playerHas(ctx, owner, (a) => a.bidBonus !== undefined);
+    if (kazra) v += abilityOf(ctx.defId(kazra))!.bidBonus!;
+  }
   // Oskar: "any numeric bonus it grants counts as zero instead".
   if (v > 0 && activeEffects(ctx, 'negateBid').some((e) => e.target === card && hostileApplies(ctx, owner, e.owner))) v = 0;
   return v;
@@ -180,39 +135,31 @@ export function resourceValue(ctx: Ctx, owner: PlayerState, card: CardId): numbe
 export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverride?: Stat): TotalBreakdown | null {
   const stat = statOverride ?? challengeStat(ctx, p);
   if (!stat) return null;
-  const hero = heroValue(ctx, p, stat);
-  const companions = p.companions.map((c) => ({ source: c, value: companionValue(ctx, p, c, stat) }));
-  addSwapBonus(ctx, p, stat, companions);
-  if (companions.length > 2 && activeAbility(ctx, p.hero)?.extraCompanionHalf) {
-    const weakest = companions.reduce((a, b) => (b.value < a.value ? b : a));
-    weakest.value = Math.floor(weakest.value / 2);
-  }
-  const council = p.councilHeroes.map((h) => ({ source: h, value: (getDef(ctx.defId(h)) as HeroDef).stats[stat] }));
+  const party = p.party.map((c) => ({ source: c, value: heroValue(ctx, p, c, stat) }));
+  const council = p.borrowed.map((h) => ({ source: h, value: (getDef(ctx.defId(h)) as HeroDef).stats[stat] }));
   const counted = p.bids.filter((b) => visible(p, b));
   const resources = counted.map((b) => ({ source: b.card, value: resourceValue(ctx, p, b.card) }));
   let bonus = 0;
   const bonuses: TotalBreakdown['bonuses'] = [];
   const add = (source: CardId | null, label: string, amount: number) => { if (amount === 0) return; bonus += amount; bonuses.push({ source, label, amount }); };
-  for (const c of p.companions) {
+  for (const c of p.party) {
     const mb = activeAbility(ctx, c)?.multiBidBonus;
     if (mb && bidsBeingRevealed(ctx) && counted.length >= mb.cards) add(c, ctx.def(c).name.split(',')[0]!, mb.bonus * counted.length);
   }
   for (const e of activeEffects(ctx, 'statBonus')) {
     if (e.target === p.id && (e.stat === 'all' || e.stat === stat)) add(e.source, ctx.def(e.source).name.split(',')[0]!, e.amount ?? 0);
   }
-  add(p.hero, ctx.def(p.hero).name.split(',')[0]!, activeAbility(ctx, p.hero)?.flatBonus ?? 0);
   // The Grudge Book / The Book of Grudges: -3 in this encounter.
   add(null, 'Grudge', -p.penalty);
   const sum = (xs: Contribution[]) => xs.reduce((a, x) => a + x.value, 0);
   return {
-    stat, hero, companions, council, resources, bonus, bonuses,
-    kin: activeAbility(ctx, p.hero)?.kin === 'A' ? kinCount(ctx, p) : 0,
-    total: hero + sum(companions) + sum(council) + sum(resources) + bonus,
+    stat, party, council, resources, bonus, bonuses,
+    total: sum(party) + sum(council) + sum(resources) + bonus,
     hiddenBids: p.bids.length - counted.length,
   };
 }
 
-/** Raw hero + companion strength in a stat (used for "may change the stat" choices). */
+/** Raw party strength in a stat (used for "may change the stat" choices). */
 export function baseStrength(ctx: Ctx, p: PlayerState, stat: Stat): number {
-  return heroValue(ctx, p, stat) + p.companions.reduce((a, c) => a + companionValue(ctx, p, c, stat), 0);
+  return p.party.reduce((a, c) => a + heroValue(ctx, p, c, stat), 0);
 }

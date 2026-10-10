@@ -142,7 +142,7 @@ export class Ctx {
 
   /** Remove a card from wherever it is in a player's play area / hand. */
   removeFromPlayer(p: PlayerState, card: CardId): void {
-    for (const key of ['hand', 'companions', 'inactiveCompanions', 'resting', 'claimed', 'councilHeroes'] as const) {
+    for (const key of ['hand', 'party', 'inactive', 'resting', 'claimed', 'borrowed'] as const) {
       const i = p[key].indexOf(card);
       if (i >= 0) p[key].splice(i, 1);
     }

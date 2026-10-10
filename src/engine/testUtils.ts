@@ -23,24 +23,23 @@ export function locateAll(s: GameState): Map<CardId, string[]> {
   for (const [k, pile] of Object.entries(s.decks)) for (const c of pile) put(c, `deck:${k}`);
   for (const [k, pile] of Object.entries(s.discards)) for (const c of pile) put(c, `discard:${k}`);
   for (const p of s.players) {
-    if (p.hero) put(p.hero, `${p.id}:hero`);
-    for (const c of p.companions) put(c, `${p.id}:companion`);
-    for (const c of p.inactiveCompanions) put(c, `${p.id}:inactive`);
+    for (const c of p.party) put(c, `${p.id}:party`);
+    for (const c of p.inactive) put(c, `${p.id}:inactive`);
     for (const c of p.resting) put(c, `${p.id}:resting`);
     for (const c of p.hand) put(c, `${p.id}:hand`);
     for (const c of p.claimed) put(c, `${p.id}:claimed`);
     for (const b of p.bids) put(b.card, `${p.id}:bid`);
-    for (const c of p.councilHeroes) put(c, `${p.id}:council`);
+    for (const c of p.borrowed) put(c, `${p.id}:borrowed`);
   }
   const t = s.turn;
   if (t.location) put(t.location, 'location');
   for (const c of t.extraLocations) put(c, 'extraLocation');
   if (t.encounter) put(t.encounter, 'encounter');
   for (const c of t.minions) put(c, 'minion');
-  for (const c of t.companionMinions) put(c, 'companionMinion');
+  for (const c of t.heroMinions) put(c, 'heroMinion');
   for (const c of t.setAside) put(c, 'setAside');
   if (t.chosenEncounter) put(t.chosenEncounter, 'chosenEncounter');
-  if (s.pending?.kind === 'companion.place') put(s.pending.drawn, 'pendingDrawn');
+  if (s.pending?.kind === 'recruit.place') put(s.pending.drawn, 'pendingDrawn');
   return where;
 }
 

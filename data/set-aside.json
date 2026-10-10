@@ -1,0 +1,367 @@
+{
+  "_about": "Rules content set aside by the party rework (Oct 2026): kept for reference and possible reuse on other cards, not used in the game. Working engine code for all of it is in git at the commit below.",
+  "engineCommit": "262e213",
+  "oldHeroes": [
+    {
+      "number": 1001,
+      "id": "warchief-grukka-ironjaw",
+      "name": "Warchief Grukka Ironjaw",
+      "originalStats": {
+        "P": 11,
+        "M": 6,
+        "G": 7
+      },
+      "triggerText": "When a Capital card enters play, draw two resources.",
+      "kinText": "Kin: your hero gets +1 to all stats for each Orc companion you control."
+    },
+    {
+      "number": 1002,
+      "id": "thorgar-twice-buried",
+      "name": "Thorgar Twice-Buried",
+      "originalStats": {
+        "P": 7,
+        "M": 6,
+        "G": 8
+      },
+      "triggerText": "When an Undead card enters play, draw a resource.",
+      "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats."
+    },
+    {
+      "number": 1003,
+      "id": "aelthir-moonveil",
+      "name": "Aelthir Moonveil",
+      "originalStats": {
+        "P": 4,
+        "M": 8,
+        "G": 9
+      },
+      "triggerText": "When a Guile challenge is faced, draw a resource.",
+      "kinText": "Kin: when a Elf card enters play under your control, draw a resource."
+    },
+    {
+      "number": 1004,
+      "id": "lord-vaelis-nightbloom",
+      "name": "Lord Vaelis Nightbloom",
+      "originalStats": {
+        "P": 5,
+        "M": 9,
+        "G": 11
+      },
+      "triggerText": "When a hero falls, draw 3 resources.",
+      "kinText": "Kin: while an opponent controls a Elf companion, it gets -1 to all stats."
+    },
+    {
+      "number": 1005,
+      "id": "pip-wanderfoot",
+      "name": "Pip Wanderfoot",
+      "originalStats": {
+        "P": 6,
+        "M": 5,
+        "G": 6
+      },
+      "triggerText": "When a location is replaced by an ability, draw a resource.",
+      "kinText": "Kin: your hero gets +1 to all stats for each Halfellow companion you control."
+    },
+    {
+      "number": 1006,
+      "id": "kazra-emberdeep",
+      "name": "Kazra Emberdeep",
+      "originalStats": {
+        "P": 8,
+        "M": 6,
+        "G": 8
+      },
+      "triggerText": "When an Ironbound card enters play, draw a resource.",
+      "kinText": "Kin: when a Dwarf card enters play under your control, draw a resource."
+    },
+    {
+      "number": 1007,
+      "id": "ysolde-of-the-wellspring",
+      "name": "Ysolde of the Wellspring",
+      "originalStats": {
+        "P": 4,
+        "M": 6,
+        "G": 6
+      },
+      "triggerText": "When a Beast card enters play, draw a resource.",
+      "kinText": "Kin: your hero gets +1 to all stats for each Elf companion you control."
+    },
+    {
+      "number": 1008,
+      "id": "mayor-hobby-trickgrin",
+      "name": "Mayor Hobby Trickgrin",
+      "originalStats": {
+        "P": 5,
+        "M": 7,
+        "G": 10
+      },
+      "triggerText": "The first time each turn anyone is forced to use a different stat, draw a resource.",
+      "kinText": "Kin: while an opponent controls a Halfellow companion, it gets -1 to all stats."
+    },
+    {
+      "number": 1009,
+      "id": "lord-paladin-aldric-ashcroft",
+      "name": "Lord-Paladin Aldric Ashcroft",
+      "originalStats": {
+        "P": 10,
+        "M": 4,
+        "G": 6
+      },
+      "triggerText": "When a Marchguard card enters play, draw a resource.",
+      "kinText": "Kin: your hero gets +1 to all stats for each Human companion you control."
+    },
+    {
+      "number": 1010,
+      "id": "high-thane-brunna-stonefast",
+      "name": "High Thane Brunna Stonefast",
+      "originalStats": {
+        "P": 8,
+        "M": 6,
+        "G": 8
+      },
+      "triggerText": "When a Physical challenge is faced, draw a resource.",
+      "kinText": "Kin: your hero gets +1 to all stats for each Dwarf companion you control."
+    },
+    {
+      "number": 1011,
+      "id": "queen-maren-ashcroft",
+      "name": "Queen Maren Ashcroft",
+      "originalStats": {
+        "P": 4,
+        "M": 8,
+        "G": 9
+      },
+      "triggerText": "When a Wardhouse card enters play, draw a resource.",
+      "kinText": "Kin: when a Human card enters play under your control, draw a resource."
+    },
+    {
+      "number": 1012,
+      "id": "archmage-corvin-varro",
+      "name": "Archmage Corvin Varro",
+      "originalStats": {
+        "P": 2,
+        "M": 10,
+        "G": 7
+      },
+      "triggerText": "When a Mental challenge is faced, draw a resource.",
+      "kinText": "Kin: when a Human card enters play under your control, draw a resource."
+    },
+    {
+      "number": 1013,
+      "id": "professor-barnaby-pickwort",
+      "name": "Professor Barnaby Pickwort",
+      "originalStats": {
+        "P": 4,
+        "M": 10,
+        "G": 7
+      },
+      "triggerText": "When an Accord card enters play, draw a resource.",
+      "kinText": "Kin: when a Halfellow card enters play under your control, draw a resource."
+    },
+    {
+      "number": 1014,
+      "id": "urzha-half-tusk",
+      "name": "Urzha Half-Tusk",
+      "originalStats": {
+        "P": 9,
+        "M": 6,
+        "G": 9
+      },
+      "triggerText": "When a minion is drawn, draw a resource.",
+      "kinText": "Kin: while an opponent controls a Orc companion, it gets -1 to all stats."
+    },
+    {
+      "number": 1015,
+      "id": "loremaster-oskar-grimgate",
+      "name": "Loremaster Oskar Grimgate",
+      "originalStats": {
+        "P": 7,
+        "M": 8,
+        "G": 9
+      },
+      "triggerText": "When an Oathbreaker card enters play, draw a resource.",
+      "kinText": "Kin: while an opponent controls a Dwarf companion, it gets -1 to all stats."
+    }
+  ],
+  "setAsideCards": [
+    {
+      "id": "mags-tolliver-market-trader",
+      "name": "Mags Tolliver, Market Trader",
+      "groups": [
+        "Human"
+      ],
+      "quote": "“I've haggled with dwarves, love. A lich is nothing.”",
+      "art": "portraits__mags-tolliver-market-trader",
+      "stats": {
+        "P": 3,
+        "M": 2,
+        "G": 4
+      },
+      "abilityName": "Queen for a Day",
+      "abilityText": "At the end of bidding, you may double your hero's stats. At the end of the encounter this card is discarded.",
+      "kind": "companion",
+      "number": 2016
+    },
+    {
+      "id": "hobart-thimblewick-moot-surgeon",
+      "name": "Hobart Thimblewick, Moot Surgeon",
+      "groups": [
+        "Halfellow",
+        "Marchguard"
+      ],
+      "quote": null,
+      "art": "portraits__hobart-thimblewick-moot-surgeon",
+      "stats": {
+        "P": 4,
+        "M": 2,
+        "G": 4
+      },
+      "abilityName": "Well-Meaning Blunder",
+      "abilityText": "During bidding, you may force another player to use their hero's guile stat in place of another stat.",
+      "kind": "companion",
+      "revision": "Was Sir Hugo Pellam (Human); now a Halfellow.",
+      "number": 2017
+    },
+    {
+      "id": "caelan-the-exile",
+      "name": "Caelan the Exile",
+      "groups": [
+        "Elf"
+      ],
+      "quote": null,
+      "art": "portraits__caelan-the-exile",
+      "stats": {
+        "P": 2,
+        "M": 4,
+        "G": 4
+      },
+      "abilityName": "Ulterior Motives",
+      "abilityText": "During bidding, you may force another player to use their hero's mental stat in place of another stat.",
+      "kind": "companion",
+      "number": 2018
+    },
+    {
+      "id": "sir-osric-vane-marshal-of-the-old-guard",
+      "name": "Sir Osric Vane, Marshal of the Old Guard",
+      "groups": [
+        "Human",
+        "Marchguard"
+      ],
+      "quote": "“I have seen five Midsummer Fairs end in a brawl. This is merely the sixth.”",
+      "art": "portraits__sir-osric-vane-marshal-of-the-old-guard",
+      "stats": {
+        "P": 4,
+        "M": 2,
+        "G": 4
+      },
+      "abilityName": "Assess the Situation",
+      "abilityText": "Your hero contributes their guile stat in place of another stat when it is higher.",
+      "kind": "companion",
+      "revision": "Now also gains +1 when the swap is used (was a below-average card).",
+      "number": 2020
+    },
+    {
+      "id": "rosalind-marchwell-marchguard-clerk",
+      "name": "Rosalind Marchwell, Marchguard Clerk",
+      "groups": [
+        "Human",
+        "Marchguard"
+      ],
+      "quote": null,
+      "art": "portraits__rosalind-marchwell-marchguard-clerk",
+      "stats": {
+        "P": 3,
+        "M": 3,
+        "G": 3
+      },
+      "abilityName": "Cross-Reference",
+      "abilityText": "Your hero contributes their mental stat in place of another stat when it is higher.",
+      "kind": "companion",
+      "revision": "Was Posy Marchbank (Halfellow); now a Human.",
+      "number": 2021
+    },
+    {
+      "id": "brisa-blastcap-bombardier",
+      "name": "Brisa Blastcap, Bombardier",
+      "groups": [
+        "Dwarf"
+      ],
+      "quote": null,
+      "art": "portraits__brisa-blastcap-bombardier",
+      "stats": {
+        "P": 5,
+        "M": 3,
+        "G": 3
+      },
+      "abilityName": "Loose Powder",
+      "abilityText": "During bidding, you may force another player to use their hero's physical stat in place of another stat.",
+      "kind": "companion",
+      "number": 2022
+    },
+    {
+      "id": "grumma-ladlejaw-camp-cook",
+      "name": "Grumma Ladlejaw, Camp Cook",
+      "groups": [
+        "Orc"
+      ],
+      "quote": "“Nobody marches on an empty belly. Not even the Warchief.”",
+      "art": "portraits__grumma-ladlejaw-camp-cook",
+      "stats": {
+        "P": 3,
+        "M": 4,
+        "G": 2
+      },
+      "abilityName": "Camp Stew",
+      "abilityText": "During bidding on your turn, you may force another player to use their hero's physical stat in place of another stat.",
+      "kind": "companion",
+      "revision": "Was Clemence Fairbrook (Human); now an Orc.",
+      "number": 2032
+    }
+  ],
+  "changedMeaning": {
+    "1002": {
+      "name": "Thorgar Twice-Buried",
+      "was": "Once per game, at the end of bidding, if this hero would fall, it doesn't. Instead, you draw 3 resources."
+    },
+    "1003": {
+      "name": "Aelthir Moonveil",
+      "was": "Before bidding on any turn, choose a companion of an opponent. That companion does not contribute any stats this turn."
+    },
+    "1007": {
+      "name": "Ysolde of the Wellspring",
+      "was": "You may have a maximum of three companions instead of two."
+    },
+    "1009": {
+      "name": "Lord-Paladin Aldric Ashcroft",
+      "was": "During bidding, you may disable one ability of another player's heroes or companions. Once per turn, you may counter an ability of another player's heroes or companions as it is used."
+    },
+    "1010": {
+      "name": "High Thane Brunna Stonefast",
+      "was": "Ignore any opponent's ability that would force a hero or companion under your control to contribute a different stat, stop one of your companions contributing stats, or make one of your resource cards count as a negative."
+    },
+    "1015": {
+      "name": "Loremaster Oskar Grimgate",
+      "was": "Before bidding, once per turn, choose an opponent. If that opponent uses an ability against your hero or companions, you may draw a resource."
+    },
+    "2023": {
+      "name": "Dagny Coldhearth, the Grudge-Bearer",
+      "was": "At the end of bidding, you win the current encounter and automatically take the location. However, you must discard all resources and your hero falls. You may use this ability only once per game."
+    },
+    "3020": {
+      "name": "The Wardens' Hall",
+      "was": "All players immediately draw a resource card for every Warden they have in play (heroes count)."
+    },
+    "5006": {
+      "name": "The Hall of Rest",
+      "was": "If your hero would fall after this card is played, you may choose your next hero from the hero stack instead of drawing one."
+    },
+    "5031": {
+      "name": "The Amulet of Aesia",
+      "was": "If your hero would fall the round this card was played, it doesn't; instead, draw a resource card for every other player."
+    },
+    "5076": {
+      "name": "The Book of Grudges",
+      "was": "When this card is revealed or played face up, if you lose the current encounter (your hero falls), the winner has -3 during the next encounter. It has +1 if your hero is Oskar."
+    }
+  }
+}

@@ -1,5 +1,5 @@
 {
-  "_about": "Every card's permanent number: the card's id (the slug of its name) -> its number. Heroes 1001+, companions 2001+, locations 3001+, encounters 4001+, resources 5001+. A number never changes and is never reused, so a card can be found by number even after its name is edited. `npm run cards` and `npm run numbers` add numbers to new cards; to rename a card, change the key here to the new id.",
+  "_about": "Every card's permanent number: the card's id (the slug of its name) -> its number. Heroes 1001-2999 (the former heroes are 1001-1015, the former companions 2001-2036), locations 3001+, encounters 4001+, resources 5001+. A number never changes and is never reused, so a card can be found by number even after its name is edited. `npm run numbers` adds numbers to new cards; to rename a card, change the key here to the new id.",
   "numbers": {
     "warchief-grukka-ironjaw": 1001,
     "thorgar-twice-buried": 1002,

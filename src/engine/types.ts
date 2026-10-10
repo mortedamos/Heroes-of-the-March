@@ -19,11 +19,8 @@ export type PlayerId = string;
 /** Opaque per-game card instance id. Hidden cards are never shown to clients with their id. */
 export type CardId = string;
 
-/** A player's hero slot before the opening hero draft has filled it. */
-export const NO_HERO: CardId = '';
-
-export type DeckName = 'hero' | 'companion' | 'location' | 'encounter' | 'resource';
-export const DECKS: readonly DeckName[] = ['hero', 'companion', 'location', 'encounter', 'resource'];
+export type DeckName = 'hero' | 'location' | 'encounter' | 'resource';
+export const DECKS: readonly DeckName[] = ['hero', 'location', 'encounter', 'resource'];
 
 export interface Bid {
   card: CardId;
@@ -38,11 +35,11 @@ export interface Bid {
 export interface PlayerState {
   id: PlayerId;
   name: string;
-  hero: CardId;
-  companions: CardId[];
-  /** Companions turned face down by a location: no stats, no abilities. */
-  inactiveCompanions: CardId[];
-  /** Companions resting by their own ability (Tova): no stats, no abilities, back next turn. */
+  /** The adventuring party: face-up heroes in play. */
+  party: CardId[];
+  /** Heroes turned face down by a location: no stats, no abilities. */
+  inactive: CardId[];
+  /** Heroes resting by their own ability (Tova): no stats, no abilities, back next turn. */
   resting: CardId[];
   hand: CardId[];
   claimed: CardId[];
@@ -51,7 +48,7 @@ export interface PlayerState {
   /** Face-down bids of other players this player has looked at this turn (Goldie): visible to them only. */
   seen: CardId[];
   /** Heroes borrowed through Council resources for this encounter. */
-  councilHeroes: CardId[];
+  borrowed: CardId[];
   /** Per-player challenge stat override set by resources (Arangil's Vision Glass, Blasting Powder). */
   statOverride: Stat | null;
   /** Persistent markers: once-per-game usage, pending card effects (e.g. "hallOfRest"). */
@@ -67,16 +64,14 @@ export interface PlayerState {
 // of the turn. Each remembers its source so it can be countered (Aldric).
 
 export type EffectKind =
-  | 'silenceCompanion'   // target companion contributes no stats (Aelthir, failed goose roll)
-  | 'forceCompanionStat' // target companion contributes `stat` instead (Liriel, Thessaly, Kesh)
-  | 'forceHeroStat'      // target player's hero contributes `stat` instead (Hugo, Caelan, Brisa, Clemence)
+  | 'silenceHero'        // target hero contributes no stats (Aelthir, failed goose roll)
+  | 'forceStat'          // target hero contributes `stat` instead (Liriel, Thessaly, Kesh, Ilvena)
   | 'statBonus'          // target player gains `amount` to `stat` ('all' = every stat) (Vaelis, geese)
-  | 'heroMultiplier'     // target player's hero stats x `amount` (Mags)
   | 'negateBid'          // target bid's value counts as zero (no card uses it now)
   | 'grudge'             // target player: if they win this encounter they have -`amount` in the next (Oskar)
-  | 'grudgeWatch'        // target player: when they use an ability against the owner's hero or companions, the owner draws a resource (Oskar)
-  | 'disableAbilities'   // target hero/companion's abilities are off this turn (Aldric)
-  | 'autoWin';           // target player wins this encounter (Mira)
+  | 'grudgeWatch'        // target player: when they use an ability against the owner's heroes, the owner draws a resource (Oskar)
+  | 'disableAbilities'   // target hero's abilities are off this turn (Aldric)
+  | 'autoWin';           // target player wins this encounter (Dagny)
 
 export interface TurnEffect {
   id: number;
@@ -98,11 +93,10 @@ export type AbilityWindow = 'turnStart' | 'afterLocation' | 'beforeBidding' | 'b
 export type HoldReason = 'location' | 'encounter' | 'reveal' | 'resolve';
 
 export type Step =
-  | 'draft'
-  | 'companionDraft'
+  | 'partyDraft'
   | 'turnStart'
   | 'winTurnStart'
-  | 'companions'
+  | 'recruit'
   | 'location'
   | 'winAfterLocation'
   | 'encounter'
@@ -118,7 +112,7 @@ export type Step =
 
 /** One line of a player's total at the end of an encounter: what each card added. */
 export interface ResultPart {
-  kind: 'hero' | 'kin' | 'companion' | 'council' | 'resource' | 'bonus' | 'penalty';
+  kind: 'hero' | 'council' | 'resource' | 'bonus' | 'penalty';
   /** The card it came from (so it can be pointed at on the table), if there is one. */
   card: CardRef | null;
   label: string;
@@ -142,20 +136,20 @@ export interface TurnState {
   /** Seat index of the current player. */
   active: number;
   step: Step;
-  /** Seat offset (from active) used while walking players in the companion phase and ability windows. */
+  /** Seat offset (from active) used while walking players in the recruit phase and ability windows. */
   cursor: number;
   location: CardId | null;
   /** Face-down bonus locations (The Endless Road, The Pirate Fens). */
   extraLocations: CardId[];
   encounter: CardId | null;
   minions: CardId[];
-  /** Companions put into play as minions (Infectious Zombie). */
-  companionMinions: CardId[];
+  /** Heroes put into play as minions (Infectious Zombie). */
+  heroMinions: CardId[];
   /** Cards set aside by effects this turn, discarded at the end (Vaelis's encounter card). */
   setAside: CardId[];
   /** An encounter found by a location's search (The Frostfells, Wreck of the Skyship Gallant): it is this turn's encounter. */
   chosenEncounter: CardId | null;
-  /** Companions recruited during the opening (turn 1) companion phase; their enter-play effects wait for its end. */
+  /** Heroes chosen in the opening party draft; their enter-play effects wait for the end of the opening phase. */
   openingEntrants: { player: PlayerId; card: CardId }[];
   /** Seat index whose bidding decision is next. */
   bidder: number;
@@ -164,7 +158,7 @@ export interface TurnState {
   revealCursor: number;
   wandsDisabled: boolean;
   noFalls: boolean;
-  /** Players whose hero must fall at the end of this (their own) turn. */
+  /** Players who must lose a hero at the end of this turn (whoever's turn it is). */
   failed: PlayerId[];
   result: TurnResult | null;
   effects: TurnEffect[];
@@ -185,11 +179,11 @@ interface DecisionBase {
 /** An activated ability a player may use right now. */
 export interface AbilityOption { source: CardId; ability: string; label: string }
 
-export interface CompanionOfferDecision extends DecisionBase { kind: 'companion.offer' }
-export interface CompanionPlaceDecision extends DecisionBase {
-  kind: 'companion.place';
+export interface RecruitOfferDecision extends DecisionBase { kind: 'recruit.offer' }
+export interface RecruitPlaceDecision extends DecisionBase {
+  kind: 'recruit.place';
   drawn: CardId;
-  /** At the companion limit, keeping the drawn card means replacing one. */
+  /** At the party size, keeping the drawn hero means replacing one. */
   mustReplace: boolean;
 }
 export interface BidDecision extends DecisionBase {
@@ -232,15 +226,15 @@ export interface ChooseDecision extends DecisionBase {
 }
 
 export type ChoosePurpose =
-  | 'discardCompanion' | 'discardResource' | 'faceDownCompanion' | 'discardForCouncil'
-  | 'silenceCompanion' | 'forceCompanion' | 'rulingCompanion' | 'forceHero' | 'disableAbility'
+  | 'discardHero' | 'discardResource' | 'faceDownHero' | 'discardForCouncil' | 'fallHero'
+  | 'silenceHero' | 'forceHero' | 'rulingHero' | 'disableAbility'
   | 'marenTarget' | 'marenGive' | 'pipClaim'
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
   | 'counterAbility' | 'oskarGrudge' | 'rumourMill' | 'fetch' | 'pickFight' | 'appleSwap'
-  | 'curseTarget' | 'vaelisGive' | 'rumourTarget' | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'companionMinion'
-  | 'heroDraft' | 'heroKeep' | 'companionDraft';
+  | 'curseTarget' | 'vaelisGive' | 'rumourTarget' | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'heroMinion'
+  | 'partyDraft';
 
-export type Decision = CompanionOfferDecision | CompanionPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;
+export type Decision = RecruitOfferDecision | RecruitPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;
 
 // ---------------------------------------------------------------------------
 // Tasks: queued, serializable units of work (usually card effects that may
@@ -257,7 +251,7 @@ export type Task =
   | ChooseTask
   | { t: 'replaceLocation'; mode: 'shuffleBack' | 'discard'; source: string }
   | { t: 'setLocation'; defId: string; source: string }
-  /** A hero falls (run one at a time, so each new hero is drawn after the previous faller has chosen). */
+  /** A player loses a hero of their choice (run one at a time, so each faller finishes before the next starts). */
   | { t: 'heroFalls'; player: PlayerId }
   /** Draw resources (queued so it can follow a choice, e.g. Skyship Manifest). */
   | { t: 'draw'; player: PlayerId; n: number; source: string };
@@ -291,10 +285,10 @@ export interface GameState {
 // Commands: untrusted client intents. Validated in commands.ts.
 
 export type Command =
-  | { type: 'companion.draw'; decision: number }
-  | { type: 'companion.skip'; decision: number }
-  | { type: 'companion.keep'; decision: number; replace: CardId | null }
-  | { type: 'companion.discard'; decision: number }
+  | { type: 'recruit.draw'; decision: number }
+  | { type: 'recruit.skip'; decision: number }
+  | { type: 'recruit.keep'; decision: number; replace: CardId | null }
+  | { type: 'recruit.discard'; decision: number }
   | { type: 'bid.play'; decision: number; card: CardId; faceDown?: boolean }
   | { type: 'bid.pass'; decision: number }
   | { type: 'ability.use'; decision: number; source: CardId; ability: string }
@@ -314,13 +308,12 @@ export type GameEvent =
   | { type: 'turnStarted'; player: PlayerId; turn: number }
   | { type: 'drew'; player: PlayerId; deck: DeckName; cards: CardRef[]; reason: string }
   | { type: 'shuffled'; deck: DeckName }
-  | { type: 'heroChanged'; player: PlayerId; from: CardRef | null; to: CardRef; reason: 'setup' | 'fell' }
-  | { type: 'companionPlayed'; player: PlayerId; card: CardRef; replaced: CardRef | null }
-  | { type: 'companionDiscarded'; player: PlayerId; card: CardRef; reason: string }
-  | { type: 'companionDeclined'; player: PlayerId; card: CardRef }
-  | { type: 'companionSkipped'; player: PlayerId }
-  | { type: 'companionFaceDown'; player: PlayerId; card: CardRef; faceDown: boolean }
-  | { type: 'companionMinion'; player: PlayerId; card: CardRef }
+  | { type: 'heroJoined'; player: PlayerId; card: CardRef; replaced: CardRef | null }
+  | { type: 'heroLeft'; player: PlayerId; card: CardRef; reason: string }
+  | { type: 'heroDeclined'; player: PlayerId; card: CardRef }
+  | { type: 'recruitSkipped'; player: PlayerId }
+  | { type: 'heroFaceDown'; player: PlayerId; card: CardRef; faceDown: boolean }
+  | { type: 'heroMinion'; player: PlayerId; card: CardRef }
   | { type: 'locationRevealed'; card: CardRef; reason: string }
   | { type: 'locationReplaced'; from: CardRef; to: CardRef; reason: string }
   | { type: 'extraLocation'; count: number }
@@ -353,6 +346,7 @@ export type GameEvent =
   | { type: 'outcome'; result: TurnResult }
   | { type: 'renownGained'; player: PlayerId; amount: number; total: number; locations: CardRef[] }
   | { type: 'fallPrevented'; player: PlayerId; source: string }
+  /** The player failed (or paid for) the encounter and will lose a hero at the end of the turn (a `heroLeft` with reason "Fell" follows). */
   | { type: 'heroFalls'; player: PlayerId }
   | { type: 'turnEnded'; player: PlayerId }
   | { type: 'gameOver'; winner: PlayerId | null };
