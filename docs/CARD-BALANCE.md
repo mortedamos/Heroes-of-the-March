@@ -1,5 +1,7 @@
 # Card balance review (simulated play)
 
+> **Historical.** This describes the game before the party rework (a hero plus companions, hero triggers, Kin bonuses). See [PARTY-REWORK.md](PARTY-REWORK.md) and [BALANCE-party.md](BALANCE-party.md) for the current game.
+
 Status: **final**, from all 10 planned rounds (72,000 hero games, 79,200 companion games, 24,000 natural-play games). The raw data is in `docs/balance-data/`, and the full per-card tables are in `docs/CARD-BALANCE-TABLES.md`. The tables are the authority if any figure here differs.
 
 ## Method

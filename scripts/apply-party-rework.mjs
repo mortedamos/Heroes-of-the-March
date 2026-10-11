@@ -66,7 +66,7 @@ for (const c of allCards) {
 for (const n of Object.keys(TEXT)) if (!allCards.some((c) => c.number === Number(n))) throw new Error(`no card ${n}`);
 
 // --- 3. Merge the kinds ----------------------------------------------------------------------------------
-const NOTE_HALVED = (c, old) => `Party rework: stats halved, rounded up (was ${old.P}/${old.M}/${old.G}); trigger and Kin bonus set aside.`;
+const NOTE_HALVED = (c, old) => `Stats halved, rounded up (was ${old.P}/${old.M}/${old.G}); trigger and Kin bonus set aside.`;
 const oldHeroes = db.heroes.map((h) => {
   const old = h.stats;
   const out = { ...h, stats: { P: HALVE(old.P), M: HALVE(old.M), G: HALVE(old.G) }, revision: NOTE_HALVED(h, old) };

@@ -14,15 +14,13 @@ export interface SetupChoice {
   name: string;
   bots: number;
   level: BotLevel;
-  draftOnReplace: boolean;
 }
 
 /** The house rules a setup choice turns into (the engine validates them again). */
 export function rulesFor(c: SetupChoice): Partial<HouseRules> {
+  void c;
   return {
-    handModel: 'steady', // current player draws 2, everyone else 1, hand limit 6: no longer a choice
-    heroDraft: 3, // at the start: look at three heroes, keep one
-    draftOnReplace: c.draftOnReplace,
+    handModel: 'steady', // every player draws 2 at the start of a turn, hand limit 6: no longer a choice
   };
 }
 
@@ -33,7 +31,7 @@ export function buildStampText(): string {
   return `${when}${when ? ' · ' : ''}build ${BUILD.number}`;
 }
 
-const STORE_KEY = 'hotm.setup.v1';
+const STORE_KEY = 'hotm.setup.v2';
 
 function loadPrefs(): Partial<SetupChoice> {
   try {
@@ -44,7 +42,6 @@ function loadPrefs(): Partial<SetupChoice> {
     if (typeof v['name'] === 'string') out.name = v['name'].slice(0, 24);
     if (Number.isInteger(v['bots'])) out.bots = Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, v['bots'] as number));
     if (v['level'] === 'easy' || v['level'] === 'normal' || v['level'] === 'hard') out.level = v['level'];
-    if (typeof v['draftOnReplace'] === 'boolean') out.draftOnReplace = v['draftOnReplace'];
     return out;
   } catch {
     return {};
@@ -53,12 +50,6 @@ function loadPrefs(): Partial<SetupChoice> {
 
 function savePrefs(c: SetupChoice): void {
   try { localStorage.setItem(STORE_KEY, JSON.stringify(c)); } catch { /* storage unavailable: fine */ }
-}
-
-function checkbox(id: string, checked: boolean): HTMLInputElement {
-  const el = h('input', { id, type: 'checkbox' });
-  el.checked = checked;
-  return el;
 }
 
 export function showSetup(root: HTMLElement): Promise<SetupChoice> {
@@ -85,8 +76,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
     }
     level.value = prefs.level ?? 'normal';
 
-    const draftOnReplace = checkbox('setup-draft-replace', prefs.draftOnReplace ?? false);
-
     const start = h('button', { class: 'btn primary big', type: 'submit' }, 'Ride out');
     const form = h('form', { class: 'setup-card' },
       h('h1', {}, 'Heroes of the March'),
@@ -94,11 +83,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
       h('label', {}, h('span', {}, 'Your name'), name),
       h('label', {}, h('span', {}, 'Opponents'), bots),
       h('label', {}, h('span', {}, 'Bot skill'), level),
-      // Folded away: the defaults are what most players want.
-      h('details', { class: 'house-rules' },
-        h('summary', {}, 'House rules'),
-        h('label', { class: 'check' }, draftOnReplace,
-          h('span', {}, h('strong', {}, 'Draft from three after a fall'), ': pick from three heroes every time, not just at the start. Otherwise you draw one and may send it back once.'))),
       start,
       h('p', { class: 'fine' }, 'Local game against bots. Online multiplayer is coming.'),
     );
@@ -108,7 +92,6 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
         name: name.value,
         bots: Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, Number.parseInt(bots.value, 10) || 2)),
         level: (['easy', 'normal', 'hard'] as const).find((x) => x === level.value) ?? 'normal',
-        draftOnReplace: draftOnReplace.checked,
       };
       savePrefs(choice);
       stopFx();

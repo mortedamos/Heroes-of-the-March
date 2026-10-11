@@ -198,7 +198,7 @@ function standard(g: Game, a: { hero?: string; companions?: string[]; party?: st
 // --- sabotage ----------------------------------------------------------------------
 
 describe('forced stats', () => {
-  it('Liriel forces an opponent companion to contribute Guile', () => {
+  it('Liriel forces an opposing hero to contribute Guile', () => {
     const g = newGame();
     standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] });
     restart(g);
@@ -251,7 +251,7 @@ describe('forced stats', () => {
   });
 
 
-  it('Hesk (a companion) lets another companion ability be used twice in a turn', () => {
+  it('Hesk lets another hero ability be used twice in a turn', () => {
     const g = newGame(3);
     give(g.s, g.C!, { companions: ['cobra-chicken', 'duchess-the-pub-goose'] });
     standard(g, { companions: ['hesk-of-two-homes', 'liriel-nightbloom'] });
@@ -270,7 +270,7 @@ describe('forced stats', () => {
 });
 
 describe('silence, steal, negate, swap', () => {
-  it('Aelthir silences an opponent companion at the start of the turn', () => {
+  it('Aelthir silences an opposing hero before bidding', () => {
     const g = newGame();
     standard(g, { hero: 'aelthir-moonveil' });
     restart(g);
@@ -482,7 +482,7 @@ describe('several forcing abilities in one turn', () => {
 
 
 describe('Hesk and Brunna', () => {
-  it('Hesk re-uses a companion\x27s once-per-turn ability exactly once more', () => {
+  it('Hesk re-uses a hero\x27s once-per-turn ability exactly once more', () => {
     const g = newGame();
     standard(g, { companions: ['hesk-of-two-homes', 'liriel-nightbloom'] });
     restart(g);
@@ -595,7 +595,7 @@ describe('challenge and encounter control', () => {
     expect(ch.difficulty.base).toBe((getDef('the-deathless-captain') as { difficulty: number }).difficulty);
   });
 
-  it('Ilvena: force an opposing companion onto its weakest stat (no cost)', () => {
+  it('Ilvena: force an opposing hero onto its weakest stat (no cost)', () => {
     const g = newGame();
     standard(g, { companions: ['elder-ilvena-of-the-conclave', 'pell-quillon-collegium-prodigy'] }, { companions: ['sergeant-waddle', 'pell-quillon-collegium-prodigy'] });
     restart(g);
@@ -747,7 +747,7 @@ describe('companion movement', () => {
     }
   });
 
-  it('Gauntlet of Returning brings back a companion from the discard', () => {
+  it('Gauntlet of Returning brings back a hero from the discard', () => {
     const g = newGame();
     standard(g, { hand: ['gauntlet-of-returning'] });
     const gnash = idOf(g.s, 'gnash-the-butcher-of-bloodmire');
@@ -823,7 +823,7 @@ describe('bidding options', () => {
     pick(g, card(g, 'sergeant-waddle'));
     const again = applyCommand(g.s, g.A, { type: 'ability.use', decision: g.s.pending!.id, source: card(g, 'liriel-nightbloom'), ability: 'force' });
     expect(again).toEqual({ ok: false, error: 'ability_unavailable' });
-    const notMine = applyCommand(g.s, g.A, { type: 'ability.use', decision: g.s.pending!.id, source: player(g, g.B).hero, ability: 'requisition' });
+    const notMine = applyCommand(g.s, g.A, { type: 'ability.use', decision: g.s.pending!.id, source: player(g, g.B).party[0]!, ability: 'requisition' });
     expect(notMine.ok).toBe(false);
   });
 });
@@ -1376,7 +1376,7 @@ describe('Bonus heroes (Varg and Moss, Goldie and Gimlet, Ysolde)', () => {
 });
 
 describe('New triggers', () => {
-  it('Seraphine draws when one of her controller\'s companions is replaced or discarded', () => {
+  it('Seraphine draws when one of her controller\'s heroes is replaced or discarded', () => {
     const g = newGame();
     standard(g, { hero: 'thorgar-twice-buried', companions: ['seraphine-moonveil-warden-scholar', 'pell-quillon-collegium-prodigy'] });
     const ctx = atBidding(g);
@@ -1493,7 +1493,7 @@ describe('Activated abilities of the redesign', () => {
     expect(d.kind === 'bid' && d.abilities.some((a) => a.ability === 'rumour')).toBe(false);
   });
 
-  it('Hedda cancels the first opposing ability that would affect one of her controller\'s companions each turn', () => {
+  it('Hedda cancels the first opposing ability that would affect one of her controller\'s heroes each turn', () => {
     const g = newGame();
     standard(g, { companions: ['liriel-nightbloom', 'kesh-the-bog-huntress'] }, { companions: ['marshal-hedda-ironvow', 'sergeant-waddle'] });
     restart(g);
@@ -1649,7 +1649,7 @@ describe('Curses and the Golden Egg: later rulings', () => {
     expect(cmd?.type === 'bid.play' && cmd.card).toBe(card(g, 'marked-for-the-hunt'));
   });
 
-  it('the Golden Egg counts goose encounters as well as goose companions', () => {
+  it('the Golden Egg counts goose encounters as well as goose heroes', () => {
     const g = newGame();
     standard(g, { hand: ['the-golden-egg'] });
     onTop(g.s, 'encounter', ['the-barrow-legion']); // Gorathaxus, Goose of the Void
@@ -1720,7 +1720,7 @@ describe('Encounters and locations of the redesign', () => {
     expect(afterEnter).toBeGreaterThan(handB);
   });
 
-  it('Barrowdeep gives an Undead encounter an extra Undead minion; the capitals draw per kin companion', () => {
+  it('Barrowdeep gives an Undead encounter an extra Undead minion; the capitals draw per kin hero', () => {
     const g = newGame();
     standard(g, {});
     onTop(g.s, 'location', ['barrowdeep']);

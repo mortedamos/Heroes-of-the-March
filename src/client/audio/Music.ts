@@ -9,7 +9,7 @@ import { inFocus, onFocusChange } from './focus';
 const TRACKS = ['neutral_music_1.mp3', 'neutral_music_2.mp3', 'neutral_music_3.mp3'];
 /** Plays on the title screen. */
 const TITLE_TRACK = 'title.mp3';
-/** Plays on the hero draft and the opening companion draft. */
+/** Plays on the party draft. */
 const OPENING_TRACK = 'hero_selection.mp3';
 
 /** 'title' and 'opening' loop their own track; 'rounds' loops one playlist track per round. */
@@ -94,7 +94,7 @@ class MusicPlayer {
   get trackNumber(): [number, number] | null { return this.mode === 'rounds' && !this.locationFile ? [this.index + 1, TRACKS.length] : null; }
 
   /**
-   * The title screen plays the title track; the hero draft and opening companion
+   * The title screen plays the title track; the party draft and the opening
    * draft play the hero-selection track; when the normal rounds begin, the playlist
    * starts on a random track.
    */

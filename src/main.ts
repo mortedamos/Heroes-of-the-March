@@ -31,7 +31,7 @@ async function newGame(): Promise<void> {
   teardown = null;
   music.setMode('title');
   const choice = await showSetup(document.body);
-  music.setMode('opening'); // the hero and companion drafts play the hero-selection track
+  music.setMode('opening'); // the party draft plays the hero-selection track
   const seats = [
     { id: 'p0', name: choice.name },
     ...BOT_NAMES.slice(0, choice.bots).map((name, i) => ({ id: `p${i + 1}`, name })),

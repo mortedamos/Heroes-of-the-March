@@ -4,7 +4,7 @@
 
 import type { ClientEvent, GameView } from '../engine/view';
 
-export const PROTOCOL_VERSION = 1;
+export const PROTOCOL_VERSION = 2;
 /** Hard cap on inbound (client -> host) message size. */
 export const MAX_CLIENT_MESSAGE_BYTES = 4096;
 

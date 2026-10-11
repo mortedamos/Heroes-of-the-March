@@ -1,81 +1,83 @@
 # House rules: rulings for review
 
-These are the calls the engine makes where the v0.3 rules are silent or
-ambiguous. The source of truth is `RULE_NOTES` in `src/engine/rules.ts`, which
-the in-game **Rules & status** panel also shows. Tell me which to change;
-several are one-line toggles in `DEFAULT_RULES`.
-
-| # | Topic | Ruling | Toggle |
-|---|---|---|---|
-| 1 | End of bidding | Bidding ends when every player passes in a row. A player who passed may bid again if someone else bids after them. | |
-| 2 | Empty hand | A player with no resource cards passes automatically. | |
-| 3 | Reveal order | Face-down bids are revealed round-robin, one card per player at a time, starting with the player who would have bid next. | |
-| 4 | Face-up bids | Playing a card face up counts as revealing it, so "when revealed" effects happen immediately. | |
-| 5 | Who faces the encounter | **Every** player is measured against the challenge, bid or not, so non-bidders can fall (the rules total "each player"). | `allPlayersFaceEncounter` |
-| 6 | No survivors | Nobody claims the location; it's discarded. | |
-| 7 | Ties | If survivors are level on the highest total, the location is discarded. Each tied player draws a location at random and claims it for its Renown only; its abilities and conditions do not trigger. | |
-| 8 | Falling | Costs no Renown. The new hero is drawn *before* the fallen one is shuffled back, so you never redraw the same hero. | |
-| 9 | Fall timing | Everyone who fails the encounter falls at the end of that turn, whoever's turn it is. Several players falling at once choose their replacements one after another. | |
-| 10 | Companion phase | Starting with the current player, each player may draw one companion, then keep it (replacing one at the limit) or discard it. | `companionPhase: 'everyone' \| 'activeOnly'` |
-| 11 | Draw size | Counts every seat, bots included. | `drawSize` |
-| 12 | Empty stacks | Reshuffle the discard pile; if both are empty, nothing is drawn. | |
-| 13 | Minions & triggers | Minions count as encounters entering play for hero triggers (e.g. Pip). | `minionsTriggerEntersPlay` |
-| 14 | Minion search | Take the top-most matching card from the encounter stack, then its discard. None: no minion. | |
-| 15 | Location group boosts | "+2 to X encounters" applies to the main encounter if it's X and to each X minion. | |
-| 16 | "5 against X" | The higher value applies when the *main* encounter is X. | |
-| 17 | Winning margin (Thorgar) | Winner's total minus the runner-up survivor's, or minus the difficulty if they were the only survivor. | |
-| 18 | Always-good "may" effects | Applied automatically in the player's favour: stat substitutions (Osric, Posy, Nettle, Aurelie, Gnash), Corvin's extra draw, Council heroes, Kazra ignoring *positive* minion bonuses, Arangil / Blasting Powder (only if your stat there is higher), The Rosepearl (best companion Mental). | |
-| 19 | Setup | Triggers don't fire during setup; they start on turn 1. | |
-| 20 | Unclaimed bonus location | The face-down extra location from The Endless Road / The Pirate Fens goes back into the stack unseen if nobody wins. | |
-| 21 | Running out | If locations run out entirely, highest Renown wins. Safety cap: `maxTurns` (200). | `maxTurns` |
-| 23 | **Hero draft** (new house rule, always on) | Whenever you get a hero, at the start and when your hero is replaced after a fall, look at the top 3 heroes, keep one, and shuffle the rest back unseen. At the start, everyone chooses their hero first; companions and hands are dealt after. The Hall of Rest still offers the whole stack. | `heroDraft` (3; 1 = blind) |
-| 23b | **Replacement heroes** | The draft of three is only for the start of the game. When your hero falls you draw the top hero and may keep them or send them back and take the next (which you must keep). Setting `draftOnReplace` (a checkbox under House rules) restores a draft of three every time. | `draftOnReplace` (false) |
-| 24 | **Tavern** (new house rule, on by default) | Three companions lie face up. In the companion phase you may recruit one instead of drawing blind; the tavern refills at once. Recruiting one and letting them go denies them to others, at the cost of your recruit. | `tavernSize` (3; 0 = off, also a switch on the new-game screen) |
-| 25 | **Steady draws** (new house rule, default) | Replaces "refill to the draw size on your turn". At the start of every turn the current player draws 2 resources and everyone else draws 1; routine draws stop at a hand of 6. Opening hands are still the player count. Draws from card abilities can exceed 6. | `handModel` 'steady' / 'refill', `activeDraw` 2, `othersDraw` 1, `handLimit` 6 (choose on the new-game screen) |
-| 26 | **Harder challenges** (new house rule, built into the cards) | Each encounter card is printed 1 to 3 harder than the original (easier cards get more; cards that already draw minions or have a condition get one less). Numbers live in `data/encounter-difficulty.json` and are applied by `npm run cards`; there is no separate "house +N" line in the game any more. Average bump is about +2. | `data/encounter-difficulty.json` |
-| 27 | **Falling costs** (new house rule, on by default) | When your hero falls you also discard one of your companions, your choice, before the new hero arrives. Your hand is not affected. Nothing is discarded if you have no companion. | `fallCost` (true) |
-| 28 | **One stat per encounter** (new house rule) | No challenge roll. Each encounter is faced on a single stat: its highest printed difficulty. Encounters that tied for highest were assigned a stat in `data/encounter-stats.json` so Physical, Magic and Guile each come up on 19 of 57 encounters. Cards show only that one stat. Heroes whose triggers were about die rolls now draw when their stat is faced on another player's turn (Aelthir Guile, Ysolde Magic, Brunna Physical); Urzha draws when an encounter is replaced. Ilvena's new ability, Ruling of the Conclave: discard a resource to force an opposing companion onto its lowest stat (before bidding, once per turn). | |
-| 30 | **Opening companion draft** (with the tavern) | Nobody is dealt companions. In turn order each player sees a private pool of five, fills two empty slots by clicking (click a filled slot to put the companion back) and confirms. There is no blind draw and no first-turn companion phase; enter-play effects happen when everyone has chosen. Without the tavern, two companions are dealt at random as before. | `companionDraft` (5 with the tavern, 0 without) |
-| 29 | **Opening companion phase** (new house rule) | On turn 1 no hero or companion ability can be used or triggered until every player has picked their companions. Companions recruited then enter play (draws and other enter-play effects) when that phase ends, in turn order; start-of-turn abilities come after. Static effects (e.g. a higher companion limit) still apply. | |
-
-## Card-ability rulings
-
-Every card ability is now implemented. These are the calls made where the
-card text left room for interpretation:
+These are the calls the engine makes where the v0.3 rules are silent or ambiguous, and the rules this edition adds (the adventuring party, the fall rule, steady draws, one stat per encounter).
+The source of truth is `RULE_NOTES` in `src/engine/rules.ts`, which the in-game **Rules & status** panel also shows; this file is generated from it (`npm run rules-doc`), so edit the notes, not this file.
+Tunable numbers live in `DEFAULT_RULES` (same file).
 
 | Topic | Ruling |
 |---|---|
-| Ability timing | Start of turn: Aelthir, Wren. After the location: Grukka (any turn, once per turn), Barnaby (your turn). Before bidding: Vaelis, Maren, Tova, Ilvena. On your bidding decision: forced-stat companions, Aldric, Pip (others' turns only), Urzha. End of bidding: geese, Mags, Mira. Once per turn unless the card says once per game. |
-| One legal choice | Resolves by itself (e.g. forcing a hero with only one opponent). |
-| Aldric (Shield of the Dawn) | Disables one opposing hero's or companion's abilities for the rest of the turn and cancels effects it made this turn; can't undo completed actions. |
-| Forced stats | The forced stat replaces the card's own substitutions. Brunna's player takes the higher value. Hobby's player draws whenever anyone is forced. |
-| Iron Mites | Players with companions roll; the lowest (ties re-roll) gives one of their *own* companions as a minion, adding its challenge stat; discarded at end of turn. |
-| Oskar | Once per turn, on any turn, a face-down card with a positive value may be made to count as zero as it's revealed. |
-| Mira | End of bidding: take the location regardless of totals; discard your hand; your hero falls (Shield of Xorthalos prevents it, the Amulet doesn't). |
-| Mags | Discarded at end of turn only if used. |
-| Hobby | First bid may be face down; cards still reveal in the normal reveal step. |
-| Pip | The claimed card becomes Pip's bid, stays face down, and Pip may look at it. |
-| Geese | "+3 physical" only helps on Physical challenges; a failed roll silences that goose for the turn. |
-| Vaelis | The drawn encounter is set aside; negative minion values hurt. |
-| Waystone Inn | Drawing is optional; if you draw, discard one companion afterwards (possibly the new one). |
-| Sigrun | Stack-or-discard choice is per draw action. |
-| Tova | Resting counts toward the companion limit; returns on her controller's next turn with +2 resources. |
-| Apple for the Road | Swaps with any face-up/revealed bid; the cards change owners. |
-| Hall of Rest | Choose any hero from the hero stack when this turn's fall happens. |
-| Hesk | One extra use per turn of one companion's once-per-turn ability. |
-| Ability dice | Hollow Hills: an ability roll of r counts as 7 − r. Mogra (own turn): roll twice, keep either. Challenge and tiebreak rolls aren't ability rolls. |
+| The adventuring party (house rule) | There is no separate hero and companions: every player leads a party of three heroes, and their stats add together. The old heroes were halved (rounded up) and joined the old companions in one hero stack. The old heroes' triggers and Kin bonuses are set aside for now (data/set-aside.json). |
+| The opening party draft (house rule) | At the start of the game each player, in turn order, privately looks at the top 6 heroes and picks 3; the rest are shuffled back unseen. Nobody can use or trigger any hero ability until every player has picked. The picked heroes "enter play" (draws and other enter-play effects) when that phase ends, in turn order; start-of-turn abilities follow. |
+| Recruit phase | From turn 2, starting with the current player and going clockwise, each player may draw one hero at random and decide whether to keep it. If keeping it would take you past your party size, you must replace one of your heroes. Toggle: recruitPhase. |
+| Steady draws (house rule) | Replaces "refill to the draw size on your turn": at the start of every turn every player draws 2 resources, but routine draws stop at a hand of 6. Opening hands are still the player count. Draws from card abilities can go past 6. (With the old hero triggers set aside, one card for the other players left too few cards to bid; the balance simulation put it back.) The v0.3 refill rule can be chosen when starting a game. |
+| One stat per encounter (house rule) | There is no challenge roll. Each encounter is faced on one stat, its highest printed difficulty (ties were settled by the designers so each stat comes up equally often). There are no dice in the game. |
+| Challenge levels (house rule) | A party of three heroes is weaker than the old hero and two companions, so every encounter is printed 5 or 6 lower than in the earlier house rules (Physical -5, Mental -6, Guile -5). The amount was set with the balance simulation so that surviving, falling and the length of a game match the old game. The numbers on the cards are the ones that count. |
+| Falling (house rule) | Every player who fails the encounter loses a hero at the end of that turn, whoever's turn it is: they choose which of their heroes falls, and it goes to the hero discard pile. Players who fall at once choose one after another. Falling costs no Renown and nothing else; the party refills in the recruit phase (or at once with The Hall of Rest). A player with no heroes loses nothing. |
+| End of bidding | Bidding ends when every player passes in a row. A player who passed may bid again if someone else bids after them. |
+| Empty hand | A player with no resource cards passes automatically. |
+| Reveal order | Face-down bids are revealed round-robin, one card per player at a time, starting with the player after the last one to pass (the player who would have bid next). |
+| Face-up bids | Playing a card face up counts as revealing it, so "when revealed" effects happen immediately. |
+| Who faces the encounter | Every player is measured against the challenge, whether or not they bid (the rules total "each player"). Non-bidders can fall. Toggle: allPlayersFaceEncounter. |
+| No survivors | If nobody survives, nobody claims the location and it is discarded. |
+| Ties | If survivors are level on the highest total, nobody takes the current location: it is discarded. Each tied player instead draws a location at random and claims it, scoring its Renown only. The abilities and conditions of that card do not trigger, and win triggers (such as Mogra) do not fire. If the stack is empty, a tied player gets nothing. |
+| Draw size | Draw size counts every seat, bots included. |
+| Empty stacks | An empty stack is refilled by shuffling its discard pile. If both are empty, nothing is drawn. |
+| Minions entering play | Minions count as encounters entering play for "enters play" triggers (e.g. Kesh's Beast trigger). Toggle: minionsTriggerEntersPlay. |
+| Minion search | A minion of a named group is taken from the top-most matching card of the encounter stack, then its discard pile. If neither has one, no minion is drawn. |
+| Location group boosts | "Challenges and minion bonuses of X encounters are increased by 2" applies to the main encounter if it is X, and to each X minion. |
+| "5 against X" resources | The higher value applies when the main encounter belongs to group X. |
+| Winning margin | Margin = winner's total minus the next-highest survivor's total, or minus the difficulty if the winner was the only survivor. |
+| Always-beneficial "may" effects | Optional effects that can only help (stat substitutions, drawing extra resources, council heroes) are applied automatically in the player's favour. |
+| Unclaimed bonus location | The face-down extra location from The Endless Road or The Pirate Fens is shuffled back into the location stack unseen if nobody wins. |
+| Setup | Triggers do not fire during setup; they start with turn 1. |
+| When abilities can be used | Any time on your turn: Elowen, Barnaby (after the location, before bidding, on your bidding decision, end of bidding). After the location: Grukka. Before bidding: Aelthir, Vaelis, Maren, Urzha, Oskar, Ilvena, Tova, Rook, Gimlet, Tobin. On your bidding decision: Liriel, Thessaly, Kesh, Aldric, Goldie. Before the reveal: Pip. End of bidding (after all reveals): geese, Torvi, Dagny. Activated abilities are once per turn unless the card says once per game. |
+| Only one legal choice | A choice with exactly one legal option resolves by itself (e.g. forcing a hero when there is only one opponent hero, or losing your only hero). |
+| Shield of the Dawn (Aldric) | Disables one opposing hero's abilities for the rest of the turn and cancels every effect it created this turn. It cannot undo something already done (a claimed card stays claimed). |
+| Forced stats | A forced hero contributes the forced stat instead of any other (including its own substitutions). Brunna's player takes whichever is higher. Mayor Hobby's player draws each time anyone is forced. |
+| Infectious Zombie | Players with heroes each turn up the top resource card; the lowest value (ties turn up again) gives one of their own heroes to the encounter as a minion. It adds its stat for the challenge to the difficulty and is discarded at the end of the turn. The resource cards turned up are discarded. |
+| Loremaster Oskar (Entered in the Book of Grudges) | Before bidding, once per turn, name an opponent. Each time that opponent uses an ability against Oskar's player's heroes this turn (silencing, forcing a stat, disabling, or a negative bonus), Oskar's player draws a resource. Aldric can counter the naming; if Oskar's ability is disabled the grudge is void. |
+| Elder Ilvena (Ruling of the Conclave) | Before bidding, once per turn, choose another player's hero. It contributes its lowest stat this turn instead of its usual one. Aldric, Brunna and Hedda can still cancel it like any forcing effect. |
+| Dagny Coldhearth (Grudge Paid in Full) | Used at the end of bidding: her player takes the location whatever the totals, discards their hand and loses a hero of their choice. Shield of Xorthalos and Thorgar's Unburied still prevent that fall; the Amulet of Aesia does not. |
+| Mayor Hobby | He may play every resource face down, not only the first. Face-down cards reveal in the normal reveal step. |
+| Pip Wanderfoot | The claimed card becomes Pip's bid, stays face down until the reveal step, and Pip may look at it. |
+| When abilities can be used | The game stops to offer abilities at six moments: the start of your turn, after the location is revealed, before bidding, during bidding (on your own turn to bid), before the reveal, and at the end of bidding (after every card is revealed). "Whenever abilities can be used" means any of these. Each moment is offered to every player in turn, clockwise from the active player, unless the card says "on your turn". Abilities worded "when" or "if you would" happen by themselves and are not offered: where a card says "if that is better" or "when it is higher" the game picks for you. |
+| The geese | "Gain 3 physical" adds 3 to your Physical total this turn; it only helps on a Physical challenge. A failed roll means that goose contributes nothing this turn. |
+| Lord Vaelis | The drawn encounter is set aside and discarded at the end of the turn. Its minion bonus goes to all of the stats of the player who uses it or of another player of their choice; a negative bonus counts against whoever receives it. |
+| Goldie (Rumour Mill) | Choose one opponent and look at all of their face-down bids. You keep seeing those cards for the rest of the turn (your totals for them are exact); other players do not. |
+| Thorgar (Unburied) | Once per game, when his player would lose a hero at the end of the turn, they don't, and draw 3 resources. Other effects that make a player fall are prevented the same way. |
+| Kazra (The Right Tools) | Each Dwarf resource card the Kazra player bids is worth 1 more. A curse placed in front of him is not his bid and gets no bonus. |
+| The Goose & Kettle | Drawing is optional. If you draw, the hero enters play and you then discard one of your heroes (possibly the new one). |
+| Sigrun Stonefast | The choice (stack or random cards from the discard pile) is made once per draw, for all cards in it. |
+| Tova Emberdeep | Resting still counts toward your party size. She returns face up at the start of her controller's next turn with one extra resource. |
+| An Apple for the Road | Swaps with any other face-up (or already revealed) bid; the two cards change owners. |
+| The Hall of Rest | If you fall after playing it this turn, you also choose any hero from the hero stack to fill the place of the one who fell, instead of waiting for the recruit phase. |
+| Hesk of Two Homes | Hesk counts as both an Orc and a Human. Once per turn he gives one extra use of another hero's once-per-turn ability. |
+| Running out of locations | If the location stack and its discard are both empty, the game ends and the highest Renown wins (ties: earliest seat after the current player). A safety cap of maxTurns also ends the game. |
+| Bonus heroes (Varg and Moss, Goldie and Gimlet, Ysolde) | With both members of a pair in your party your party size is one higher (Ysolde adds one more of her own: with both pairs, six). A pair member drawn while its partner is in play may be kept above the normal size. If the pair is broken (one leaves play) or Ysolde leaves, and you are over your party size, you immediately choose heroes to discard down to it. |
+| "When a challenge is faced" | Fires when the encounter's challenge is announced, on every player's turn, and again if a later location changes the challenge type. |
+| Skarra and Destiny the Frog | A Skarra encounter's minion can be anything except another Skarra. When Destiny the Frog would be the encounter, a Skarra encounter is drawn from the stack instead: that card becomes the encounter and Destiny becomes its minion (worth her printed 1), standing in for one of its minion draws. If no Skarra is left in the stack, Destiny is the encounter herself. Everything is discarded at the end of the turn. |
+| Curses (Rotten Apple and friends) | A curse is bid like any resource, face up or face down. When it is revealed or played face up, its owner places it in front of an opposing player of their choice; its negative value counts toward that player's bid. It is discarded with the rest at the end of the turn. |
+| The Book of Grudges | If its owner loses the encounter (and so loses a hero) and someone else wins, the winner has -3 in the next encounter. It is worth +1 for a player whose party includes Oskar. Penalties from several grudges add up. |
+| Marshal Hedda (Hold the Line) | Once per turn, the first opposing ability that would silence, force the stat of, or disable one of her controller's heroes has no effect (including a counter by Aldric). Abilities aimed at resources are not covered. |
+| Torvi Cinderkeg (Fire in the Hole) | Used at the end of bidding, before the winner is declared. Torvi is discarded (so his own stat no longer counts) and every opponent has -4 to their total this encounter, or -6 if the player controls a revealed Mhorgrim's Hunt. Torvi's replacement is drawn in the normal recruit phase. |
+| The Treasure Trow | Every player draws a resource when it enters play (as the encounter or as a minion). When someone survives its challenge, each survivor draws a resource. |
+| The Hollow Hills (Fog of the Fey) | While it is the location, face-down resource cards stay hidden until the reveal step: Goldie's Rumour Mill cannot be used, and no ability can reveal or look at a face-down card early. |
 
-## Observations from simulations (not changes)
+## Default values
 
-Bot games, 300 per row, normal bots, all card abilities in play (3 players / 4 players):
+| Setting | Value |
+|---|---|
+| `renownToWin` | 20 |
+| `partySize` | 3 |
+| `drawSize` | playerCount |
+| `recruitPhase` | everyone |
+| `allPlayersFaceEncounter` | true |
+| `minionsTriggerEntersPlay` | true |
+| `maxTurns` | 200 |
+| `draftPool` | 6 |
+| `handModel` | steady |
+| `activeDraw` | 2 |
+| `othersDraw` | 2 |
+| `handLimit` | 6 |
 
-| | Turns | Survival | Falls per player per game | Hero lasts (share of game) | Close games (≤4 Renown) | Game winner's share of locations | Turns with sabotage |
-|---|---|---|---|---|---|---|---|
-| v0.3 rules | 9.4 / 11.4 | 94% / 94% | 0.43 / 0.51 | 70% / 66% | 16% / 22% | 58% / 47% | 64% / 79% |
-| + catch-up draw, Renown 31 − 2×players | 13.6 / 15.0 | 95% / 95% | 0.53 / 0.58 | 66% / 63% | 20% / 25% | 49% / 41% | 67% / 82% |
-| + 8 "hex" resources (see below) | 13.9 / 15.0 | 93% / 93% | 0.79 / 0.77 | 56% / 57% | 25% / 24% | 48% / 41% | 76% / 86% |
-| + difficulty +2 on top | 14.0 / 15.1 | 88% / 88% | 1.35 / 1.22 | 43% / 45% | 29% / 25% | 48% / 41% | 75% / 86% |
-
-- **Catch-up draw** (since removed: resource scarcity is part of the game): at the start of each turn, the player(s) with the lowest Renown drew one resource.
-- **Hex resources (experiment):** eight vanilla resources (Jester's Cap, Tin Whistle, Glamour Rouge, Draught of Forgetting, Mask of Many Faces, Blank Writ, Pickled Eggs and Treacle, Cloak of Hiding) instead subtract their value from the strongest opponent when revealed. The v0.3 rules text describes resources that "subtract from someone else's" total, but no card in the data does this.
-- Raising difficulty shortens how long a hero lasts, which cuts against keeping a hero as a long-term plan.
+How the numbers were set (encounter difficulty, steady draws) and how the new game compares with the old one: [BALANCE-party.md](BALANCE-party.md).

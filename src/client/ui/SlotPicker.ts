@@ -1,4 +1,4 @@
-// A "fill the slots" picker for heroes and companions: open slots on one side, the cards on offer on the other.
+// A "fill the slots" picker for heroes: open slots on one side, the cards on offer on the other.
 // Cards can be dragged (mouse, finger or pen) into a slot, between slots, or back out; a tap sends a card to the first
 // open slot (or back). Nothing is decided until the player presses the confirm button.
 
@@ -18,9 +18,9 @@ export interface SlotPickerOptions {
   state: PickerState;
   /** Every card that can be in a slot or in the pool. */
   cards: PickerCard[];
-  /** Cards that stay where they are unless another card takes their slot (your current companions). */
+  /** Cards that stay where they are unless another card takes their slot (your current heroes). */
   locked?: ReadonlySet<string>;
-  /** Locked cards that cannot even be replaced (a resting companion). */
+  /** Locked cards that cannot even be replaced (a resting hero). */
   fixed?: ReadonlySet<string>;
   title: string;
   hint: string;

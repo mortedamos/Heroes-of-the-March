@@ -17,7 +17,7 @@
    "abilityName": "Strike the Heart",
    "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 11/6/7); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 11/6/7); trigger and Kin bonus set aside.",
    "number": 1001
   },
   {
@@ -36,7 +36,7 @@
    "abilityName": "Unburied",
    "abilityText": "Once per game, at the end of bidding, if you would fall, you don't. Instead, you draw 3 resources.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 7/6/8); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 7/6/8); trigger and Kin bonus set aside.",
    "number": 1002
   },
   {
@@ -56,7 +56,7 @@
    "abilityName": "I Held the Torch",
    "abilityText": "Before bidding on any turn, choose a hero of an opponent. That hero does not contribute any stats this turn.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
    "number": 1003
   },
   {
@@ -75,7 +75,7 @@
    "abilityName": "Master Manipulator",
    "abilityText": "Before bidding, you may draw the next card from the encounter stack. You may use its minion bonus this turn, or give it to another player.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 5/9/11); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 5/9/11); trigger and Kin bonus set aside.",
    "number": 1004
   },
   {
@@ -95,7 +95,7 @@
    "abilityName": "Tricky Pockets",
    "abilityText": "Once per turn before the reveal, claim a face-down resource card from another player as your own. If you have resource cards in your hand, a random one of those takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 6/5/6); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 6/5/6); trigger and Kin bonus set aside.",
    "number": 1005
   },
   {
@@ -114,7 +114,7 @@
    "abilityName": "The Right Tools",
    "abilityText": "Every dwarf resource you bid is +1 higher value.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 8/6/8); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 8/6/8); trigger and Kin bonus set aside.",
    "number": 1006
   },
   {
@@ -134,7 +134,7 @@
    "abilityName": "The Forest Walks With Me",
    "abilityText": "Your party may have four heroes instead of three.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 4/6/6); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 4/6/6); trigger and Kin bonus set aside.",
    "number": 1007
   },
   {
@@ -154,7 +154,7 @@
    "abilityText": "You may bid all of your resource cards face down. Abilities of those resource cards take effect when revealed, not while face down.",
    "kind": "hero",
    "number": 1008,
-   "revision": "Party rework: stats halved, rounded up (was 5/7/10); trigger and Kin bonus set aside."
+   "revision": "Stats halved, rounded up (was 5/7/10); trigger and Kin bonus set aside."
   },
   {
    "id": "lord-paladin-aldric-ashcroft",
@@ -174,7 +174,7 @@
    "abilityText": "During bidding, you may disable one ability of another player's heroes. Once per turn, you may counter an ability of another player's heroes as it is used.",
    "kind": "hero",
    "number": 1009,
-   "revision": "Party rework: stats halved, rounded up (was 10/4/6); trigger and Kin bonus set aside."
+   "revision": "Stats halved, rounded up (was 10/4/6); trigger and Kin bonus set aside."
   },
   {
    "id": "high-thane-brunna-stonefast",
@@ -192,7 +192,7 @@
    "abilityName": "Walls First",
    "abilityText": "Ignore any opponent's ability that would force one of your heroes to contribute a different stat, stop one of your heroes contributing stats, or make one of your resource cards count as a negative.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 8/6/8); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 8/6/8); trigger and Kin bonus set aside.",
    "number": 1010
   },
   {
@@ -213,7 +213,7 @@
    "abilityName": "Royal Requisition",
    "abilityText": "Before bidding on your turn, you may trade a resource card from your hand with a random card in another player's hand.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
    "number": 1011
   },
   {
@@ -233,7 +233,7 @@
    "abilityName": "Resources of the Collegium",
    "abilityText": "Once per turn, when you draw a resource, draw an additional resource.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 2/10/7); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 2/10/7); trigger and Kin bonus set aside.",
    "number": 1012
   },
   {
@@ -253,7 +253,7 @@
    "abilityName": "The Society's Maps",
    "abilityText": "Once per turn, whenever abilities can be used on your turn, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 4/10/7); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 4/10/7); trigger and Kin bonus set aside.",
    "number": 1013
   },
   {
@@ -273,7 +273,7 @@
    "abilityName": "Pick Your Fight",
    "abilityText": "Once per turn, before bidding, you may look at the next encounter in the encounter stack. You may replace the current encounter and its minions with it.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 9/6/9); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 9/6/9); trigger and Kin bonus set aside.",
    "number": 1014
   },
   {
@@ -293,7 +293,7 @@
    "abilityName": "Entered in the Book of Grudges",
    "abilityText": "Before bidding, once per turn, choose an opponent. If that opponent uses an ability against your heroes, you may draw a resource.",
    "kind": "hero",
-   "revision": "Party rework: stats halved, rounded up (was 7/8/9); trigger and Kin bonus set aside.",
+   "revision": "Stats halved, rounded up (was 7/8/9); trigger and Kin bonus set aside.",
    "number": 1015
   },
   {

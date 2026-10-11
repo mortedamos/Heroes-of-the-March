@@ -18,6 +18,7 @@
     "sfx": "node scripts/sfx.ts",
     "skies": "node scripts/skies.ts",
     "numbers": "node scripts/card-numbers.ts",
+    "rules-doc": "node scripts/rules-doc.ts",
     "export:cards": "node scripts/export-cards.ts",
     "ambience": "node scripts/sfx.ts",
     "balance:build": "rolldown scripts/balance/cli.ts --format esm --platform node --file _build/balance/cli.mjs && rolldown scripts/balance/report.ts --format esm --platform node --file _build/balance/report.mjs"

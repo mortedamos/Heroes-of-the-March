@@ -1,5 +1,7 @@
 # Kingdom redesign: balance results
 
+> **Historical.** This describes the game before the party rework (a hero plus companions, hero triggers, Kin bonuses). See [PARTY-REWORK.md](PARTY-REWORK.md) and [BALANCE-party.md](BALANCE-party.md) for the current game.
+
 Bot games at the normal level (3 and 4 players, seeded). Bots recruit companions of their hero's kingdom. Relative win rate = wins / fair share (1.00 is fair).
 Stats are Physical/Mental/Guile. "Before" is the card before the kingdom redesign.
 

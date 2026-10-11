@@ -1,5 +1,7 @@
 # Kingdom redesign
 
+> **Historical.** This describes the game before the party rework (a hero plus companions, hero triggers, Kin bonuses). See [PARTY-REWORK.md](PARTY-REWORK.md) and [BALANCE-party.md](BALANCE-party.md) for the current game.
+
 Goal: a player can build a viable single-kingdom strategy, and abilities that key on a card group trigger often enough to matter.
 Every number below is a starting point; see CARD-BALANCE.md for the measured results.
 

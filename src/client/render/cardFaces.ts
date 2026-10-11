@@ -12,7 +12,6 @@ const SERIF = 'Georgia, "Palatino Linotype", "Book Antiqua", "Times New Roman", 
 
 export const KIND_COLORS: Record<CardDef['kind'], { frame: string; dark: string; label: string }> = {
   hero: { frame: '#b8862b', dark: '#3b2a0e', label: 'Hero' },
-  companion: { frame: '#3d7d78', dark: '#12302e', label: 'Companion' },
   location: { frame: '#557d3a', dark: '#1d2e12', label: 'Location' },
   encounter: { frame: '#94302f', dark: '#2e0f0f', label: 'Encounter' },
   resource: { frame: '#4e548f', dark: '#191b36', label: 'Resource' },
@@ -21,7 +20,7 @@ export const KIND_COLORS: Record<CardDef['kind'], { frame: string; dark: string;
 export const STAT_COLORS: Record<Stat, string> = { P: '#b3372f', M: '#2f5fb3', G: '#2f8a4c' };
 
 const DECK_KIND: Record<DeckName, CardDef['kind']> = {
-  hero: 'hero', companion: 'companion', location: 'location', encounter: 'encounter', resource: 'resource',
+  hero: 'hero', location: 'location', encounter: 'encounter', resource: 'resource',
 };
 
 type Face = { canvas: HTMLCanvasElement; version: number; listeners: Set<() => void> };
@@ -249,12 +248,6 @@ function emblem(g: CanvasRenderingContext2D, kind: CardDef['kind'], cx: number, 
       g.moveTo(-r * 0.6, r * 0.35); g.lineTo(-r * 0.6, -r * 0.25); g.lineTo(-r * 0.3, r * 0.05); g.lineTo(0, -r * 0.45);
       g.lineTo(r * 0.3, r * 0.05); g.lineTo(r * 0.6, -r * 0.25); g.lineTo(r * 0.6, r * 0.35); g.closePath(); g.fill();
       break;
-    case 'companion': // two circles (allies)
-      g.arc(-r * 0.25, -r * 0.15, r * 0.22, 0, Math.PI * 2); g.fill(); g.beginPath();
-      g.arc(r * 0.25, -r * 0.15, r * 0.22, 0, Math.PI * 2); g.fill(); g.beginPath();
-      g.ellipse(-r * 0.25, r * 0.35, r * 0.32, r * 0.2, 0, Math.PI, 0); g.fill(); g.beginPath();
-      g.ellipse(r * 0.25, r * 0.35, r * 0.32, r * 0.2, 0, Math.PI, 0); g.fill();
-      break;
     case 'location': // tower
       g.rect(-r * 0.25, -r * 0.3, r * 0.5, r * 0.75); g.fill(); g.beginPath();
       for (let i = 0; i < 3; i++) g.rect(-r * 0.3 + i * r * 0.22, -r * 0.48, r * 0.16, r * 0.2);
@@ -370,7 +363,7 @@ function drawFace(g: CanvasRenderingContext2D, def: CardDef, art: HTMLImageEleme
   const tx = 36, tw = W - 72;
 
   // Stats / numbers
-  if (def.kind === 'hero' || def.kind === 'companion') {
+  if (def.kind === 'hero') {
     const bw = (tw - 24) / 3;
     (['P', 'M', 'G'] as Stat[]).forEach((s, i) => badge(g, tx + i * (bw + 12), y, bw, 46, STAT_COLORS[s], `${s}  ${def.stats[s]}`, 28));
     y += 60;
@@ -392,11 +385,9 @@ function drawFace(g: CanvasRenderingContext2D, def: CardDef, art: HTMLImageEleme
 
   // Rules text
   const blocks: TextBlock[] = [];
-  if (def.kind === 'hero' || def.kind === 'companion') {
+  if (def.kind === 'hero') {
     if (def.abilityName) blocks.push({ text: def.abilityName, weight: 'bold', color: KIND_COLORS[def.kind].dark });
     if (def.abilityText) blocks.push({ text: def.abilityText, gapBefore: 2, glow: true, ...(emphasis ? { weight: 'bold' } : {}) });
-    if (def.kind === 'hero' && def.triggerText) blocks.push({ text: `⚡ ${def.triggerText}`, style: 'italic', color: '#5a3d0c', gapBefore: 10 });
-    if (def.kind === 'hero' && def.kinText) blocks.push({ text: `◆ ${def.kinText}`, style: 'italic', color: '#2f5d3a', gapBefore: 6 });
   } else if (def.conditionText) {
     blocks.push({ text: def.conditionText, glow: true, ...(emphasis ? { weight: 'bold' } : {}) });
   }

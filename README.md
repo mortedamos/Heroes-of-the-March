@@ -13,22 +13,16 @@ npm run typecheck
 npm run build      # production bundle in dist/
 ```
 
-Card data is generated from the design spreadsheet:
+Card data lives in `src/data/cards.json` (it is edited directly; the old spreadsheet pipeline is gone). Each card has a permanent number in `data/card-numbers.json` (`npm run numbers` numbers new cards). The party rework (heroes and companions became one kind of card) is described in [docs/PARTY-REWORK.md](docs/PARTY-REWORK.md); what it set aside is in `data/set-aside.json`.
 
-```bash
-npm run cards      # source-docs/Heroes-of-the-March-card-data.xlsx -> src/data/cards.json
-```
-
-Card art comes from `_build/art`. Which art goes on which card is set in
-`data/art-map.json` (by card name); unmapped cards get a drawn emblem.
-Edit the spreadsheet or the art map, re-run `npm run cards`, and reload.
+Card art comes from `_build/art`; each card names its art file in `cards.json` (`art`), and a card without one gets a drawn emblem.
 
 ## Layout
 
 ```
 src/
   engine/        Pure rules engine: no DOM, no three.js. Runs in browser or Node.
-    setup.ts       createGame(): decks, heroes, companions, hands
+    setup.ts       createGame(): decks, hands, then the opening party draft
     flow.ts        turn state machine + queued card-effect tasks
     commands.ts    trust boundary: validate + apply player commands, resume()
     view.ts        per-player redacted views and events
@@ -38,8 +32,8 @@ src/
   bots/          Heuristic bot (sees only its own view)
   net/           GameHost (authoritative), protocol, local JSON transport, bot seats
   client/        three.js table, card face renderer, HTML HUD
-data/art-map.json  card name -> art file
-scripts/build-cards.ts  xlsx -> JSON (validates the sheet)
+data/set-aside.json  rules content set aside by the party rework
+scripts/balance/       bot-game simulation (npm run balance:build)
 ```
 
 ## Screens and input
@@ -54,7 +48,7 @@ On compact shapes the camera fits the whole play area to the space the dock leav
 
 Cards are shown as large as the space allows, and their text is repeated as plain text only when the card comes out too small to read (`Hud.inspect`, using the print size from `rulesTextSize`).
 
-Choosing a card works the same everywhere: a bid, a companion pick or a one-card choice happens on click. On touch screens there's no hover, so the first tap shows the card full size with its action button, and a second tap (or the button) confirms. Holding an ability button opens its card without using it.
+Choosing a card works the same everywhere: a bid, a hero pick or a one-card choice happens on click. On touch screens there's no hover, so the first tap shows the card full size with its action button, and a second tap (or the button) confirms. Holding an ability button opens its card without using it.
 
 ## Multiplayer hooks
 

@@ -32,7 +32,7 @@ function isAbilityResult(e: ClientEvent, by: PlayerId): boolean {
   switch (e.type) {
     case 'effect': case 'effectCancelled': case 'abilityIgnored': case 'abilityZap': case 'ability': case 'bidClaimed': case 'cursePlaced': case 'bidsSwapped': case 'cardsTraded':
     case 'cardShown': case 'peeked': case 'bottomed': case 'locationReplaced': case 'encounterReplaced':
-    case 'companionFaceDown': case 'companionDiscarded': case 'companionMinion': case 'resourceDiscarded':
+    case 'heroFaceDown': case 'heroLeft': case 'heroMinion': case 'resourceDiscarded':
     case 'councilHero': case 'extraLocation': case 'fallPrevented':
       return true;
     case 'drew': return e.player === by;
@@ -41,8 +41,7 @@ function isAbilityResult(e: ClientEvent, by: PlayerId): boolean {
 }
 
 const DECK_INFO: Record<DeckName, { name: string; text: string }> = {
-  hero: { name: 'Hero Deck', text: 'Heroes to draft at the start, and to take up when your hero falls.' },
-  companion: { name: 'Companion Deck', text: 'Allies you can draw blind to join your party.' },
+  hero: { name: 'Hero Deck', text: 'Heroes to draft into your party at the start, and to recruit one at a time as it changes.' },
   location: { name: 'Location Deck', text: 'The places the players compete to claim each turn.' },
   encounter: { name: 'Encounter Deck', text: 'Contains cards that define the monsters and challenges you face.' },
   resource: { name: 'Resource Deck', text: 'The cards you draw and bid to win locations.' },
@@ -65,9 +64,8 @@ function afflictionsOf(view: GameView): Map<string, string[]> {
     const by = `by ${nameOf(view, e.owner)}'s ${getDef(e.source.def).name}`;
     const stat = e.stat && e.stat !== 'all' ? STAT_NAMES[e.stat] : '';
     switch (e.kind) {
-      case 'silenceCompanion': add(e.targetCard?.id, `Silenced: contributes nothing ${by}`); break;
-      case 'forceCompanionStat': add(e.targetCard?.id, `Forced to use ${stat} ${by}`); break;
-      case 'forceHeroStat': add(view.players.find((p) => p.id === e.targetPlayer)?.hero?.id, `Forced to use ${stat} ${by}`); break;
+      case 'silenceHero': add(e.targetCard?.id, `Silenced: contributes nothing ${by}`); break;
+      case 'forceStat': add(e.targetCard?.id, `Forced to use ${stat} ${by}`); break;
       case 'negateBid': add(e.targetCard?.id, `Counts as zero ${by}`); break;
       case 'disableAbilities': add(e.targetCard?.id, `Abilities disabled ${by}`); break;
       default: break;
@@ -88,10 +86,10 @@ function targetsOf(e: ClientEvent): PlayerId[] {
   }
 }
 
-/** The player a table card belongs to (hero, companions or face-up bids). */
+/** The player a table card belongs to (a hero of their party or a face-up bid). */
 function ownerOfCard(view: GameView, cardId: string): PlayerId | null {
-  return view.players.find((p) => p.hero?.id === cardId || p.companions.some((c) => c.id === cardId)
-    || p.inactiveCompanions.some((c) => c.id === cardId) || p.resting.some((c) => c.id === cardId)
+  return view.players.find((p) => p.party.some((c) => c.id === cardId)
+    || p.inactive.some((c) => c.id === cardId) || p.resting.some((c) => c.id === cardId)
     || p.bids.some((b) => !b.hidden && b.card.id === cardId))?.id ?? null;
 }
 
@@ -309,9 +307,8 @@ export class GameClient {
         if (!part.card || part.value === 0) continue;
         const at = this.board.screenPoint(part.card.id);
         if (!at) continue;
-        const kin = part.kind === 'kin';
-        const text = kin ? `◆ +${part.value}` : part.value > 0 ? `+${part.value}` : `${part.value}`;
-        this.hud.floatNumber(at.x, at.y - (kin ? 22 : 0), text, kin ? 'kin' : part.value < 0 ? 'neg' : '', 60 * n++);
+        const text = part.value > 0 ? `+${part.value}` : `${part.value}`;
+        this.hud.floatNumber(at.x, at.y, text, part.value < 0 ? 'neg' : '', 60 * n++);
       }
     }
   }
@@ -392,7 +389,7 @@ export class GameClient {
       this.scene.environment.setLocation(view.turn.location?.def);
       this.showPlaceInfo(view.turn.location?.def);
     }
-    const opening = view.turn.number === 0 || (view.turn.number === 1 && (view.turn.step === 'turnStart' || view.turn.step === 'companions' || view.turn.step === 'draft'));
+    const opening = view.turn.number === 0 || (view.turn.number === 1 && (view.turn.step === 'turnStart' || view.turn.step === 'recruit' || view.turn.step === 'partyDraft'));
     if (opening !== this.openingMusic) {
       this.openingMusic = opening;
       music.setOpening(opening);
@@ -435,8 +432,8 @@ export class GameClient {
         case 'abilityCountered':
           this.hud.banner(`${getDef(e.source.def).name} countered by ${getDef(e.by.def).name}!`, 'warn', 2200);
           break;
-        case 'heroChanged':
-          if (e.reason === 'fell') this.hud.banner(`${nameOf(view, e.player)}: a new hero takes up the banner`, 'warn');
+        case 'heroLeft':
+          if (e.reason === 'Fell') this.hud.banner(`${nameOf(view, e.player)}: ${getDef(e.card.def).name.split(',')[0]} falls`, 'warn');
           break;
         case 'gameOver':
           this.hud.banner(`${nameOf(view, e.winner)} ${e.winner === view.you ? 'win' : 'wins'}!`, 'big', 3000);
@@ -457,7 +454,8 @@ export class GameClient {
    * done to someone, one for boons).
    */
   private attackFor(e: ClientEvent, view: GameView): void {
-    const heroOf = (pid: PlayerId | null): string | null => view.players.find((p) => p.id === pid)?.hero?.id ?? null;
+    // A player-level effect (no card of its own) comes from, or lands on, the first hero of their party.
+    const heroOf = (pid: PlayerId | null): string | null => view.players.find((p) => p.id === pid)?.party[0]?.id ?? null;
     let from: string | null = null;
     let to: string | null = null;
     let theme: Theme = 'hex';
@@ -467,9 +465,9 @@ export class GameClient {
         at = e.targetPlayer;
         from = this.board.hasCard(e.source.id) ? e.source.id : heroOf(e.effect.owner);
         to = e.targetCard && this.board.hasCard(e.targetCard.id) ? e.targetCard.id : heroOf(e.targetPlayer);
-        const boon = e.effect.kind === 'statBonus' || e.effect.kind === 'autoWin' || e.effect.kind === 'heroMultiplier' || e.effect.owner === e.targetPlayer;
+        const boon = e.effect.kind === 'statBonus' || e.effect.kind === 'autoWin' || e.effect.owner === e.targetPlayer;
         const k = e.effect.kind;
-        theme = k === 'statBonus' || k === 'heroMultiplier' ? 'boon' : k === 'disableAbilities' ? 'shield' : boon ? 'boon' : 'hex';
+        theme = k === 'statBonus' ? 'boon' : k === 'disableAbilities' ? 'shield' : boon ? 'boon' : 'hex';
         break;
       }
       case 'abilityCountered': from = e.by.id; to = e.source.id; theme = 'shield'; at = null; break;
@@ -544,9 +542,9 @@ export class GameClient {
           for (let i = 0; i < n; i++) sfx.playLater('deal', i * 130);
         }
         break;
-      case 'bid': case 'companionPlayed': sfx.play('card-place'); break;
+      case 'bid': case 'heroJoined': sfx.play('card-place'); break;
       case 'revealed': case 'encounterRevealed': case 'locationRevealed': sfx.play('card-flip'); break;
-      case 'resourceDiscarded': case 'companionDiscarded': sfx.play('card-discard'); break;
+      case 'resourceDiscarded': case 'heroLeft': sfx.play('card-discard'); break;
       case 'renownGained': sfx.play('renown'); break;
       default: break;
     }
@@ -676,8 +674,8 @@ export class GameClient {
           def: c.def,
           title: c.title ?? (you ? 'You used a card ability' : `${c.ownerName} used a card ability`),
           subtitle: c.subtitle ?? (names.length ? `against a target owned by ${names.join(' and ')}` : ''),
-          name: def.kind === 'hero' || def.kind === 'companion' ? def.abilityName : def.name,
-          text: def.kind === 'hero' || def.kind === 'companion' ? def.abilityText : c.label,
+          name: def.kind === 'hero' ? def.abilityName : def.name,
+          text: def.kind === 'hero' ? def.abilityText : c.label,
           results: c.lines,
           theme: c.theme,
           from,

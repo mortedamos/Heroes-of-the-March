@@ -200,7 +200,7 @@ body.shape-tall .btn.ability, body.shape-short .btn.ability { white-space: norma
 .hand > .card-btn:hover, .hand > .card-btn:focus-visible { z-index: 100; }
 .card-btn.fan { transform-origin: 50% 160%; transform: translateY(var(--fan-y, 0)) rotate(var(--fan, 0deg)); }
 body.shape-short .card-btn.fan { transform: none; }
-/* First companion phase: a big panel over the table, under the hover preview. */
+/* Recruit phase and party draft: a big panel over the table, under the hover preview. */
 .draft-slot { display: flex; align-items: center; justify-content: center; border: 2px dashed var(--line); border-radius: 8px; color: var(--ink-dim); font-style: italic; flex: none; }
 .comp-stage {
   position: fixed; left: 0; right: 0; top: var(--top-h); bottom: 0; z-index: 2; pointer-events: none;
@@ -213,9 +213,7 @@ body.shape-short .card-btn.fan { transform: none; }
   background: rgba(16, 11, 6, 0.96); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 34px rgba(0,0,0,0.7);
 }
 .stage-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-.stage-hero { flex: none; display: flex; flex-direction: column; gap: 6px; align-items: center; padding-right: 14px; border-right: 1px solid var(--line); }
-.stage-hero h3 { margin: 0; font-size: 16px; color: var(--gold); }
-@media (max-width: 720px) { .stage-panel { flex-direction: column; align-items: stretch; } .stage-hero { border-right: 0; padding-right: 0; } }
+@media (max-width: 720px) { .stage-panel { flex-direction: column; align-items: stretch; } }
 .stage-main h2 { margin: 0; color: var(--gold); text-align: center; }
 .stage-section h3 { margin: 0 0 2px; font-size: 16px; color: #fff; }
 .stage-hint { margin: 0 0 8px; color: var(--ink-dim); font-size: 13px; }
@@ -270,7 +268,7 @@ body.shape-short .card-btn.fan { transform: none; }
   line-height: 1; border-radius: 50%; background: var(--gold); color: #1b1206; border: 2px solid #fff3cf;
   font-weight: bold; font-size: 13px; box-shadow: 0 2px 6px rgba(0,0,0,0.6);
 }
-/* The same chip on the table's hero and companion cards: placed by Hud.reposition. */
+/* The same chip on the table's hero cards: placed by Hud.reposition. */
 .card-chips { position: fixed; inset: 0; z-index: 1; pointer-events: none; }
 .value-chip.table-chip { top: 0; left: 0; right: auto; width: 26px; height: 26px; font-size: 13px; will-change: transform; }
 .value-chip.zero { background: #6b6254; color: #e7dcc4; border-color: #b7aa8f; }
@@ -413,7 +411,7 @@ body.touch .moments-bar { height: 34px; }
 .moments-foot { font-size: 11px; color: var(--ink-dim); margin-top: 8px; line-height: 1.35; }
 @media (prefers-reduced-motion: reduce) { .moment-dot.ready { animation: none; } }
 
-/* Hero and companion pickers: open slots on one side, the cards on the other. */
+/* Party pickers: open slots on one side, the cards on the other. */
 .picker { display: flex; gap: 18px; align-items: flex-start; justify-content: center; }
 .picker-slots { flex: none; display: flex; flex-direction: column; align-items: center; gap: 8px; padding-right: 16px; border-right: 1px solid var(--line); }
 .picker-slots h3, .picker-pool-wrap h3 { margin: 0 0 4px; font-size: 16px; color: #fff; text-align: center; }
@@ -765,7 +763,7 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 
 /* Display font: the game's own headings, title and buttons (not the card faces). */
 :root { --display: "Cinzel Decorative", Georgia, "Palatino Linotype", serif; }
-.setup h1, .menu-brand, .stage-main h2, .stage-section h3, .stage-hero h3, .modal h2, .decision-title, .case-title strong,
+.setup h1, .menu-brand, .stage-main h2, .stage-section h3, .modal h2, .decision-title, .case-title strong,
 .plate-name, .banner, .notice-title, .btn.primary, .music-title, .deck-tip strong {
   font-family: var(--display);
 }
@@ -818,8 +816,6 @@ body.shape-tall .inspector.pinned .inspect-actions, body.shape-short .inspector.
 .rp { font-size: 12px; padding: 2px 7px; border-radius: 999px; background: rgba(255,255,255,0.08); color: var(--ink); white-space: nowrap; }
 .rp b { margin-left: 2px; }
 .rp-hero { background: rgba(229,185,90,0.22); }
-.rp-kin { background: rgba(110, 200, 140, 0.25); }
-.rp-companion { background: rgba(110, 150, 220, 0.2); }
 .rp-council { background: rgba(160, 110, 210, 0.25); }
 .rp-resource { background: rgba(190, 150, 90, 0.2); }
 .rp-bonus { background: rgba(110, 200, 140, 0.18); }

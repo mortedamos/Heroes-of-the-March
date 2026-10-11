@@ -24,7 +24,7 @@ describe('slot picker', () => {
     expect(s.slots).toEqual(['c', null]);
   });
 
-  it('a locked card (a current companion) is pushed out by a new one and returns when the new one leaves', () => {
+  it('a locked card (a current hero) is pushed out by a new one and returns when the new one leaves', () => {
     const locked = new Set(['x', 'y']);
     const s = newPickerState(1, ['x', 'y', null]);
     placeCard(s, 'new', 0, locked);

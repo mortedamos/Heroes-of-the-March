@@ -57,7 +57,7 @@ export interface HudDeps {
 }
 
 const STEP_LABEL: Record<string, string> = {
-  draft: 'Choosing heroes', companionDraft: 'Choosing companions', turnStart: 'Start of turn', winTurnStart: 'Start of turn', companions: 'Companion phase', location: 'Location',
+  partyDraft: 'Choosing parties', turnStart: 'Start of turn', winTurnStart: 'Start of turn', recruit: 'Recruit phase', location: 'Location',
   winAfterLocation: 'Location', encounter: 'Encounter', challenge: 'Encounter',
   winBeforeBidding: 'Before bidding', bidding: 'Bidding', winBeforeReveal: 'Before the reveal', reveal: 'Revealing bids', winEndOfBidding: 'End of bidding',
   resolve: 'Resolving', turnEnd: 'End of turn', gameOver: 'Game over',
@@ -98,11 +98,9 @@ function effectTag(e: EffectView): string {
   const stat = e.stat === 'all' ? 'all' : e.stat ? STAT_NAMES[e.stat] : '';
   const tgt = e.targetCard ? getDef(e.targetCard.def).name.split(',')[0] : '';
   switch (e.kind) {
-    case 'silenceCompanion': return `${tgt} silenced`;
-    case 'forceCompanionStat': return `${tgt} → ${stat}`;
-    case 'forceHeroStat': return `Hero → ${stat}`;
+    case 'silenceHero': return `${tgt} silenced`;
+    case 'forceStat': return `${tgt} → ${stat}`;
     case 'statBonus': return `${(e.amount ?? 0) >= 0 ? '+' : ''}${e.amount} ${stat}`;
-    case 'heroMultiplier': return 'Hero ×2';
     case 'negateBid': return `${tgt} zero`;
     case 'disableAbilities': return `${tgt} disabled`;
     case 'autoWin': return 'Takes the location';
@@ -142,7 +140,7 @@ export class Hud {
   /** The turn timeline at the top of the screen. */
   private readonly moments = new MomentStrip();
   private readonly plates = h('div', { class: 'plates' });
-  /** Stat chips on the table's hero and companion cards (what each adds to the challenge now). */
+  /** Stat chips on the table's hero cards (what each adds to the challenge now). */
   private readonly chips = h('div', { class: 'card-chips' });
   private readonly chipEls = new Map<string, HTMLElement>();
   private readonly challenge = h('div', { class: 'challenge hidden' });
@@ -167,7 +165,7 @@ export class Hud {
   private counterHeld = false;
   private counter: { decision: number; prompt: string; source: string; options: { value: string; label: string }[] } | null = null;
   private readonly modal = h('div', { class: 'modal-layer hidden' });
-  /** Large companion-phase panel for each player's first turn, before the game really starts. */
+  /** Large recruit-phase panel (drawn heroes and your party). */
   private readonly stage = h('div', { class: 'comp-stage hidden' });
   /** Tooltip for the deck under the mouse. */
   private readonly deckTipEl = h('div', { class: 'deck-tip hidden', role: 'tooltip' });
@@ -180,7 +178,7 @@ export class Hud {
   private view: GameView | null = null;
   private layout: Layout | null = null;
   private selected = new Set<string>();
-  /** Where the cards are in the hero and companion pickers (kept while the same decision is open). */
+  /** Where the cards are in the party pickers (kept while the same decision is open). */
   private picker: PickerState | null = null;
   private faceDown = false;
   private pinned: string | null = null;
@@ -285,7 +283,7 @@ export class Hud {
     if (view.winner && !this.modal.dataset['gameover']) this.showGameOver(view);
   }
 
-  /** A number in the upper right of every hero and companion on the table: what it adds in the challenge's stat right now. */
+  /** A number in the upper right of every hero on the table: what it adds in the challenge's stat right now. */
   private renderChips(v: GameView): void {
     const keep = new Set<string>();
     for (const p of v.players) {
@@ -465,7 +463,7 @@ export class Hud {
         ? h('span', { class: `plate-crown skull${this.crowned.has(p.id) ? ' still' : ''}`, title: 'Would fall from this encounter as things stand' }, '💀')
         : this.leaders(v).has(p.id) ? h('span', { class: `plate-crown${this.crowned.has(p.id) ? ' still' : ''}`, title: 'Highest total so far' }, '👑') : '',
       h('div', { class: 'plate-head' },
-        h('strong', { class: 'plate-name', title: p.hero ? getDef(p.hero.def).name : '' }, p.name, you ? h('span', { class: 'plate-you' }, ' (you)') : ''),
+        h('strong', { class: 'plate-name', title: p.party.map((c) => getDef(c.def).name).join(', ') }, p.name, you ? h('span', { class: 'plate-you' }, ' (you)') : ''),
         h('span', { class: 'plate-renown', title: `Renown (${v.rules.renownToWin} wins)` }, `★ ${p.renown}`, h('span', { class: 'plate-goal' }, `/${v.rules.renownToWin}`)),
         power ?? ''),
     ];
@@ -485,7 +483,7 @@ export class Hud {
     this.detailEl.classList.add('hidden');
   }
 
-  /** The detail card: hero, Renown, power against the encounter, hand, bids, and what is affecting the player. */
+  /** The detail card: party, Renown, power against the encounter, hand, bids, and what is affecting the player. */
   private renderDetail(): void {
     const v = this.view;
     const p = v?.players.find((x) => x.id === this.detailFor);
@@ -510,7 +508,7 @@ export class Hud {
     const conds: HTMLElement[] = [];
     if (p.penalty > 0) conds.push(h('div', { class: 'pd-cond hex' }, `−${p.penalty} to their total this encounter`));
     if (p.penaltyNext > 0) conds.push(h('div', { class: 'pd-cond hex' }, `−${p.penaltyNext} to their total next encounter`));
-    if (p.statOverride) conds.push(h('div', { class: 'pd-cond hex' }, `Their hero is forced to ${STAT_NAMES[p.statOverride]}`));
+    if (p.statOverride) conds.push(h('div', { class: 'pd-cond hex' }, `They face the challenge on ${STAT_NAMES[p.statOverride]}`));
     for (const e of v.turn.effects.filter((x) => x.active && x.targetPlayer === p.id)) {
       conds.push(h('div', { class: `pd-cond ${e.owner === p.id ? 'boon' : 'hex'}` }, effectTag(e), h('span', { class: 'pd-from' }, ` (${getDef(e.source.def).name})`)));
     }
@@ -518,7 +516,7 @@ export class Hud {
     replace(this.detailEl,
       h('div', { class: 'pd-head' },
         h('strong', {}, p.name, p.id === v.you ? ' (you)' : ''),
-        p.hero ? h('span', { class: 'pd-hero' }, getDef(p.hero.def).name) : ''),
+        p.party.length ? h('span', { class: 'pd-hero' }, p.party.map((c) => shortName(c.def)).join(' · ')) : ''),
       row('Renown', `★ ${p.renown} / ${v.rules.renownToWin}`),
       row('Power', proj
         ? h('span', { class: proj.total >= proj.difficulty ? 'pd-ok' : 'pd-low' }, `${STAT_NAMES[proj.stat]} ${proj.total}${proj.hiddenBids ? ` + ${proj.hiddenBids} unknown` : ''} vs ${proj.difficulty}`)
@@ -595,21 +593,21 @@ export class Hud {
       return;
     }
     this.counter = null;
-    const companionDraft = mine?.kind === 'choose' && mine.purpose === 'companionDraft';
-    if (companionDraft) {
+    const partyDraft = mine?.kind === 'choose' && mine.purpose === 'partyDraft';
+    if (partyDraft) {
       this.stage.classList.remove('hidden');
-      this.renderCompanionDraft(v, d!.id, mine);
-      append(this.prompt, h('span', { class: 'waiting' }, 'Choose your companions.'));
+      this.renderPartyDraft(v, d!.id, mine);
+      append(this.prompt, h('span', { class: 'waiting' }, 'Choose your party.'));
       return;
     }
-    const draft = mine?.kind === 'choose' && (mine.purpose === 'heroDraft' || mine.purpose === 'heroKeep' || mine.purpose === 'hallOfRest') && mine.options.length > 0;
-    if (draft) {
+    const hall = mine?.kind === 'choose' && mine.purpose === 'hallOfRest' && mine.options.length > 0;
+    if (hall) {
       this.stage.classList.remove('hidden');
-      this.renderDraftStage(v, d!.id, mine);
-      append(this.prompt, h('span', { class: 'waiting' }, 'Choose your hero.'));
+      this.renderHallOfRest(v, d!.id, mine);
+      append(this.prompt, h('span', { class: 'waiting' }, 'Choose who takes the empty place.'));
       return;
     }
-    const big = mine !== null && (mine.kind === 'companion.offer' || mine.kind === 'companion.place');
+    const big = mine !== null && (mine.kind === 'recruit.offer' || mine.kind === 'recruit.place');
     this.stage.classList.toggle('hidden', !big);
     if (big) {
       this.renderStage(v, d!.id, mine);
@@ -624,27 +622,8 @@ export class Hud {
         h('button', { class: 'btn primary', on: { click: () => this.deps.newGame() } }, 'Play again'));
     } else if (!mine) {
       const who = d ? nameOf(v, d.player) : null;
-      const what = d?.kind === 'bid' ? 'bidding' : d?.kind === 'choose' ? 'choosing' : d?.kind === 'activate' ? 'considering an ability' : d ? 'recruiting a companion' : '';
+      const what = d?.kind === 'bid' ? 'bidding' : d?.kind === 'choose' ? 'choosing' : d?.kind === 'activate' ? 'considering an ability' : d ? 'recruiting a hero' : '';
       append(this.prompt, h('span', { class: 'waiting' }, d ? `Waiting for ${who}… (${what})` : v.hold ? '…' : ''));
-    } else if (mine.kind === 'companion.place') {
-      const me = v.players.find((p) => p.id === v.you)!;
-      const drawn = mine.drawn;
-      const buttons = h('div', { class: 'decision-buttons' });
-      if (!mine.mustReplace) {
-        append(buttons, h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'companion.keep', decision: d!.id, replace: null }) } }, 'Recruit'));
-      }
-      for (const c of [...me.companions, ...me.inactiveCompanions]) {
-        const b = h('button', { class: `btn${mine.mustReplace ? ' primary' : ''}`, on: { click: () => this.deps.send({ type: 'companion.keep', decision: d!.id, replace: c.id }) } }, `Replace ${shortName(c.def)}`);
-        this.previewOn(b, c.def);
-        append(buttons, b);
-      }
-      append(buttons, h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'companion.discard', decision: d!.id }) } }, 'Let them go'));
-      append(this.prompt, h('div', { class: 'decision' },
-        this.thumbButton(drawn, size.drawn, 'drawn'),
-        h('div', { class: 'decision-body' },
-          h('div', { class: 'decision-title' }, `You drew ${getDef(drawn.def).name}.`),
-          mine.mustReplace ? h('div', { class: 'decision-text' }, "You're at your companion limit.") : '',
-          buttons)));
     } else if (mine.kind === 'activate') {
       // The glowing card is the prompt; this button passes at once instead of waiting for the chance to time out (GameClient).
       append(this.prompt,
@@ -695,68 +674,59 @@ export class Hud {
   private pickerGhost = (c: PickerCard, w: number): HTMLElement => cardThumb(c.def, w, 'thumb');
 
   /**
-   * The opening companion draft: open slots (as many as you may take) on one side, the pool on the other. Drag or tap
+   * The opening party draft: open slots (as many as you may take) on one side, the pool on the other. Drag or tap
    * cards in and out; nothing is decided until the button is pressed.
    */
-  private renderCompanionDraft(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
-    const me = v.players.find((p) => p.id === v.you)!;
+  private renderPartyDraft(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
     const cards: PickerCard[] = c.options.map((o) => ({ id: o.value, def: o.card?.def ?? o.value }));
     if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, Array.from({ length: c.max }, () => null));
     const state = this.picker;
     const picks = state.slots.filter((x): x is string => x !== null);
-    const w = this.pickerWidth(c.max, cards.length, 170);
+    const w = this.pickerWidth(c.max, cards.length);
     const box = h('div', { class: 'picker-box' });
     renderSlotPicker(box, {
       state, cards, width: w,
-      title: 'Choose your companions',
-      slotsLabel: `Your companions (${picks.length}/${c.max})`, poolLabel: 'Available',
-      hint: 'Drag companions into the open slots, or tap one to send it there. Drag one out (or tap it) to change your mind. Press the button when you are happy.',
+      title: 'Choose your party',
+      slotsLabel: `Your party (${picks.length}/${c.max})`, poolLabel: 'Heroes on offer',
+      hint: 'Drag heroes into the open slots, or tap one to send it there. Drag one out (or tap it) to change your mind. The others go back in the stack, unseen. Press the button when you are happy.',
       makeCard: this.pickerCard, ghost: this.pickerGhost,
-      aside: me.hero ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w, 150))) : null,
-      confirm: { label: 'Confirm companions', enabled: picks.length >= c.min && picks.length <= c.max, run: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks }); } },
+      confirm: { label: 'Confirm party', enabled: picks.length >= c.min && picks.length <= c.max, run: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks }); } },
       onChange: () => { this.inspect(null); this.renderDock(v); }, onDragStart: () => this.inspect(null),
     });
-    replace(this.stage, h('div', { class: 'stage-panel' }, h('div', { class: 'stage-main' }, h('h2', {}, 'Choose your companions'), box)));
+    replace(this.stage, h('div', { class: 'stage-panel' }, h('div', { class: 'stage-main' }, h('h2', {}, 'Choose your party'), box)));
   }
 
-  /** The hero draft: the offered heroes to drag into the hero slot (or tap), then a button to confirm. */
-  private renderDraftStage(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
-    const cardOptions = c.options.filter((o) => o.card);
-    const others = c.options.filter((o) => !o.card);
-    const cards: PickerCard[] = cardOptions.map((o) => ({ id: o.value, def: o.card!.def }));
+  /** The Hall of Rest: any hero in the stack may take the place of the one who fell. */
+  private renderHallOfRest(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
+    const cards: PickerCard[] = c.options.filter((o) => o.card).map((o) => ({ id: o.value, def: o.card!.def }));
     if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, [null]);
     const state = this.picker;
     const chosen = state.slots[0] ?? null;
-    const keepOrSend = c.purpose === 'heroKeep';
-    const hall = c.purpose === 'hallOfRest';
     const w = this.pickerWidth(1, cards.length);
     const box = h('div', { class: 'picker-box' });
     renderSlotPicker(box, {
       state, cards, width: w,
-      title: 'Choose your hero',
-      slotsLabel: 'Your hero', poolLabel: keepOrSend ? 'The hero on offer' : hall ? 'Heroes in the stack' : 'Heroes on offer',
-      hint: hall ? 'Any hero in the stack may be chosen. Drag one into the slot (or tap it), then press the button.'
-        : keepOrSend ? 'Keep this hero by placing them in the slot, or send them back and draw another (you must keep that one).'
-        : 'Drag a hero into the slot, or tap one to send it there. The others go back in the stack, unseen. Press the button when you are happy.',
+      title: 'The Hall of Rest',
+      slotsLabel: 'Takes the empty place', poolLabel: 'Heroes in the stack',
+      hint: 'Any hero in the stack may be chosen. Drag one into the slot (or tap it), then press the button.',
       makeCard: this.pickerCard, ghost: this.pickerGhost,
-      extras: others.map((o) => h('button', { class: 'btn', on: { click: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks: [o.value] }); } } }, o.label)),
       confirm: { label: 'Choose this hero', enabled: chosen !== null, run: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks: [chosen!] }); } },
       onChange: () => { this.inspect(null); this.renderDock(v); }, onDragStart: () => this.inspect(null),
     });
     replace(this.stage, h('div', { class: 'stage-panel draft' }, h('div', { class: 'stage-main' },
-      h('h2', {}, keepOrSend ? 'A new hero takes up your banner' : hall ? 'The Hall of Rest: choose who takes up your banner' : 'Choose your hero'), box)));
+      h('h2', {}, 'The Hall of Rest: choose who takes the empty place'), box)));
   }
 
   /**
-   * A companion drawn on a later turn: your party's slots on one side, the new companion on the other. Drag them into
-   * an open slot to recruit them, onto one of yours to replace it, or leave them out to let them go.
+   * A hero drawn on a later turn: your party's slots on one side, the new hero on the other. Drag them into an open
+   * slot to recruit them, onto one of yours to replace it, or leave them out to let them go.
    */
-  private renderPlaceStage(v: GameView, decision: number, mine: Extract<NonNullable<PendingView['detail']>, { kind: 'companion.place' }>): void {
+  private renderPlaceStage(v: GameView, decision: number, mine: Extract<NonNullable<PendingView['detail']>, { kind: 'recruit.place' }>): void {
     const me = v.players.find((p) => p.id === v.you)!;
-    const party = [...me.companions, ...me.inactiveCompanions];
+    const party = [...me.party, ...me.inactive];
     const fixedCards = me.resting;
     const all = [...party, ...fixedCards];
-    const slotCount = Math.max(me.maxCompanions, all.length);
+    const slotCount = Math.max(me.partySize, all.length);
     const drawn: PickerCard = { id: mine.drawn.id, def: mine.drawn.def };
     if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, Array.from({ length: slotCount }, (_, i) => all[i]?.id ?? null));
     const state = this.picker;
@@ -770,23 +740,22 @@ export class Hud {
     renderSlotPicker(box, {
       state, cards, locked, fixed: new Set(fixedCards.map((c) => c.id)), width: w,
       title: 'Build your party',
-      slotsLabel: `Your companions (${slotCount - state.slots.filter((x) => x === null).length}/${me.maxCompanions})`, poolLabel: `You drew ${getDef(mine.drawn.def).name}`,
+      slotsLabel: `Your party (${slotCount - state.slots.filter((x) => x === null).length}/${me.partySize})`, poolLabel: `You drew ${getDef(mine.drawn.def).name}`,
       hint: mine.mustReplace
-        ? "You're at your companion limit. Drag the new companion onto one of yours to replace it, or tap one of yours; leave them out to let them go."
-        : 'Drag the new companion into an open slot to recruit them, or onto one of yours to replace it. Leave them out to let them go.',
+        ? 'Your party is full. Drag the new hero onto one of yours to replace them, or tap one of yours; leave them out to let them go.'
+        : 'Drag the new hero into an open slot to recruit them, or onto one of yours to replace them. Leave them out to let them go.',
       makeCard: this.pickerCard, ghost: this.pickerGhost,
       confirm: {
         label, enabled: true,
         run: () => {
           this.picker = null;
-          if (!placed) this.deps.send({ type: 'companion.discard', decision });
-          else this.deps.send({ type: 'companion.keep', decision, replace: displaced ? displaced.id : null });
+          if (!placed) this.deps.send({ type: 'recruit.discard', decision });
+          else this.deps.send({ type: 'recruit.keep', decision, replace: displaced ? displaced.id : null });
         },
       },
       onChange: () => { this.inspect(null); this.renderDock(v); }, onDragStart: () => this.inspect(null),
     });
-    const hero = me.hero ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w, 150))) : '';
-    replace(this.stage, h('div', { class: 'stage-panel' }, hero, h('div', { class: 'stage-main' }, h('h2', {}, 'Build your party'), box)));
+    replace(this.stage, h('div', { class: 'stage-panel' }, h('div', { class: 'stage-main' }, h('h2', {}, 'Build your party'), box)));
   }
 
   /** Card width for the big panel: four across, or whatever two rows of the viewport allow. */
@@ -797,36 +766,31 @@ export class Hud {
   }
 
   /**
-   * The companion phase (every turn, and before anything can be used at the start): a large
-   * panel with your hero and your current companions (or the picked
-   * card and whom it could replace), so you can look for abilities that combine.
+   * The recruit phase (every turn, and before anything can be used at the start): a large panel with your party (or the
+   * drawn card and whom it could replace), so you can look for abilities that combine.
    */
   private renderStage(v: GameView, decision: number, mine: NonNullable<PendingView['detail']>): void {
     const me = v.players.find((p) => p.id === v.you)!;
     const w = this.stageCardWidth();
-    const mineCards = [...me.companions, ...me.inactiveCompanions];
+    const mineCards = [...me.party, ...me.inactive];
     const row = (cards: CardRef[], make: (c: CardRef) => HTMLElement, empty: string): HTMLElement =>
       h('div', { class: 'stage-row' }, ...(cards.length ? cards.map(make) : [h('div', { class: 'stage-empty' }, empty)]));
     const section = (title: string, hint: string, body: HTMLElement): HTMLElement =>
       h('section', { class: 'stage-section' }, h('h3', {}, title), hint ? h('p', { class: 'stage-hint' }, hint) : '', body);
-    const touch = isTouch();
-    const children: HTMLElement[] = [h('h2', {}, 'Choose your companions')];
-    const limit = `(${me.companions.length + me.inactiveCompanions.length + me.resting.length}/${me.maxCompanions})`;
+    const children: HTMLElement[] = [h('h2', {}, 'Recruit a hero')];
+    const size = `(${me.party.length + me.inactive.length + me.resting.length}/${me.partySize})`;
 
-    if (mine.kind === 'companion.offer') {
+    if (mine.kind === 'recruit.offer') {
       const buttons = h('div', { class: 'decision-buttons' },
-        h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'companion.draw', decision }) } }, 'Draw a companion'),
-        h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'companion.skip', decision }) } }, 'Skip'));
+        h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'recruit.draw', decision }) } }, 'Draw a hero'),
+        h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'recruit.skip', decision }) } }, 'Skip'));
       children.push(
-        section('Your companions ' + limit, 'Draw one companion at random, then decide whether to keep it. If you are at your companion limit, you will need to replace one.',
-          row(mineCards, (c) => this.thumbButton(c, w), 'None yet.')),
+        section('Your party ' + size, 'Draw one hero at random, then decide whether to keep them. If your party is full, you will need to replace one.',
+          row(mineCards, (c) => this.thumbButton(c, w), 'No heroes yet.')),
         buttons);
     }
-    if (mine.kind === 'companion.place') { this.renderPlaceStage(v, decision, mine); return; }
-    const hero = me.hero
-      ? h('aside', { class: 'stage-hero' }, h('h3', {}, 'Your hero'), this.thumbButton(me.hero, Math.min(w + 20, 210)))
-      : '';
-    replace(this.stage, h('div', { class: 'stage-panel' }, hero, h('div', { class: 'stage-main' }, ...children)));
+    if (mine.kind === 'recruit.place') { this.renderPlaceStage(v, decision, mine); return; }
+    replace(this.stage, h('div', { class: 'stage-panel' }, h('div', { class: 'stage-main' }, ...children)));
   }
 
   private hint(key: string, decision: number, text: string): HTMLElement | '' {
@@ -1096,10 +1060,8 @@ export class Hud {
   /** A card's name and rules as plain text (the copy shown when the printed text would be too small to read). */
   private cardText(d: ReturnType<typeof getDef>): HTMLElement[] {
     const text: HTMLElement[] = [h('h3', { class: 'inspect-name' }, d.name)];
-    if (d.kind === 'hero' || d.kind === 'companion') {
+    if (d.kind === 'hero') {
       if (d.abilityName) text.push(h('p', {}, h('strong', {}, d.abilityName), d.abilityText ? ` ${d.abilityText}` : ''));
-      if (d.kind === 'hero' && d.triggerText) text.push(h('p', { class: 'trigger' }, `⚡ ${d.triggerText}`));
-      if (d.kind === 'hero' && d.kinText) text.push(h('p', { class: 'trigger' }, `◆ ${d.kinText}`));
     } else if (d.conditionText) text.push(h('p', {}, d.conditionText));
     return text;
   }
@@ -1704,7 +1666,7 @@ export class Hud {
   showResult(r: TurnResult, v: GameView): void {
     const rows = [...r.rows].sort((a, b) => b.total - a.total);
     const sign = (n: number) => (n >= 0 ? `+${n}` : `${n}`);
-    const part = (p: TurnResult['rows'][number]['parts'][number]) => h('span', { class: `rp rp-${p.kind}`, title: p.kind }, p.kind === 'kin' ? '◆ Kin ' : `${p.label} `, h('b', {}, sign(p.value)));
+    const part = (p: TurnResult['rows'][number]['parts'][number]) => h('span', { class: `rp rp-${p.kind}`, title: p.kind }, `${p.label} `, h('b', {}, sign(p.value)));
     replace(this.resultPanel,
       h('h3', {}, r.winner ? `${nameOf(v, r.winner)} ${r.winner === v.you ? 'win' : 'wins'} the location!` : r.tied ? `A tie: the location is lost, and ${r.tied.map((p) => nameOf(v, p)).join(' and ')} each draw a new one.` : 'Nobody survived: the location is lost.'),
       h('div', { class: 'result-rows' }, ...rows.map((row) => h('div', { class: `result-row ${row.player === r.winner || r.tied?.includes(row.player) ? 'win' : row.survived ? '' : 'fail'}` },

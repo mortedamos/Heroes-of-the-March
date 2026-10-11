@@ -46,8 +46,7 @@ const CARD_Y = 0.012;
 // Stacks live in the lower corners, clear of every seat's cards and bids.
 const DECK_POS: Record<DeckName, { x: number; z: number }> = {
   hero: { x: -5.1, z: 0.5 },
-  companion: { x: -5.1, z: 1.45 },
-  location: { x: -5.1, z: 2.4 },
+  location: { x: -5.1, z: 1.45 },
   encounter: { x: 5.1, z: 0.5 },
   resource: { x: 5.1, z: 1.45 },
 };
@@ -89,7 +88,7 @@ function seatAnchors(view: GameView, shape: Shape): SeatAnchor[] {
   const youIdx = Math.max(0, view.players.findIndex((p) => p.id === view.you));
   const ordered = Array.from({ length: n }, (_, i) => view.players[(youIdx + i) % n]!);
   const out: SeatAnchor[] = [];
-  const rows = (p: PlayerPublicView) => 1 + Math.max(p.maxCompanions, p.companions.length + p.inactiveCompanions.length);
+  const rows = (p: PlayerPublicView) => Math.max(p.partySize, p.party.length + p.inactive.length + p.resting.length);
   ordered.forEach((p, i) => {
     if (i === 0 && view.you) {
       // On compact screens nothing covers the bottom edge, so sit lower and clear of the stacks.
@@ -124,9 +123,6 @@ function frameFor(seats: SeatAnchor[]): Frame {
   return f;
 }
 
-/** How much larger a hero is drawn than a companion on the table. */
-const HERO_SCALE = 1.18;
-
 function THREE_DEG(d: number): number {
   return (d * Math.PI) / 180;
 }
@@ -140,22 +136,16 @@ export function computeLayout(view: GameView, shape: Shape = 'wide'): Layout {
     const p = byId.get(seat.player)!;
     const s = seat.scale;
     const gap = 1.05 * s;
+    // The party: face-up heroes, then those turned face down by a location or resting. All the same size.
     const row = [
-      // No hero yet during the opening draft.
-      ...(p.hero ? [{ card: p.hero, faceUp: true, back: 'hero' as DeckName }] : []),
-      ...p.companions.map((c) => ({ card: c, faceUp: true, back: 'companion' as DeckName })),
-      ...p.inactiveCompanions.map((c) => ({ card: c, faceUp: false, back: 'companion' as DeckName })),
-      ...p.resting.map((c) => ({ card: c, faceUp: false, back: 'companion' as DeckName })),
+      ...p.party.map((c) => ({ card: c, faceUp: true })),
+      ...p.inactive.map((c) => ({ card: c, faceUp: false })),
+      ...p.resting.map((c) => ({ card: c, faceUp: false })),
     ];
-    // Heroes are drawn a little larger than companions.
-    const size = (r: { back: DeckName }) => (r.back === 'hero' ? HERO_SCALE : 1);
-    const total = row.reduce((t, r) => t + gap * size(r), 0);
-    let cursor = seat.x - total / 2;
+    let cursor = seat.x - (row.length * gap) / 2;
     row.forEach((r) => {
-      const w = gap * size(r);
-      const spawn = r.back === 'hero' ? deckPos('hero') : deckPos('companion');
-      cards.push({ key: r.card.id, def: r.card.def, back: r.back, x: cursor + w / 2, y: CARD_Y, z: seat.z, scale: s * size(r), faceUp: r.faceUp, spawn, owner: p.id });
-      cursor += w;
+      cards.push({ key: r.card.id, def: r.card.def, back: 'hero', x: cursor + gap / 2, y: CARD_Y, z: seat.z, scale: s, faceUp: r.faceUp, spawn: deckPos('hero'), owner: p.id });
+      cursor += gap;
     });
 
     // Bids and council heroes sit in front of each player's cards: toward the
@@ -168,7 +158,7 @@ export function computeLayout(view: GameView, shape: Shape = 'wide'): Layout {
       ...p.bids.map((b, i) => (b.hidden
         ? { key: `hid:${p.id}:${i}`, def: null, back: 'resource' as DeckName, faceUp: false }
         : { key: b.card.id, def: b.card.def, back: 'resource' as DeckName, faceUp: true })),
-      ...p.councilHeroes.map((h) => ({ key: h.id, def: h.def, back: 'hero' as DeckName, faceUp: true })),
+      ...p.borrowed.map((h) => ({ key: h.id, def: h.def, back: 'hero' as DeckName, faceUp: true })),
     ];
     const bx0 = bx - ((bidItems.length - 1) * bgap) / 2;
     bidItems.forEach((b, i) => {
@@ -193,10 +183,10 @@ export function computeLayout(view: GameView, shape: Shape = 'wide'): Layout {
   }
   if (t.location) cards.push({ key: t.location.id, def: t.location.def, back: 'location', ...LOCATION_POS, y: CARD_Y + 0.01, scale: 1.2, faceUp: true, spawn: deckPos('location') });
   if (t.encounter) cards.push({ key: t.encounter.id, def: t.encounter.def, back: 'encounter', ...ENCOUNTER_POS, y: CARD_Y + 0.01, scale: 1.2, faceUp: true, spawn: deckPos('encounter') });
-  // Minions, companions taken as minions (Infectious Zombie), and cards set aside (Vaelis).
+  // Minions, heroes taken as minions (Infectious Zombie), and cards set aside (Vaelis).
   const extras = [
     ...t.minions.map((m) => ({ ref: m, back: 'encounter' as DeckName, spawn: deckPos('encounter') })),
-    ...t.companionMinions.map((m) => ({ ref: m, back: 'companion' as DeckName, spawn: deckPos('companion') })),
+    ...t.heroMinions.map((m) => ({ ref: m, back: 'hero' as DeckName, spawn: deckPos('hero') })),
     ...t.setAside.map((m) => ({ ref: m, back: 'encounter' as DeckName, spawn: deckPos('encounter') })),
   ];
   extras.forEach((m, i) => {

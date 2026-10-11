@@ -15,19 +15,17 @@ export function describe(e: ClientEvent, view: GameView): string | null {
   switch (e.type) {
     case 'turnStarted': return `— Turn ${e.turn}: ${who(e.player)}${e.player === view.you ? ' take' : ' takes'} the lead —`;
     case 'drew':
-      if (e.deck === 'companion') return null;
       if (e.cards) return `${who(e.player)} drew ${e.cards.map((c) => card(c.def)).join(', ')}${e.reason && e.reason !== 'Start of turn' ? ` (${e.reason})` : ''}.`;
       return `${who(e.player)} drew ${e.count} resource${e.count === 1 ? '' : 's'}${e.reason && e.reason !== 'Start of turn' ? ` (${e.reason})` : ''}.`;
-    case 'heroChanged': return e.reason === 'fell'
-      ? `${who(e.player)}: ${card(e.to.def)} takes up the banner.`
-      : `${who(e.player)} ${e.player === view.you ? 'ride' : 'rides'} out with ${card(e.to.def)}.`;
-    case 'companionPlayed': return e.replaced
+    case 'heroJoined': return e.replaced
       ? `${who(e.player)} recruited ${card(e.card.def)}, replacing ${card(e.replaced.def)}.`
-      : `${who(e.player)} recruited ${card(e.card.def)}.`;
-    case 'companionDiscarded': return `${who(e.player)} discarded ${card(e.card.def)} (${e.reason}).`;
-    case 'companionDeclined': return `${who(e.player)} passed on ${card(e.card.def)}.`;
-    case 'companionSkipped': return null;
-    case 'companionFaceDown': return `${who(e.player)}: ${card(e.card.def)} ${e.faceDown ? 'is turned face down' : 'returns'}.`;
+      : `${who(e.player)} ${e.player === view.you ? 'welcome' : 'welcomes'} ${card(e.card.def)} to ${e.player === view.you ? 'your' : 'their'} party.`;
+    case 'heroLeft': return e.reason === 'Fell'
+      ? `${who(e.player)} ${e.player === view.you ? 'lose' : 'loses'} ${card(e.card.def)}. The hero falls.`
+      : `${who(e.player)} discarded ${card(e.card.def)} (${e.reason}).`;
+    case 'heroDeclined': return `${who(e.player)} passed on ${card(e.card.def)}.`;
+    case 'recruitSkipped': return null;
+    case 'heroFaceDown': return `${who(e.player)}: ${card(e.card.def)} ${e.faceDown ? 'is turned face down' : 'returns'}.`;
     case 'locationRevealed': return `Location: ${card(e.card.def)} (Renown ${(getDef(e.card.def) as { renown?: number }).renown ?? '?'}).`;
     case 'locationReplaced': return `${e.reason}: ${card(e.from.def)} is replaced by ${card(e.to.def)}.`;
     case 'extraLocation': return 'A second location is placed face down. The winner claims both.';
@@ -46,12 +44,12 @@ export function describe(e: ClientEvent, view: GameView): string | null {
       return `Totals (${STAT_NAMES[r.stat]}): ${parts.join(', ')}. ${r.winner ? `${who(r.winner)} ${r.winner === view.you ? 'win' : 'wins'}!` : r.tied ? `A tie between ${r.tied.map((p) => who(p)).join(' and ')}: the location is discarded and each draws a new one.` : 'Nobody survives.'}`;
     }
     case 'renownGained': return `${who(e.player)} ${e.player === view.you ? 'claim' : 'claims'} ${e.locations.map((l) => card(l.def)).join(' and ')} (+${e.amount} Renown, ${e.total} total).`;
-    case 'fallPrevented': return `${e.source} saves ${e.player === view.you ? 'your' : `${who(e.player)}'s`} hero from falling.`;
-    case 'heroFalls': return `${who(e.player)} failed. The hero falls.`;
+    case 'fallPrevented': return `${e.source} saves ${e.player === view.you ? 'your' : `${who(e.player)}'s`} party from losing a hero.`;
+    case 'heroFalls': return `${who(e.player)} failed. ${e.player === view.you ? 'You lose' : 'They lose'} a hero.`;
     case 'gameOver': return `Game over. ${who(e.winner)} ${e.winner === view.you ? 'hold' : 'holds'} the Marches!`;
     case 'gameStarted': return 'The Marchstone has split. The heroes ride out.';
     case 'shuffled': case 'turnEnded': case 'effectCancelled': return null;
-    case 'companionMinion': return `${who(e.player)} ${e.player === view.you ? 'lose' : 'loses'} ${card(e.card.def)} to the Infectious Zombie: it joins the encounter as a minion.`;
+    case 'heroMinion': return `${who(e.player)} ${e.player === view.you ? 'lose' : 'loses'} ${card(e.card.def)} to the Infectious Zombie: it joins the encounter as a minion.`;
     case 'encounterReplaced': return `${e.reason}: ${card(e.from.def)} is driven off.`;
     case 'abilityZap': return null;
     case 'abilityIgnored': return `${who(e.player)}: ${short(e.by.def)} shrugs off ${short(e.source.def)}.`;
@@ -81,15 +79,13 @@ function describeEffect(e: Extract<ClientEvent, { type: 'effect' }>, view: GameV
   const stat = (s: string | undefined) => (s === 'all' ? 'all stats' : s ? STAT_NAMES[s as 'P' | 'M' | 'G'] : '');
   const ef = e.effect;
   switch (ef.kind) {
-    case 'silenceCompanion': return `${src}: ${target} contributes nothing this turn.`;
-    case 'forceCompanionStat': return `${src}: ${target} must contribute ${stat(ef.stat)}.`;
-    case 'forceHeroStat': return `${src}: ${e.targetPlayer === view.you ? 'your' : `${who(e.targetPlayer)}'s`} hero must contribute ${stat(ef.stat)}.`;
+    case 'silenceHero': return `${src}: ${target} contributes nothing this turn.`;
+    case 'forceStat': return `${src}: ${target} must contribute ${stat(ef.stat)}.`;
     case 'statBonus': return `${src}: ${who(e.targetPlayer)} ${(ef.amount ?? 0) >= 0 ? 'gain' : 'lose'}${e.targetPlayer === view.you ? '' : 's'} ${Math.abs(ef.amount ?? 0)} to ${stat(ef.stat)}.`;
-    case 'heroMultiplier': return `${src}: ${e.targetPlayer === view.you ? 'your' : `${who(e.targetPlayer)}'s`} hero's stats are doubled.`;
     case 'negateBid': return `${src}: ${target} now counts as zero!`;
     case 'disableAbilities': return `${src}: ${target}'s ability is disabled for the rest of the turn.`;
     case 'autoWin': return `${src}: ${who(e.targetPlayer)} will take the location, whatever the totals!`;
-    case 'grudgeWatch': return `${src}: ${who(e.targetPlayer)} ${e.targetPlayer === view.you ? 'are' : 'is'} watched. An ability used against the grudge-holder's hero or companions draws them a resource.`;
+    case 'grudgeWatch': return `${src}: ${who(e.targetPlayer)} ${e.targetPlayer === view.you ? 'are' : 'is'} watched. An ability used against the grudge-holder's heroes draws them a resource.`;
     case 'grudge': return `${src}: if ${who(e.targetPlayer)} win${e.targetPlayer === view.you ? '' : 's'} this encounter, ${e.targetPlayer === view.you ? 'you have' : 'they have'} -${ef.amount ?? 3} in the next.`;
   }
 }

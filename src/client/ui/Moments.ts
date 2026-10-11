@@ -9,7 +9,7 @@ import { h, replace } from './dom';
 interface Moment { short: string; name: string; text: string; windows: string[] }
 
 export const MOMENTS: readonly Moment[] = [
-  { short: 'Start', name: 'Start of turn', text: 'Hands refill and resting companions return.', windows: ['turnStart'] },
+  { short: 'Start', name: 'Start of turn', text: 'Hands refill and resting heroes return.', windows: ['turnStart'] },
   { short: 'Location', name: 'After the location is revealed', text: 'The location and the encounter come into play.', windows: ['afterLocation'] },
   { short: 'Before', name: 'Before bidding', text: 'Your last chance to act before any card is played. Every player gets a turn.', windows: ['beforeBidding'] },
   { short: 'Bidding', name: 'During bidding', text: 'In turn, play a resource or pass. Some abilities are offered on your turn to bid.', windows: ['bidding'] },
@@ -20,7 +20,7 @@ export const MOMENTS: readonly Moment[] = [
 /** Which moment a turn step belongs to (-1: no timeline, 6: the turn is over). */
 export function momentIndex(step: string): number {
   switch (step) {
-    case 'turnStart': case 'winTurnStart': case 'companions': return 0;
+    case 'turnStart': case 'winTurnStart': case 'recruit': return 0;
     case 'location': case 'winAfterLocation': case 'encounter': case 'challenge': return 1;
     case 'winBeforeBidding': return 2;
     case 'bidding': return 3;
@@ -35,9 +35,9 @@ export function momentIndex(step: string): number {
 export function myCardsByMoment(view: GameView): string[][] {
   const out: string[][] = MOMENTS.map(() => []);
   const me = view.players.find((p) => p.id === view.you);
-  if (!me?.hero) return out;
+  if (!me?.party.length) return out;
   const mine = view.turn.active === view.you;
-  for (const ref of [me.hero, ...me.companions]) {
+  for (const ref of me.party) {
     const acts = abilityOf(ref.def)?.activations;
     if (!acts) continue;
     const name = getDef(ref.def).name.split(',')[0]!;

@@ -1,5 +1,7 @@
 # Hero balance analysis
 
+> **Historical.** This describes the game before the party rework (a hero plus companions, hero triggers, Kin bonuses). See [PARTY-REWORK.md](PARTY-REWORK.md) and [BALANCE-party.md](BALANCE-party.md) for the current game.
+
 Goal: **no bad heroes.** Heroes with lower stat totals should be balanced by
 stronger abilities.
 
