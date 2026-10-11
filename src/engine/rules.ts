@@ -41,7 +41,7 @@ export const DEFAULT_RULES: HouseRules = {
   draftPool: 6,
   handModel: 'steady',
   activeDraw: 2,
-  othersDraw: 1,
+  othersDraw: 2,
   handLimit: 6,
 };
 
@@ -58,11 +58,11 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'recruit-phase', topic: 'Recruit phase',
     ruling: 'From turn 2, starting with the current player and going clockwise, each player may draw one hero at random and decide whether to keep it. If keeping it would take you past your party size, you must replace one of your heroes. Toggle: recruitPhase.' },
   { id: 'hand-model', topic: 'Steady draws (house rule)',
-    ruling: 'Replaces "refill to the draw size on your turn": at the start of every turn the current player draws 2 resources and every other player draws 1, but routine draws stop at a hand of 6. Opening hands are still the player count. Draws from card abilities can go past 6. The v0.3 refill rule can be chosen when starting a game.' },
+    ruling: 'Replaces "refill to the draw size on your turn": at the start of every turn every player draws 2 resources, but routine draws stop at a hand of 6. Opening hands are still the player count. Draws from card abilities can go past 6. (With the old hero triggers set aside, one card for the other players left too few cards to bid; the balance simulation put it back.) The v0.3 refill rule can be chosen when starting a game.' },
   { id: 'one-stat', topic: 'One stat per encounter (house rule)',
     ruling: 'There is no challenge roll. Each encounter is faced on one stat, its highest printed difficulty (ties were settled by the designers so each stat comes up equally often). There are no dice in the game.' },
   { id: 'difficulty', topic: 'Challenge levels (house rule)',
-    ruling: 'A party of three heroes is weaker than the old hero and two companions, so every encounter is printed 3 or 4 lower than in the earlier house rules (Physical and Mental -3, Guile -4). The numbers on the cards are the ones that count.' },
+    ruling: 'A party of three heroes is weaker than the old hero and two companions, so every encounter is printed 5 or 6 lower than in the earlier house rules (Physical -5, Mental -6, Guile -5). The amount was set with the balance simulation so that surviving, falling and the length of a game match the old game. The numbers on the cards are the ones that count.' },
   { id: 'fall', topic: 'Falling (house rule)',
     ruling: 'Every player who fails the encounter loses a hero at the end of that turn, whoever\'s turn it is: they choose which of their heroes falls, and it goes to the hero discard pile. Players who fall at once choose one after another. Falling costs no Renown and nothing else; the party refills in the recruit phase (or at once with The Hall of Rest). A player with no heroes loses nothing.' },
   { id: 'bidding-end', topic: 'End of bidding',

@@ -1688,7 +1688,7 @@ describe('Encounters and locations of the redesign', () => {
     expect(g.s.discards.encounter).toContain(card(g, 'skarra-ironjaw-the-bog-mother'));
   });
 
-  it('The Runeforged Titan is hard on Physical, but only 7 if the challenge is changed to Mental or Guile', () => {
+  it('The Runeforged Titan is hard on Physical, but only 5 if the challenge is changed to Mental or Guile', () => {
     const base = (loc: string) => {
       const g = newGame();
       standard(g, {});
@@ -1699,8 +1699,8 @@ describe('Encounters and locations of the redesign', () => {
       return viewFor(g.s, g.A).turn.challenge!.difficulty.base;
     };
     expect(base('the-silverwood-hunt')).toBe((getDef('runeforged-titan') as { difficulty: number }).difficulty); // Physical
-    expect(base('the-sealed-archive')).toBe(7); // Mental
-    expect(base('tomb-of-the-first-wardens')).toBe(7); // Guile
+    expect(base('the-sealed-archive')).toBe(5); // Mental
+    expect(base('tomb-of-the-first-wardens')).toBe(5); // Guile
   });
 
   it('The Treasure Trow: everyone draws when it enters, and each survivor draws when it is defeated', () => {

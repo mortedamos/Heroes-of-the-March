@@ -754,7 +754,7 @@ export const ABILITIES: Record<string, Ability> = {
     },
   },
   'destiny-the-frog': { status: 'full', fetchesGroup: 'Skarra' },
-  'runeforged-titan': { status: 'full', difficultyByStat: { M: 7, G: 7 } },
+  'runeforged-titan': { status: 'full', difficultyByStat: { M: 5, G: 5 } },
   'iron-mites': {
     status: 'full',
     note: 'The player whose resource card is lowest gives up one of their own heroes as a minion.',

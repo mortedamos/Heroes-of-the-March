@@ -294,7 +294,7 @@ function bestForce(t: Table, sourceDef: string, level: BotLevel): ForceChoice {
  * need cards from the hand.
  */
 const CHALLENGE_ODDS: Record<Stat, { chance: number; difficulty: number }> = {
-  P: { chance: 0.33, difficulty: 11.8 }, M: { chance: 0.33, difficulty: 11.6 }, G: { chance: 0.33, difficulty: 9.8 },
+  P: { chance: 0.33, difficulty: 9.8 }, M: { chance: 0.33, difficulty: 8.6 }, G: { chance: 0.33, difficulty: 8.8 },
 };
 
 interface HandCard { id: string; worth: number }

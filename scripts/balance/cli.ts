@@ -1,5 +1,5 @@
 // Usage (after `npm run balance:build`):
-//   node _build/balance/cli.mjs run <card|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--only id,id] [--out file.json]
+//   node _build/balance/cli.mjs run <card|party|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--ease P,M,G] [--rules JSON] [--tweak JSON] [--only id,id] [--out file.json]
 //   (--only keeps just the heroes whose id contains one of the given fragments; card experiment only)
 // Experiments are fully determined by (seed, game index): rerunning gives identical numbers.
 
@@ -8,6 +8,8 @@ import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BotLevel } from '../../src/bots/heuristic';
+import { ABILITIES } from '../../src/engine/abilities';
+import { allDefs } from '../../src/engine/cards';
 import { addGameMetrics, heroIds, merge, mix, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
 
 
@@ -28,7 +30,17 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
   const base = Number(opt.seed ?? 1);
   const ns = (opt.ns ?? '3,4').split(',').map(Number);
   const level = (opt.level ?? 'normal') as BotLevel;
+  // --ease P,M,G: add to every encounter's printed difficulty (a calibration experiment; the card data is not touched).
+  if (opt.ease) {
+    const [eP = 0, eM = 0, eG = 0] = opt.ease.split(',').map(Number);
+    const by = { P: eP, M: eM, G: eG };
+    for (const d of allDefs()) if (d.kind === 'encounter') d.difficulty += by[d.stat];
+  }
   const ablate = opt.ablate === '1';
+  // --tweak '{"card-id":{"field":value}}': patch ability registry entries for the whole run (a calibration experiment).
+  if (opt.tweak) for (const [id, patch] of Object.entries(JSON.parse(opt.tweak) as Record<string, object>)) Object.assign(ABILITIES[id] ?? (ABILITIES[id] = { status: 'full' }), patch);
+  // --rules '{"activeDraw":3}': house-rule overrides for every game (a calibration experiment).
+  const rules = opt.rules ? (JSON.parse(opt.rules) as Record<string, unknown>) : undefined;
   const cells: Record<string, Cell> = {};
   const cards: AggMap = {};
   let played = 0;
@@ -56,12 +68,22 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
       } finally { restore(); }
       played++;
     }
+  } else if (experiment === 'party') {
+    // --party a,b,c: the named heroes (id fragments) are forced into a rotating seat's opening party; everyone else drafts at random.
+    const ids = (opt.party ?? '').split(',').filter(Boolean).map((f) => heroIds().find((id) => id.includes(f)) ?? (() => { throw new Error('no hero ' + f); })());
+    for (const n of ns) for (let g = from + shard; g < from + games; g += shards) {
+      const seed = mix(base, hashStr(ids.join('+')), n, g);
+      const seat = g % n;
+      const spec: GameSpec = { n, seed, level, force: { seat, def: ids }, randomDraft: true, ...(rules ? { rules } : {}) };
+      record(`${ids.join('+')}|${n}`, playGame(spec, cards), seat);
+      played++;
+    }
   } else if (experiment === 'nat') {
     const cycle = [3, 4, 3, 4, 5, 2, 6];
     for (let g = from + shard; g < from + games; g += shards) {
       const n = cycle[g % cycle.length]!;
       const seed = mix(base, 0x9a7, g);
-      const rec = playGame({ n, seed, level }, cards);
+      const rec = playGame({ n, seed, level, ...(rules ? { rules } : {}) }, cards);
       const c = (cells[`all|${n}`] ??= newCell());
       c.games++; c.turns += rec.turns; if (rec.capped) c.capped++;
       for (const p of rec.players) { c.posGames[p.pos]!++; if (p.won) c.posWins[p.pos]!++; c.falls += p.falls; }

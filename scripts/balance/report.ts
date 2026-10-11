@@ -106,11 +106,11 @@ if (nat) {
   if (cells.some(([, c]) => c.rows)) {
     out.push('', '### Game health (per player count)', '');
     out.push(table(
-      ['Players', 'Survival', 'Falls /player /game', 'Turns before first fall (share of game)', 'Bids /player-turn', 'Turns with sabotage', 'Close games (winner ≤4 Renown ahead)', 'Avg winning margin (Renown)'],
+      ['Players', 'Survival', 'Falls /player /game', 'Turns before first fall (share of game)', 'Bids /player-turn', 'Turns with sabotage', 'Close games (winner ≤4 Renown ahead)', 'Avg winning margin (Renown)', 'Survival: Physical / Mental / Guile'],
       cells.map(([k, c]) => {
         const n = Number(k.split('|')[1]);
         return [n, `${pct(c.surv / c.rows)}%`, (c.falls / c.games / n).toFixed(2), `${pct(c.tenure / c.pgames)}%`,
-          (c.bids / (c.turns * n)).toFixed(2), `${pct(c.sabTurns / c.turns)}%`, `${pct(c.close / c.games)}%`, (c.gap / c.games).toFixed(1)];
+          (c.bids / (c.turns * n)).toFixed(2), `${pct(c.sabTurns / c.turns)}%`, `${pct(c.close / c.games)}%`, (c.gap / c.games).toFixed(1), c.statRows.map((r, i) => pct(c.statSurv[i]! / Math.max(1, r), 0) + '%').join(' / ')];
       })));
   }
   for (const kind of ['hero'] as const) {

@@ -1319,7 +1319,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 11,
+   "difficulty": 10,
    "number": 4001
   },
   {
@@ -1339,7 +1339,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 11,
+   "difficulty": 9,
    "number": 4002
   },
   {
@@ -1358,7 +1358,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 11,
+   "difficulty": 9,
    "number": 4003
   },
   {
@@ -1377,7 +1377,7 @@
    },
    "conditionText": "When this card comes into play draw an Ironbound minion.",
    "stat": "M",
-   "difficulty": 10,
+   "difficulty": 7,
    "number": 4004
   },
   {
@@ -1396,7 +1396,7 @@
    },
    "conditionText": "When this card comes into play draw an Undead minion.",
    "stat": "M",
-   "difficulty": 10,
+   "difficulty": 7,
    "number": 4005
   },
   {
@@ -1415,7 +1415,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4006
   },
   {
@@ -1435,7 +1435,7 @@
    },
    "conditionText": "When this card comes into play draw an Undead minion.",
    "stat": "G",
-   "difficulty": 9,
+   "difficulty": 8,
    "number": 4007
   },
   {
@@ -1456,7 +1456,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 11,
+   "difficulty": 10,
    "number": 4008
   },
   {
@@ -1476,7 +1476,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4011
   },
   {
@@ -1495,7 +1495,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 11,
+   "difficulty": 10,
    "number": 4012
   },
   {
@@ -1515,7 +1515,7 @@
    },
    "conditionText": "When this card comes into play draw two minions.",
    "stat": "G",
-   "difficulty": 10,
+   "difficulty": 9,
    "number": 4013
   },
   {
@@ -1535,7 +1535,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 12,
+   "difficulty": 11,
    "number": 4014
   },
   {
@@ -1555,7 +1555,7 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 15,
+   "difficulty": 12,
    "number": 4015
   },
   {
@@ -1576,7 +1576,7 @@
    },
    "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
-   "difficulty": 11,
+   "difficulty": 8,
    "number": 4016
   },
   {
@@ -1595,7 +1595,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 10,
+   "difficulty": 9,
    "number": 4017
   },
   {
@@ -1615,7 +1615,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 9,
+   "difficulty": 8,
    "number": 4018
   },
   {
@@ -1634,7 +1634,7 @@
    },
    "conditionText": "When this card comes into play as an encounter or a minion, each player with a hero turns up the top resource card. The player with the lowest value (ties turn up again) selects a hero to go into play as a minion, adding the relevant stat bonus to the selected challenge’s difficulty. The resource cards are then discarded.",
    "stat": "G",
-   "difficulty": 9,
+   "difficulty": 8,
    "number": 4020
   },
   {
@@ -1653,7 +1653,7 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 11,
+   "difficulty": 8,
    "number": 4021
   },
   {
@@ -1673,7 +1673,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "G",
-   "difficulty": 10,
+   "difficulty": 9,
    "number": 4023
   },
   {
@@ -1692,7 +1692,7 @@
    },
    "conditionText": "When this card comes into play draw an Ironbound minion.",
    "stat": "M",
-   "difficulty": 10,
+   "difficulty": 7,
    "number": 4024
   },
   {
@@ -1713,7 +1713,7 @@
    },
    "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "G",
-   "difficulty": 10,
+   "difficulty": 9,
    "number": 4025
   },
   {
@@ -1734,7 +1734,7 @@
    },
    "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
-   "difficulty": 10,
+   "difficulty": 7,
    "number": 4026
   },
   {
@@ -1755,7 +1755,7 @@
    },
    "conditionText": "When this card comes into play draw two Undead minions.",
    "stat": "M",
-   "difficulty": 10,
+   "difficulty": 7,
    "number": 4027
   },
   {
@@ -1772,7 +1772,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 11,
+   "difficulty": 8,
    "number": 4028
   },
   {
@@ -1794,7 +1794,7 @@
    },
    "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
-   "difficulty": 11,
+   "difficulty": 8,
    "number": 4029
   },
   {
@@ -1816,7 +1816,7 @@
    },
    "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "M",
-   "difficulty": 13,
+   "difficulty": 10,
    "number": 4031
   },
   {
@@ -1838,7 +1838,7 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 15,
+   "difficulty": 12,
    "number": 4032
   },
   {
@@ -1855,7 +1855,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 13,
+   "difficulty": 10,
    "number": 4033
   },
   {
@@ -1875,7 +1875,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 11,
+   "difficulty": 9,
    "number": 4035
   },
   {
@@ -1893,9 +1893,9 @@
     "count": 0,
     "group": null
    },
-   "conditionText": "If the challenge is changed to Mental or Guile, its difficulty is 7.",
+   "conditionText": "If the challenge is changed to Mental or Guile, its difficulty is 5.",
    "stat": "P",
-   "difficulty": 15,
+   "difficulty": 13,
    "number": 4036
   },
   {
@@ -1915,7 +1915,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 10,
+   "difficulty": 9,
    "number": 4038
   },
   {
@@ -1935,7 +1935,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 11,
+   "difficulty": 9,
    "number": 4039
   },
   {
@@ -1955,7 +1955,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 11,
+   "difficulty": 9,
    "number": 4040
   },
   {
@@ -1974,7 +1974,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4041
   },
   {
@@ -1993,7 +1993,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4042
   },
   {
@@ -2012,7 +2012,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4043
   },
   {
@@ -2029,7 +2029,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4045
   },
   {
@@ -2048,7 +2048,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4046
   },
   {
@@ -2068,7 +2068,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4048
   },
   {
@@ -2087,7 +2087,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 12,
+   "difficulty": 10,
    "number": 4049
   },
   {
@@ -2107,7 +2107,7 @@
    },
    "conditionText": null,
    "stat": "P",
-   "difficulty": 11,
+   "difficulty": 9,
    "number": 4050
   },
   {
@@ -2124,7 +2124,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 11,
+   "difficulty": 8,
    "number": 4052
   },
   {
@@ -2141,7 +2141,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 11,
+   "difficulty": 10,
    "number": 4053
   },
   {
@@ -2162,7 +2162,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 13,
+   "difficulty": 10,
    "number": 4055
   },
   {
@@ -2181,7 +2181,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "G",
-   "difficulty": 9,
+   "difficulty": 8,
    "number": 4056
   },
   {
@@ -2201,7 +2201,7 @@
    },
    "conditionText": null,
    "stat": "M",
-   "difficulty": 11,
+   "difficulty": 8,
    "number": 4057
   },
   {
@@ -2220,7 +2220,7 @@
     "group": null
    },
    "stat": "G",
-   "difficulty": 7,
+   "difficulty": 6,
    "conditionText": "When this card comes into play as an encounter, draw a Skarra enounter. That card becomes the encounter, and this card becomes the minion.",
    "number": 4058
   },
@@ -2239,7 +2239,7 @@
     "group": null
    },
    "stat": "G",
-   "difficulty": 8,
+   "difficulty": 7,
    "conditionText": "When this card comes into play, all players draw a resource card. When it is defeated, each player who survived draws a resource card.",
    "number": 4059
   }

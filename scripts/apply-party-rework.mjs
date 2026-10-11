@@ -2,7 +2,7 @@
 //  - Old heroes: stats halved (rounded up); trigger and Kin bonus set aside (data/set-aside.json).
 //  - Old companions become heroes. Seven that reference "your hero" are set aside whole.
 //  - "companion" wording becomes "hero" / "party" across every card's rules text.
-//  - Encounters get easier: Physical -3, Mental -3, Guile -4 (a first guess, calibrated with the balance sim).
+//  - Encounters get easier: Physical -5, Mental -6, Guile -5 (calibrated with the balance sim; the first guess was -3 / -3 / -4).
 // Idempotent: refuses to run on a v0.4 file. Card numbers are keyed by id and do not change.
 import { readFileSync, writeFileSync } from 'node:fs';
 
@@ -86,10 +86,10 @@ delete db.companions;
 log.push(`heroes ${db.heroes.length} (set aside ${SET_ASIDE_COMPANIONS.length} companions)`);
 
 // --- 4. Easier encounters ---------------------------------------------------------------------------------
-const SHIFT = { P: 3, M: 3, G: 4 };
+const SHIFT = { P: 5, M: 6, G: 5 }; // calibrated with the balance sim (docs/BALANCE-party.md), not the first guess of 3 / 3 / 4
 for (const e of db.encounters) { e.difficulty -= SHIFT[e.stat]; }
 const titan = db.encounters.find((e) => e.number === 4036);
-if (titan) titan.conditionText = 'If the challenge is changed to Mental or Guile, its difficulty is 7.';
+if (titan) titan.conditionText = 'If the challenge is changed to Mental or Guile, its difficulty is 5.';
 
 db.version = 'v0.4';
 writeFileSync(DB, JSON.stringify(db, null, 1) + '\n');
