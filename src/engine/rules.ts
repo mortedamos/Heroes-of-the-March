@@ -4,8 +4,10 @@
 
 export interface HouseRules {
   renownToWin: number;
-  /** Heroes in a party. (Ysolde and the bonus pairs raise it for their player.) */
+  /** Heroes in a party. (Ysolde, companions and The Goose & Kettle raise it for their player.) */
   partySize: number;
+  /** The most heroes of one party that may ride for free as companions. 9 means no cap (the card rules as written); a balance lever. */
+  companionCap: number;
   /** 'playerCount' follows the rules; a number overrides it. */
   drawSize: 'playerCount' | number;
   /** Every player gets a recruit decision each turn ('everyone') or only the current player. */
@@ -33,6 +35,7 @@ export interface HouseRules {
 export const DEFAULT_RULES: HouseRules = {
   renownToWin: 20,
   partySize: 3,
+  companionCap: 9,
   drawSize: 'playerCount',
   recruitPhase: 'everyone',
   allPlayersFaceEncounter: true,

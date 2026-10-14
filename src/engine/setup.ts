@@ -43,6 +43,7 @@ function sanitizeRules(r: Partial<HouseRules> | undefined): HouseRules {
     Number.isInteger(v) && (v as number) >= lo && (v as number) <= hi ? (v as number) : d;
   out.renownToWin = int(r.renownToWin, 5, 100, out.renownToWin);
   out.partySize = int(r.partySize, 1, 5, out.partySize);
+  out.companionCap = int(r.companionCap, 0, 9, out.companionCap);
   out.draftPool = int(r.draftPool, out.partySize, 12, Math.max(out.draftPool, out.partySize));
   out.drawSize = r.drawSize === 'playerCount' ? 'playerCount' : int(r.drawSize, 1, 10, 0) || out.drawSize;
   out.recruitPhase = r.recruitPhase === 'activeOnly' ? 'activeOnly' : 'everyone';

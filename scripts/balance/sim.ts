@@ -3,7 +3,7 @@
 
 import { botDecide, type BotLevel } from '../../src/bots/heuristic';
 import { ABILITIES, type Ability } from '../../src/engine/abilities';
-import { allDefs } from '../../src/engine/cards';
+import { allDefs, stripNamedAbilitiesOf } from '../../src/engine/cards';
 import { applyCommand } from '../../src/engine/commands';
 import { createGame } from '../../src/engine/setup';
 import { viewFor } from '../../src/engine/view';
@@ -110,7 +110,8 @@ export function describeAbility(def: string): { status: string; hooks: string[];
 export function strip(def: string): () => void {
   const prev = ABILITIES[def];
   ABILITIES[def] = { status: 'full' };
-  return () => { if (prev) ABILITIES[def] = prev; else delete ABILITIES[def]; };
+  const undoNamed = stripNamedAbilitiesOf(def);
+  return () => { undoNamed(); if (prev) ABILITIES[def] = prev; else delete ABILITIES[def]; };
 }
 
 // --- one game ------------------------------------------------------------------------
@@ -142,6 +143,8 @@ export interface GameRecord {
   bids: number; sabTurns: number;
   /** Winner's final Renown minus the best other player's. */
   gap: number;
+  /** Turns on which a location was won, tied for (nobody took it) or lost by everyone (nobody survived). */
+  won: number; tied: number; empty: number;
 }
 
 /** Effect kinds that hurt another player (old and new engine names). */
@@ -180,6 +183,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   const firstFall = new Map<string, number>();
   const statRows = [0, 0, 0], statSurv = [0, 0, 0];
   let rows = 0, surv = 0, bids = 0, sabTurns = 0, turnNo = 0, sabThisTurn = false;
+  let won = 0, tied = 0, empty = 0;
   let steps = 0;
 
   const snapshot = () => {
@@ -203,7 +207,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       else if (e.type === 'minionDrawn') bump(seen.enc, e.card.def);
       else if (e.type === 'bid') { bump(seen.res, e.card.def); bids++; }
       else if (e.type === 'heroFalls') { falls.set(e.player, (falls.get(e.player) ?? 0) + 1); if (!firstFall.has(e.player)) firstFall.set(e.player, turnNo); }
-      else if (e.type === 'outcome') { for (const r of e.result.rows) { rows++; const si = 'PMG'.indexOf(r.stat); statRows[si]!++; if (r.survived) { surv++; statSurv[si]!++; } } }
+      else if (e.type === 'outcome') { if (e.result.winner) won++; else if (e.result.tied?.length) tied++; else empty++; for (const r of e.result.rows) { rows++; const si = 'PMG'.indexOf(r.stat); statRows[si]!++; if (r.survived) { surv++; statSurv[si]!++; } } }
       else if (e.type === 'effect') {
         const k = e.effect.kind as string;
         const hostile = HOSTILE_EFFECTS.has(k) || (k === 'statBonus' && (e.effect.amount ?? 0) < 0);
@@ -289,7 +293,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
     if (owner === '-' || !held[owner]?.has(def)) { const a = aggOf(cards, def); a.calls += v.calls; a.produced += v.produced; }
   }
   for (const [key, v] of used) { const [owner, def] = key.split('|') as [string, string]; if (!held[owner]?.has(def)) aggOf(cards, def).used += v; }
-  return { n, turns: state.turn.number, winner: winnerIdx, players, capped, rows, surv, statRows, statSurv, bids, sabTurns, gap };
+  return { n, turns: state.turn.number, winner: winnerIdx, players, capped, rows, surv, statRows, statSurv, bids, sabTurns, gap, won, tied, empty };
 }
 
 // --- shards: the unit of saved results -----------------------------------------------
@@ -301,18 +305,21 @@ export interface Cell {
   statRows: number[]; statSurv: number[];
   /** Player-games, and the summed share of each player's game played before their first fall. */
   pgames: number; tenure: number;
+  /** Turns by outcome: a location won, a tie (nobody took it), nobody survived. */
+  won: number; tied: number; empty: number;
 }
 export interface Shard { experiment: string; args: Record<string, string>; cells: Record<string, Cell>; cards: AggMap; games: number }
 
 export const newCell = (): Cell => ({
   games: 0, wins: 0, turns: 0, falls: 0, capped: 0, posGames: Array(6).fill(0), posWins: Array(6).fill(0),
-  rows: 0, surv: 0, bids: 0, sabTurns: 0, gap: 0, close: 0, pgames: 0, tenure: 0, statRows: [0, 0, 0], statSurv: [0, 0, 0],
+  rows: 0, surv: 0, bids: 0, sabTurns: 0, gap: 0, close: 0, pgames: 0, tenure: 0, statRows: [0, 0, 0], statSurv: [0, 0, 0], won: 0, tied: 0, empty: 0,
 });
 
 /** Fold one finished game's whole-game metrics into a cell (all players of the game). */
 export function addGameMetrics(c: Cell, rec: GameRecord): void {
   c.rows += rec.rows; c.surv += rec.surv; rec.statRows.forEach((v, i) => { c.statRows[i]! += v; c.statSurv[i]! += rec.statSurv[i]!; }); c.bids += rec.bids; c.sabTurns += rec.sabTurns;
   c.gap += rec.gap; if (rec.gap <= 4) c.close++;
+  c.won += rec.won; c.tied += rec.tied; c.empty += rec.empty;
   for (const p of rec.players) { c.pgames++; c.tenure += p.firstFall === null ? 1 : Math.min(1, p.firstFall / Math.max(1, rec.turns)); }
 }
 
@@ -326,6 +333,7 @@ export function merge(parts: Shard[]): Shard {
       t.games += c.games; t.wins += c.wins; t.turns += c.turns; t.falls += c.falls; t.capped += c.capped;
       t.rows += c.rows ?? 0; t.surv += c.surv ?? 0; (c.statRows ?? []).forEach((v, i) => { t.statRows[i]! += v; t.statSurv[i]! += c.statSurv[i]!; }); t.bids += c.bids ?? 0; t.sabTurns += c.sabTurns ?? 0;
       t.gap += c.gap ?? 0; t.close += c.close ?? 0; t.pgames += c.pgames ?? 0; t.tenure += c.tenure ?? 0;
+      t.won += c.won ?? 0; t.tied += c.tied ?? 0; t.empty += c.empty ?? 0;
       c.posGames.forEach((v, i) => { t.posGames[i]! += v; });
       c.posWins.forEach((v, i) => { t.posWins[i]! += v; });
     }

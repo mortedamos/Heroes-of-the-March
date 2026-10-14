@@ -104,6 +104,17 @@ export function stripNamedAbilities(which: readonly string[]): void {
   if (which.includes('companion')) companionBy.clear();
 }
 
+/** Balance experiments only: take one hero's Allied, Nemesis and Companion To away (a "stats only" hero); returns the undo. */
+export function stripNamedAbilitiesOf(defId: string): () => void {
+  const a = alliedBy.get(defId), n = nemesisBy.get(defId), c = companionBy.get(defId);
+  alliedBy.delete(defId); nemesisBy.delete(defId); companionBy.delete(defId);
+  return () => {
+    if (a) alliedBy.set(defId, a);
+    if (n) nemesisBy.set(defId, n);
+    if (c) companionBy.set(defId, c);
+  };
+}
+
 export const alliedTargets = (defId: string): readonly Target[] => alliedBy.get(defId) ?? [];
 export const nemesisTargets = (defId: string): readonly Target[] => nemesisBy.get(defId) ?? [];
 /** The heroes this hero is a companion to (any one of them in the party makes it ride for free). */

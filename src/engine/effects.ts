@@ -278,7 +278,10 @@ export function ridingHeroes(ctx: Ctx, p: PlayerState, incoming?: CardId): Set<C
   if (incoming) cards.push(incoming);
   const defs = new Set(cards.map((c) => ctx.defId(c)));
   const out = new Set<CardId>();
-  for (const c of cards) if (companionsOf(ctx.defId(c)).some((d) => defs.has(d))) out.add(c);
+  for (const c of cards) {
+    if (out.size >= ctx.s.rules.companionCap) break; // a balance lever: only the first few ride for free
+    if (companionsOf(ctx.defId(c)).some((d) => defs.has(d))) out.add(c);
+  }
   return out;
 }
 
@@ -395,7 +398,7 @@ export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'd
       ctx.s.turn.pendingLocation = next;
       ctx.queueFirst({
         t: 'choose', purpose: 'counterAbility', player: p.id, source: ctx.def(shield).name,
-        prompt: `${reason} would change the location to ${ctx.def(next).name}. Counter it with ${ctx.def(shield).name.split(',')[0]}?`,
+        prompt: `${reason} would change the location. Counter it with ${ctx.def(shield).name.split(',')[0]}?`,
         options: [{ value: 'counter', label: 'Counter it' }, { value: 'allow', label: 'Let it happen' }], min: 1, max: 1,
         data: { kind: 'location', next, mode, reason, shield },
       });

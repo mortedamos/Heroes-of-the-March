@@ -463,11 +463,8 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
     case 'counterAbility': {
       // Counter what would hurt us; a location swap only if it lowers the Renown on offer.
       if (level === 'easy') return [rand() < 0.5 ? 'counter' : 'allow'];
-      const m = /would change the location to (.+)\. Counter it with/.exec(c.prompt);
-      if (m) {
-        const next = [...allDefs()].find((d) => d.kind === 'location' && d.name === m[1]);
-        return [next && locationRenown({ def: next.id }) < locationRenown(t.view.turn.location) ? 'counter' : 'allow'];
-      }
+      // (The place that would replace the location is not shown: the bot only knows what is at stake.)
+      if (/would change the location/.test(c.prompt)) return [locationRenown(t.view.turn.location) >= 4 ? 'counter' : 'allow'];
       return ['counter'];
     }
     case 'redirectHero':

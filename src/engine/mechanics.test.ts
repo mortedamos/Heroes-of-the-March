@@ -283,6 +283,10 @@ describe('forced stats', () => {
     const d = g.s.pending!;
     expect(d.kind === 'choose' && d.purpose === 'counterAbility' && d.player === g.B).toBe(true);
     expect(g.s.turn.pendingLocation).not.toBeNull();
+    // The card that would replace the location is a hidden draw: the question must not name it.
+    const nextName = getDef(g.s.cards[g.s.turn.pendingLocation!]!).name;
+    const asked = viewFor(g.s, g.B).pending!.detail as { prompt: string };
+    expect(asked.prompt).not.toContain(nextName);
     checkInvariants(g.s);
     pick(g, 'counter');
     expect(g.s.turn.location).toBe(here);
