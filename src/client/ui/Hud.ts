@@ -103,6 +103,7 @@ function effectTag(e: EffectView): string {
     case 'statBonus': return `${(e.amount ?? 0) >= 0 ? '+' : ''}${e.amount} ${stat}`;
     case 'negateBid': return `${tgt} zero`;
     case 'disableAbilities': return `${tgt} disabled`;
+    case 'bidValue': return `${tgt} = ${e.amount ?? 3}`;
     case 'autoWin': return 'Takes the location';
     case 'grudgeWatch': return 'Watched';
     case 'grudge': return `Grudge -${e.amount ?? 3}`;

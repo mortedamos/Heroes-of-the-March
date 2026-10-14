@@ -1,5 +1,5 @@
 {
- "version": "v0.4",
+ "version": "v0.5",
  "heroes": [
   {
    "id": "warchief-grukka-ironjaw",
@@ -16,6 +16,9 @@
    },
    "abilityName": "Strike the Heart",
    "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
+   "allied": [
+    "Orc"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 11/6/7); trigger and Kin bonus set aside.",
    "number": 1001
@@ -33,8 +36,11 @@
     "M": 3,
     "G": 4
    },
-   "abilityName": "Unburied",
+   "abilityName": "Too Stubborn to Die",
    "abilityText": "Once per game, at the end of bidding, if you would fall, you don't. Instead, you draw 3 resources.",
+   "nemesis": [
+    "Undead"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 7/6/8); trigger and Kin bonus set aside.",
    "number": 1002
@@ -53,8 +59,12 @@
     "M": 4,
     "G": 5
    },
-   "abilityName": "I Held the Torch",
-   "abilityText": "Before bidding on any turn, choose a hero of an opponent. That hero does not contribute any stats this turn.",
+   "abilityName": "Progenetor",
+   "abilityText": "Once per turn, when an Elf or Human card enters play, draw a resource.",
+   "allied": [
+    "Human",
+    "Elf"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
    "number": 1003
@@ -92,8 +102,8 @@
     "M": 3,
     "G": 3
    },
-   "abilityName": "Tricky Pockets",
-   "abilityText": "Once per turn before the reveal, claim a face-down resource card from another player as your own. If you have resource cards in your hand, a random one of those takes its place, face down. It is not revealed until the bidding reveal step, as normal.",
+   "abilityName": "Wanderlust",
+   "abilityText": "Once per turn, when a location is replaced by an ability, draw a resource.",
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 6/5/6); trigger and Kin bonus set aside.",
    "number": 1005
@@ -111,8 +121,11 @@
     "M": 3,
     "G": 4
    },
-   "abilityName": "The Right Tools",
-   "abilityText": "Every dwarf resource you bid is +1 higher value.",
+   "abilityName": "Master Golemsmith",
+   "abilityText": "When an Ironbound card enters play, draw a resource.",
+   "allied": [
+    "Dwarf"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 8/6/8); trigger and Kin bonus set aside.",
    "number": 1006
@@ -133,6 +146,12 @@
    },
    "abilityName": "The Forest Walks With Me",
    "abilityText": "Your party may have four heroes instead of three.",
+   "allied": [
+    "Beast"
+   ],
+   "nemesis": [
+    "Skarra"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/6/6); trigger and Kin bonus set aside.",
    "number": 1007
@@ -152,9 +171,12 @@
    },
    "abilityName": "A Little Plan",
    "abilityText": "You may bid all of your resource cards face down. Abilities of those resource cards take effect when revealed, not while face down.",
+   "allied": [
+    "Halfellow"
+   ],
    "kind": "hero",
-   "number": 1008,
-   "revision": "Stats halved, rounded up (was 5/7/10); trigger and Kin bonus set aside."
+   "revision": "Stats halved, rounded up (was 5/7/10); trigger and Kin bonus set aside.",
+   "number": 1008
   },
   {
    "id": "lord-paladin-aldric-ashcroft",
@@ -171,10 +193,13 @@
     "G": 3
    },
    "abilityName": "Shield of the Dawn",
-   "abilityText": "During bidding, you may disable one ability of another player's heroes. Once per turn, you may counter an ability of another player's heroes as it is used.",
+   "abilityText": "Once per turn, counter any ability that would affect your heroes.",
+   "allied": [
+    "Marchguard"
+   ],
    "kind": "hero",
-   "number": 1009,
-   "revision": "Stats halved, rounded up (was 10/4/6); trigger and Kin bonus set aside."
+   "revision": "Stats halved, rounded up (was 10/4/6); trigger and Kin bonus set aside.",
+   "number": 1009
   },
   {
    "id": "high-thane-brunna-stonefast",
@@ -190,7 +215,13 @@
     "G": 4
    },
    "abilityName": "Walls First",
-   "abilityText": "Ignore any opponent's ability that would force one of your heroes to contribute a different stat, stop one of your heroes contributing stats, or make one of your resource cards count as a negative.",
+   "abilityText": "Once per turn, counter any ability that would affect your resources or the current location.",
+   "allied": [
+    "Dwarf"
+   ],
+   "companionTo": [
+    "Kazra Emberdeep"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 8/6/8); trigger and Kin bonus set aside.",
    "number": 1010
@@ -212,6 +243,9 @@
    },
    "abilityName": "Royal Requisition",
    "abilityText": "Before bidding on your turn, you may trade a resource card from your hand with a random card in another player's hand.",
+   "allied": [
+    "Human"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
    "number": 1011
@@ -231,7 +265,10 @@
     "G": 4
    },
    "abilityName": "Resources of the Collegium",
-   "abilityText": "Once per turn, when you draw a resource, draw an additional resource.",
+   "abilityText": "Once per turn, when you draw resources, draw one additional resource.",
+   "allied": [
+    "Collegium"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 2/10/7); trigger and Kin bonus set aside.",
    "number": 1012
@@ -250,7 +287,7 @@
     "M": 5,
     "G": 4
    },
-   "abilityName": "The Society's Maps",
+   "abilityName": "Archivist Society Maps",
    "abilityText": "Once per turn, whenever abilities can be used on your turn, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/10/7); trigger and Kin bonus set aside.",
@@ -270,8 +307,11 @@
     "M": 3,
     "G": 5
    },
-   "abilityName": "Pick Your Fight",
+   "abilityName": "Strategic Encounter",
    "abilityText": "Once per turn, before bidding, you may look at the next encounter in the encounter stack. You may replace the current encounter and its minions with it.",
+   "allied": [
+    "Warden"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 9/6/9); trigger and Kin bonus set aside.",
    "number": 1014
@@ -292,13 +332,16 @@
    },
    "abilityName": "Entered in the Book of Grudges",
    "abilityText": "Before bidding, once per turn, choose an opponent. If that opponent uses an ability against your heroes, you may draw a resource.",
+   "nemesis": [
+    "Oathbreaker"
+   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 7/8/9); trigger and Kin bonus set aside.",
    "number": 1015
   },
   {
    "id": "goldie-trickgrin-keeper-of-the-goose-and-kettle",
-   "name": "Goldie Trickgrin, Keeper of the Goose & Kettle",
+   "name": "Goldie Trickgrin, Proprieter of the Goose & Kettle",
    "groups": [
     "Halfellow"
    ],
@@ -309,8 +352,8 @@
     "M": 4,
     "G": 5
    },
-   "abilityName": "Rumour Mill",
-   "abilityText": "- During bidding, once per turn, look at all of the face-down resource cards that another player has bid. \n- If Gimlet is already in your party, you may play this card as a bonus hero above your party size.",
+   "abilityName": "Tavern Keeper",
+   "abilityText": "When you draw a new hero, you may instead draw three and choose one.",
    "kind": "hero",
    "revision": "Was +2 to Wands (an innkeeper, not an enchanter).",
    "number": 2001
@@ -330,6 +373,10 @@
    },
    "abilityName": "Waiting at the Door",
    "abilityText": "Before bidding on any turn you may turn this hero face down and gain no bonuses from it. On your next turn, draw two additional resource cards and then turn this card face up.",
+   "nemesis": [
+    "Beast",
+    "Undead"
+   ],
    "kind": "hero",
    "revision": "Now two extra cards on her return (was one); Physical 1 → 2 and Mental 3 → 4 (the ability alone didn't make up for resting).",
    "number": 2002
@@ -348,17 +395,22 @@
     "G": 3
    },
    "abilityName": "Pack Runner",
-   "abilityText": "- At the start of your turn, draw a resource card for each other Orc hero you control. \n- Varg gains +2 to all stats while Sigrun is in your party. \n- If Moss is already in play, you may play this card as a bonus hero above your party size.",
+   "abilityText": "Once per turn, when an Orc card enters play, draw a resource.",
+   "allied": [
+    "Sigrun Stonefast"
+   ],
+   "companionTo": [
+    "Sigrun Stonefast"
+   ],
    "kind": "hero",
    "revision": "Was a draw for Underway companions.",
    "number": 2003
   },
   {
    "id": "tansy-brambleby-barmaid-and-volunteer",
-   "name": "Tansy Brambleby, Barmaid and Volunteer",
+   "name": "Tansy Brambleby, Barmaid",
    "groups": [
-    "Halfellow",
-    "Marchguard"
+    "Halfellow"
    ],
    "quote": "“I pour the ale, I patrol the road, and I feed the geese. Mostly in that order.”",
    "art": "portraits__tansy-brambleby-barmaid-and-volunteer",
@@ -367,8 +419,8 @@
     "M": 3,
     "G": 4
    },
-   "abilityName": "Goose & Company",
-   "abilityText": "At the start of your turn, draw a resource card for every Goose in play anywhere.",
+   "abilityName": "Rumour Mill",
+   "abilityText": "During bidding, once per turn, look at all of the face-down resource cards that another player has bid.",
    "kind": "hero",
    "revision": "Was a draw when a Goose entered play, which almost never happened; now counts every Goose in play at the start of your turn.",
    "number": 2004
@@ -426,8 +478,8 @@
     "M": 2,
     "G": 4
    },
-   "abilityName": "Hold the Line",
-   "abilityText": "Once per turn, when an opponent's ability would affect one of your heroes, cancel it.",
+   "abilityName": "Self Sacrifice",
+   "abilityText": "Once per turn, if an ability targets one of your heroes, you may have it target this hero instead and draw a resource.",
    "kind": "hero",
    "revision": "Was a draw for Marchguard companions or locations.",
    "number": 2007
@@ -447,7 +499,7 @@
     "G": 3
    },
    "abilityName": "Proofs and Theorems",
-   "abilityText": "At the end of bidding, as resource cards are revealed, if you played at least two resource cards, each of them gains 2 to its value.",
+   "abilityText": "When a Mental challenge is faced, draw a resource.",
    "kind": "hero",
    "revision": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 to keep her from outperforming the rest.",
    "number": 2008
@@ -465,8 +517,8 @@
     "M": 3,
     "G": 5
    },
-   "abilityName": "Brave Little Heart",
-   "abilityText": "This hero contributes their guile stat in place of another stat when it is higher.",
+   "abilityName": "Brave Heart",
+   "abilityText": "When a Guile challenge is faced, draw a resource.",
    "kind": "hero",
    "revision": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter.",
    "number": 2009
@@ -486,9 +538,10 @@
     "M": 4,
     "G": 3
    },
-   "abilityName": "Think It Through",
-   "abilityText": "This hero contributes their mental stat in place of another stat when it is higher.",
+   "abilityName": "Adaptive Medicine",
+   "abilityText": "The first time each turn anyone is forced to use a different stat or the stat needed to beat a challege is changed, draw a resource.",
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2010
   },
   {
@@ -505,8 +558,9 @@
     "G": 2
    },
    "abilityName": "Gnash SMASH",
-   "abilityText": "This hero contributes their physical stat in place of another stat when it is higher.",
+   "abilityText": "When a Physical challenge is faced, draw a resource.",
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2011
   },
   {
@@ -523,7 +577,10 @@
     "G": 5
    },
    "abilityName": "Encore!",
-   "abilityText": "- Once per turn, when you would draw a resource card, you may instead look at three random cards from the resource discard stack, take one and leave the rest. \n- Sigrun gains +2 to all stats while Varg is in your party.",
+   "abilityText": "Once per turn, when you would draw a resource card, you may instead look at three random cards from the resource discard stack, take one and leave the rest.",
+   "allied": [
+    "Varg Ironjaw"
+   ],
    "kind": "hero",
    "revision": "Was a random card from the discard pile; now a choice of one from three, once per turn.",
    "number": 2012
@@ -544,7 +601,11 @@
    },
    "abilityName": "Too Clever by Half",
    "abilityText": "During bidding, you can force another player's hero to contribute their guile stat in place of another stat.",
+   "allied": [
+    "Warden"
+   ],
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2013
   },
   {
@@ -563,7 +624,11 @@
    },
    "abilityName": "Mind of the Grove",
    "abilityText": "During bidding, you can force another player's hero to contribute their mental stat in place of another stat.",
+   "nemesis": [
+    "Undead"
+   ],
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2014
   },
   {
@@ -576,12 +641,19 @@
    "art": "portraits__kesh-the-bog-huntress",
    "stats": {
     "P": 5,
-    "M": 1,
+    "M": 2,
     "G": 4
    },
    "abilityName": "Call of the Hunt",
-   "abilityText": "- During bidding, you can force another player's hero to contribute their physical stat in place of another stat. \n- When a Beast encounter enters play, draw a resource card.",
+   "abilityText": "When a Beast encounter enters play, draw a resource card.",
+   "allied": [
+    "Beast"
+   ],
+   "nemesis": [
+    "Beast"
+   ],
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2015
   },
   {
@@ -600,6 +672,9 @@
    },
    "abilityName": "Eternal Vigilance",
    "abilityText": "Once per turn, whenever abilities can be used on your turn, you may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
+   "allied": [
+    "Warden"
+   ],
    "kind": "hero",
    "revision": "Was Wren Nightingale (Human); now an Elf.",
    "number": 2019
@@ -618,7 +693,10 @@
     "G": 4
    },
    "abilityName": "Grudge Paid in Full",
-   "abilityText": "At the end of bidding, you win the current encounter and automatically take the location. However, you must discard all resources and one of your heroes falls. You may use this ability only once per game.",
+   "abilityText": "At the end of bidding, you may win the current encounter and automatically take the location. However, you must discard all resources and one of your heroes falls. You may use this ability only once per game.",
+   "nemesis": [
+    "Oathbreaker"
+   ],
    "kind": "hero",
    "revision": "Was Mira Coldwater (Human); now a Dwarf grudge-bearer.",
    "number": 2023
@@ -639,6 +717,9 @@
    },
    "abilityName": "Wellspring Renewal",
    "abilityText": "When one of your heroes is replaced or discarded, draw a resource card.",
+   "allied": [
+    "Warden"
+   ],
    "kind": "hero",
    "revision": "Was draw 2 when she entered play.",
    "number": 2024
@@ -648,17 +729,22 @@
    "name": "Honk, the Goose Rout Veteran",
    "groups": [
     "Goose",
-    "Beast"
+    "Beast",
+    "Marchguard"
    ],
    "quote": null,
    "art": "portraits__honk-the-goose-rout-veteran",
    "stats": {
     "P": 4,
-    "M": 3,
+    "M": 2,
     "G": 1
    },
    "abilityName": "HONK!",
-   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is 3 or more, gain 3 physical. Discard it either way. You keep this hero's stats.",
+   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card, then discard it. If its value was 3 or more, gain +2.",
+   "companionTo": [
+    "Hobart Thimblewick",
+    "Tobin Quill"
+   ],
    "kind": "hero",
    "revision": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats (was an 88% relative win rate; the roll almost never got used).",
    "number": 2025
@@ -674,11 +760,15 @@
    "art": "portraits__duchess-the-pub-goose",
    "stats": {
     "P": 4,
-    "M": 3,
+    "M": 2,
     "G": 1
    },
    "abilityName": "Hiss",
-   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is 4 or more, gain 5 guile. Discard it either way. You keep this hero's stats.",
+   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card, then discard it. If its value is even, gain +2.",
+   "companionTo": [
+    "Hobart Thimblewick",
+    "Tobin Quill"
+   ],
    "kind": "hero",
    "revision": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats.",
    "number": 2026
@@ -688,17 +778,22 @@
    "name": "Sergeant Waddle",
    "groups": [
     "Goose",
-    "Beast"
+    "Beast",
+    "Marchguard"
    ],
    "quote": null,
    "art": "portraits__sergeant-waddle",
    "stats": {
     "P": 4,
-    "M": 3,
+    "M": 2,
     "G": 2
    },
    "abilityName": "HONK!",
-   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If its value is odd, gain 2 physical. Discard it either way. You keep this hero's stats.",
+   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card, then discard it. If its value is odd, gain +2.",
+   "companionTo": [
+    "Hobart Thimblewick",
+    "Tobin Quill"
+   ],
    "kind": "hero",
    "revision": "No more die and no risk: a revealed card replaces the roll and the goose keeps its stats.",
    "number": 2027
@@ -714,11 +809,15 @@
    "art": "portraits__cobra-chicken",
    "stats": {
     "P": 4,
-    "M": 3,
-    "G": 3
+    "M": 2,
+    "G": 2
    },
-   "abilityName": "Hiss",
-   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card. If it is a Wand, gain 3 guile. Discard it either way. You keep this hero's stats.",
+   "abilityName": "WARK!",
+   "abilityText": "At the end of bidding, after all cards have been revealed, you may reveal the top resource card, then discard it. If it is a wand, wands give no bonuses this turn.",
+   "companionTo": [
+    "Tansy Brambleby",
+    "Tobin Quill"
+   ],
    "kind": "hero",
    "revision": "Now Hiss: reveals a card for Guile instead of rolling for Physical; the goose keeps its stats.",
    "number": 2028
@@ -757,7 +856,7 @@
     "G": 2
    },
    "abilityName": "Smash and Grab",
-   "abilityText": "When you win a location, draw a resource card.",
+   "abilityText": "When you lose bidding, take a random resource card from an opponent.",
    "kind": "hero",
    "revision": "Was a die reroll and an extra reveal.",
    "number": 2030
@@ -777,6 +876,9 @@
    },
    "abilityName": "Keeper of the Flock",
    "abilityText": "Once per turn, before bidding, reveal the top three heroes. If one or more is a Goose, you may put one of them into play as a hero (your party size still applies). Discard the rest.",
+   "allied": [
+    "Goose"
+   ],
    "kind": "hero",
    "revision": "Was a draw when a Goose entered play, which almost never happened (effective on about 8% of triggers).",
    "number": 2031
@@ -796,8 +898,12 @@
     "M": 3,
     "G": 4
    },
-   "abilityName": "Raised by Both",
+   "abilityName": "Persistence",
    "abilityText": "Once per turn, you may use a once-per-turn ability of another hero you control a second time.",
+   "allied": [
+    "Orc",
+    "Human"
+   ],
    "kind": "hero",
    "revision": "Counts as both an Orc and a Human.",
    "number": 2033
@@ -816,9 +922,13 @@
     "M": 3,
     "G": 3
    },
-   "abilityName": "Varg's Shadow",
-   "abilityText": "If Varg is already in play, you may play this card as a bonus hero above your party size.",
+   "abilityName": "Hunt the Enemy",
+   "abilityText": "When an encounter minion is drawn, draw a resource.",
+   "companionTo": [
+    "Varg Ironjaw"
+   ],
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2034
   },
   {
@@ -834,9 +944,13 @@
     "M": 3,
     "G": 4
    },
-   "abilityName": "Fire in the Hole",
-   "abilityText": "At the end of bidding, before the winner is declared, you may discard this hero. If you do, every opponent has -4 to their total this encounter, or -6 if you bid Mhorgrim's Hunt.",
+   "abilityName": "Uncontrolled Explosion",
+   "abilityText": "At the end of bidding, before the winner is declared, you may discard a resource from your hand and this hero. If you do, every opponent has -6 to their total this encounter.",
+   "companionTo": [
+    "Brisa Blastcap"
+   ],
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2035
   },
   {
@@ -854,9 +968,125 @@
     "G": 3
    },
    "abilityName": "Fetch",
-   "abilityText": "- Before bidding, once per turn, you may swap a resource card from your hand with the top card of the resource discard stack. \n- Gimlet gains +1 to all stats while Destiny the Frog is part of the current encounter. \n- If Goldie is already in your party, you may play this card as a bonus hero above your party size.",
+   "abilityText": "Before bidding, once per turn, you may swap a resource card from your hand with the top card of the resource discard stack.",
+   "allied": [
+    "Goldie Trickgrin"
+   ],
+   "nemesis": [
+    "Destiny the Frog"
+   ],
+   "companionTo": [
+    "Goldie Trickgrin"
+   ],
    "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2036
+  },
+  {
+   "id": "caelan-halfelven",
+   "name": "Caelan Halfelven",
+   "groups": [
+    "Elf",
+    "Human",
+    "Warden",
+    "Marchguard"
+   ],
+   "quote": null,
+   "art": null,
+   "stats": {
+    "P": 2,
+    "M": 4,
+    "G": 4
+   },
+   "abilityName": "Child of the March",
+   "abilityText": "Once per turn, when a Warden or Marchguard card enters play, you may draw a resource.",
+   "allied": [
+    "Marchguard",
+    "Warden"
+   ],
+   "kind": "hero",
+   "number": 2037
+  },
+  {
+   "id": "brisa-blastcap-bombardier",
+   "name": "Brisa Blastcap, Bombardier",
+   "groups": [
+    "Dwarf"
+   ],
+   "quote": null,
+   "art": "portraits__brisa-blastcap-bombardier",
+   "stats": {
+    "P": 5,
+    "M": 3,
+    "G": 3
+   },
+   "abilityName": "Improvised Explosives",
+   "abilityText": "At the end of bidding you may turn one of your revealed resources face down. If you do, that resource card contributes 3 instead of its normal value.",
+   "kind": "hero",
+   "revision": "Revised in the card sheet (v0.5).",
+   "number": 2022
+  },
+  {
+   "id": "grumma-ladlejaw-camp-cook",
+   "name": "Grumma Ladlejaw, Camp Cook",
+   "groups": [
+    "Orc"
+   ],
+   "quote": "“Nobody marches on an empty belly. Not even the Warchief.”",
+   "art": "portraits__grumma-ladlejaw-camp-cook",
+   "stats": {
+    "P": 3,
+    "M": 4,
+    "G": 2
+   },
+   "abilityName": "Well Fed Army",
+   "abilityText": "At the end of bidding, if you bid at least 3 resources, draw a resource.",
+   "kind": "hero",
+   "revision": "Was Clemence Fairbrook (Human); now an Orc.",
+   "number": 2032
+  },
+  {
+   "id": "aelder-mossleaf-awakened-oak",
+   "name": "Aelder Mossleaf, Awakened Oak",
+   "groups": [
+    "Elf",
+    "Accord"
+   ],
+   "quote": null,
+   "art": null,
+   "stats": {
+    "P": 8,
+    "M": 2,
+    "G": 4
+   },
+   "abilityName": "Inexorable Roots",
+   "abilityText": "Once per turn, at the end of bidding, discard a resource. Aelder Mossleaf gains +3 until the end of the current encounter.",
+   "companionTo": [
+    "Aelthir Moonveil"
+   ],
+   "kind": "hero",
+   "number": 2038
+  },
+  {
+   "id": "farmer-hobart-thimblewick",
+   "name": "Farmer Hobart Thimblewick",
+   "groups": [
+    "Halfellow"
+   ],
+   "quote": null,
+   "art": null,
+   "stats": {
+    "P": 4,
+    "M": 3,
+    "G": 4
+   },
+   "abilityName": "Goose & Company",
+   "abilityText": "At the start of your turn, draw a resource card for every Goose in play anywhere.",
+   "allied": [
+    "Goose"
+   ],
+   "kind": "hero",
+   "number": 2039
   }
  ],
  "locations": [
@@ -871,7 +1101,7 @@
    "quote": null,
    "art": "buildings__palace",
    "renown": 5,
-   "conditionText": null,
+   "conditionText": "All players immediately draw a resource card for every Human hero they have in play.",
    "number": 3002
   },
   {
@@ -884,7 +1114,7 @@
    "quote": null,
    "art": "enhancements__ruin_1",
    "renown": 5,
-   "conditionText": "The challenges and minion bonuses of Undead encounters are increased by 2.",
+   "conditionText": "The challenges and minion bonuses of Undead encounters are increased by 3.",
    "number": 3004
   },
   {
@@ -945,14 +1175,14 @@
   {
    "kind": "location",
    "id": "the-mirror-marches",
-   "name": "The Mirror Marches",
+   "name": "The Mirror Mire",
    "groups": [
     "Elf"
    ],
    "quote": null,
    "art": "cities__elf_city_4",
    "renown": 5,
-   "conditionText": "The challenges and minion bonuses of Ironbound encounters are increased by 2.",
+   "conditionText": "All resources are played face up. No ability can force them to be face down.",
    "number": 3011
   },
   {
@@ -966,7 +1196,7 @@
    "quote": null,
    "art": "buildings__runewall",
    "renown": 3,
-   "conditionText": "If any minions are in play at this location, their bonus is increased by one.",
+   "conditionText": "If any minions are in play at this location, their bonus is increased by 2.",
    "number": 3013
   },
   {
@@ -1007,7 +1237,7 @@
    ],
    "quote": null,
    "art": "terrain__desert_2",
-   "renown": 2,
+   "renown": 3,
    "conditionText": "All players immediately draw a resource card for every Orc hero they have in play.",
    "number": 3016
   },
@@ -1036,7 +1266,7 @@
    "quote": null,
    "art": "buildings__deep_forge",
    "renown": 4,
-   "conditionText": null,
+   "conditionText": "The challenges and minion bonuses of Ironbound encounters are increased by 2.",
    "number": 3018
   },
   {
@@ -1213,7 +1443,7 @@
    "quote": null,
    "art": "enhancements__resource_fertile_2",
    "renown": 4,
-   "conditionText": "Fog of the Fey. All face-down resource cards stay hidden until the reveal step. No ability can force them to be revealed beforehand.",
+   "conditionText": "Fog of the Fey: All face-down resource cards stay hidden until the reveal step. No ability can force them to be revealed beforehand.",
    "number": 3033
   },
   {
@@ -1226,7 +1456,7 @@
    "quote": "“Pint for the rumour, Mayor?” — Goldie Trickgrin",
    "art": "buildings__neighborhood_pub",
    "renown": 2,
-   "conditionText": "All players may draw a hero and put them into play, then discard a hero in play.",
+   "conditionText": "All players may draw a hero and put them into play. Party size in increased by 1 while this location is in play.",
    "number": 3034
   },
   {
@@ -1282,7 +1512,7 @@
    "quote": null,
    "art": "terrain__tundra_2",
    "renown": 2,
-   "conditionText": "If the encounter is Undead, it draws one extra Undead minion.",
+   "conditionText": "Draw one extra minion. All encounters and minions count as Undead.",
    "number": 3040
   },
   {
@@ -1632,7 +1862,7 @@
     "count": 0,
     "group": null
    },
-   "conditionText": "When this card comes into play as an encounter or a minion, each player with a hero turns up the top resource card. The player with the lowest value (ties turn up again) selects a hero to go into play as a minion, adding the relevant stat bonus to the selected challenge’s difficulty. The resource cards are then discarded.",
+   "conditionText": "When this card comes into play as an encounter or a minion, each player turns up the top resource card. The player with the lowest value (ties turn up again) selects a hero to go into play as a minion as a zombified hero. The resource cards are then discarded. The zombified hero adds the relevant stat bonus to the selected challenge’s difficulty and gains the undead tag.",
    "stat": "G",
    "difficulty": 8,
    "number": 4020
@@ -1811,7 +2041,7 @@
    "art": null,
    "minionValue": -3,
    "minions": {
-    "count": 0,
+    "count": 1,
     "group": null
    },
    "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",

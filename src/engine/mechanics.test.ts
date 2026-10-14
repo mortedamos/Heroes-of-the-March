@@ -4,10 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { botDecide } from '../bots/heuristic';
 import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
-import { discardHero, drawResources, fire, heroEnters, partyCount, partySize, replaceLocation } from './effects';
-import { difficultyFor, totalFor } from './totals';
+import { discardHero, drawResources, fire, heroEnters, partyLoad, partySize, replaceLocation } from './effects';
+import { difficultyFor, totalFor, visibleTo } from './totals';
 import { ABILITIES, abilityOf } from './abilities';
-import { CARDS, getDef, hasDef } from './cards';
+import { CARDS, companionsOf, getDef, hasDef, resolveTarget } from './cards';
 import setAside from '../../data/set-aside.json';
 import { createGame } from './setup';
 import type { HouseRules } from './rules';
@@ -211,32 +211,84 @@ describe('forced stats', () => {
     expect(g.s.pending?.kind).toBe('bid'); // back to A's bidding decision
   });
 
-  it("Aldric's Shield of the Dawn cancels it", () => {
+  it("Aldric's player may counter a forced stat as it lands, once per turn", () => {
+    const g = newGame();
+    standard(g, { companions: ['liriel-nightbloom', 'thessaly-of-the-grove'] }, { hero: 'lord-paladin-aldric-ashcroft' });
+    restart(g);
+    until(g, bidFor(g.A));
+    const before = total(g, g.A, g.B);
+    use(g, 'liriel-nightbloom', 'force');
+    pick(g, card(g, 'sergeant-waddle'));
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'counterAbility' && d.player === g.B).toBe(true);
+    pick(g, 'counter');
+    expect(g.events.some((e) => e.type === 'abilityCountered')).toBe(true);
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(0);
+    expect(total(g, g.A, g.B)).toBe(before);
+    expect(g.s.pending?.kind).toBe('bid');
+    // The counter is used up: the next one lands without a question.
+    use(g, 'thessaly-of-the-grove', 'force');
+    pick(g, card(g, 'sergeant-waddle'));
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(1);
+  });
+
+  it("Aldric's player may let it land; it is forced, and the counter is still unused", () => {
     const g = newGame();
     standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] }, { hero: 'lord-paladin-aldric-ashcroft' });
     restart(g);
     until(g, bidFor(g.A));
     const before = total(g, g.A, g.B);
     use(g, 'liriel-nightbloom', 'force');
-    pick(g, 'allow'); // Aldric's player lets it resolve, then cancels it afterwards with the proactive shield
     pick(g, card(g, 'sergeant-waddle'));
-    act(g, { type: 'bid.pass', decision: g.s.pending!.id });
-    until(g, bidFor(g.B));
-    use(g, 'lord-paladin-aldric-ashcroft', 'shield');
-    pick(g, card(g, 'liriel-nightbloom'));
-    expect(total(g, g.A, g.B)).toBe(before);
-    expect(g.events.some((e) => e.type === 'effectCancelled')).toBe(true);
+    pick(g, 'allow');
+    expect(total(g, g.A, g.B)).toBe(before - 2); // Sergeant Waddle: P4 -> G2 on a Physical challenge
+    expect(g.s.turn.used[`${card(g, 'lord-paladin-aldric-ashcroft')}:shield`]).toBeUndefined();
   });
 
-  it('Brunna ignores forcing that would hurt her', () => {
+  it("Brunna's player may counter a curse placed in front of them", () => {
     const g = newGame();
-    standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] }, { hero: 'high-thane-brunna-stonefast' });
+    standard(g, { hand: ['cursed-locket', 'honey-biscuit'] }, { hero: 'high-thane-brunna-stonefast' });
     restart(g);
     until(g, bidFor(g.A));
     const before = total(g, g.A, g.B);
-    use(g, 'liriel-nightbloom', 'force');
-    pick(g, card(g, 'sergeant-waddle'));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'cursed-locket') });
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'counterAbility' && d.player === g.B).toBe(true);
+    pick(g, 'counter');
+    expect(player(g, g.B).bids).toHaveLength(0);
+    expect(g.s.discards.resource).toContain(card(g, 'cursed-locket'));
     expect(total(g, g.A, g.B)).toBe(before);
+    checkInvariants(g.s);
+  });
+
+  it('...and if Brunna\'s player lets it land, the curse counts against them', () => {
+    const g = newGame();
+    standard(g, { hand: ['cursed-locket', 'honey-biscuit'] }, { hero: 'high-thane-brunna-stonefast' });
+    restart(g);
+    until(g, bidFor(g.A));
+    const before = total(g, g.A, g.B);
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'cursed-locket') });
+    pick(g, 'allow');
+    expect(player(g, g.B).bids.map((b) => b.card)).toEqual([card(g, 'cursed-locket')]);
+    expect(total(g, g.A, g.B)).toBe(before - 5);
+  });
+
+  it('Walls First also counters a change of location, and the card that would have replaced it goes back unseen', () => {
+    const g = newGame();
+    standard(g, { hand: ['wayfinders-die', 'honey-biscuit'] }, { hero: 'high-thane-brunna-stonefast' });
+    restart(g);
+    until(g, bidFor(g.A));
+    const here = g.s.turn.location;
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'wayfinders-die') });
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'counterAbility' && d.player === g.B).toBe(true);
+    expect(g.s.turn.pendingLocation).not.toBeNull();
+    checkInvariants(g.s);
+    pick(g, 'counter');
+    expect(g.s.turn.location).toBe(here);
+    expect(g.s.turn.pendingLocation).toBeNull();
+    expect(g.events.some((e) => e.type === 'abilityCountered')).toBe(true);
+    checkInvariants(g.s);
   });
 
   it('Fennick draws when someone is forced', () => {
@@ -270,34 +322,24 @@ describe('forced stats', () => {
 });
 
 describe('silence, steal, negate, swap', () => {
-  it('Aelthir silences an opposing hero before bidding', () => {
+  it('Aelthir draws when an Elf or Human card enters play, but only once per turn', () => {
     const g = newGame();
     standard(g, { hero: 'aelthir-moonveil' });
+    onTop(g.s, 'location', ['the-silverwood-hunt']); // Elf
+    onTop(g.s, 'encounter', ['wren-the-covens-knife']); // Human
     restart(g);
-    until(g, activateFor(g.A, 'beforeBidding')); // once the challenge is known
-    use(g, 'aelthir-moonveil', 'torch');
-    pick(g, card(g, 'sergeant-waddle'));
     until(g, bidFor(g.A));
-    // Maren's Physical + Tobin P3 (Waddle silenced)
-    expect(total(g, g.A, g.B)).toBe((getDef('queen-maren-ashcroft') as { stats: { P: number } }).stats.P + 3);
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Aelthir Moonveil')).toHaveLength(1);
   });
 
-  it('Pip claims a face-down bid in the window before the reveal (empty hand: no swap)', () => {
+  it('Pip draws when an ability replaces the location', () => {
     const g = newGame();
-    // A keeps a spare card so bidding is still open when we check the stolen card stays hidden.
-    standard(g, { hand: ['honey-biscuit', 'the-axe-of-doom', 'feathered-cap'] }, { hero: 'pip-wanderfoot', hand: [] });
-    onTop(g.s, 'encounter', ['wyrmkin-warband']); // not Ironbound, so Pip's trigger draws nothing
+    standard(g, { hero: 'pip-wanderfoot', hand: ['wayfinders-die', 'honey-biscuit'] });
     restart(g);
     until(g, bidFor(g.A));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
-    until(g, bidFor(g.A));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
-    until(g, activateFor(g.B, 'beforeReveal'));
-    use(g, 'pip-wanderfoot', 'pockets'); // one face-down card: claimed without asking
-    expect(player(g, g.B).bids.map((b) => b.card)).toEqual([card(g, 'the-axe-of-doom')]);
-    expect(player(g, g.A).bids).toHaveLength(1);
-    // It was claimed while still face down: the reveal step comes after.
-    expect(g.events.findIndex((e) => e.type === 'bidClaimed')).toBeLessThan(g.events.findIndex((e) => e.type === 'revealed'));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'wayfinders-die') });
+    expect(g.events.some((e) => e.type === 'locationReplaced')).toBe(true);
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Pip Wanderfoot')).toHaveLength(1);
   });
 
   it('face-down cards are turned up one per player, taking turns', () => {
@@ -498,46 +540,6 @@ describe('Hesk and Brunna', () => {
     expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(2);
   });
 
-  it('Brunna announces that her hero shrugs off an opponent\x27s effect', () => {
-    const g = newGame();
-    standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] }, { hero: 'high-thane-brunna-stonefast' });
-    restart(g);
-    until(g, bidFor(g.A));
-    use(g, 'liriel-nightbloom', 'force');
-    pick(g, card(g, 'sergeant-waddle'));
-    const ev = g.events.find((e) => e.type === 'abilityIgnored');
-    expect(ev && ev.type === 'abilityIgnored' && ev.player === g.B).toBe(true);
-    expect(viewFor(g.s, g.A).turn.effects.find((e) => e.kind === 'forceStat')?.ignored).toBe(true);
-  });
-});
-
-describe('Aldric counters abilities as they are used', () => {
-  it('offers Aldric\x27s player a counter before the ability resolves; countering stops it', () => {
-    const g = newGame();
-    standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] }, { hero: 'lord-paladin-aldric-ashcroft' });
-    restart(g);
-    until(g, bidFor(g.A));
-    const before = total(g, g.A, g.B);
-    use(g, 'liriel-nightbloom', 'force');
-    // Aldric\x27s player is asked first, before A even picks a target.
-    const d = g.s.pending!;
-    expect(d.kind === 'choose' && d.purpose === 'counterAbility' && d.player === g.B).toBe(true);
-    pick(g, 'counter');
-    expect(g.events.some((e) => e.type === 'abilityCountered')).toBe(true);
-    // The ability never resolved: no target prompt for A, and totals are unchanged.
-    expect(g.s.pending?.kind).toBe('bid');
-    expect(total(g, g.A, g.B)).toBe(before);
-  });
-
-  it('letting it resolve runs the ability as normal, and Aldric can still counter once per turn only', () => {
-    const g = newGame();
-    standard(g, { companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'] }, { hero: 'lord-paladin-aldric-ashcroft' });
-    restart(g);
-    until(g, bidFor(g.A));
-    use(g, 'liriel-nightbloom', 'force');
-    pick(g, 'allow');
-    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'forceHero').toBe(true);
-  });
 });
 
 describe('the opening turn', () => {
@@ -597,15 +599,15 @@ describe('challenge and encounter control', () => {
 
   it('Ilvena: force an opposing hero onto its weakest stat (no cost)', () => {
     const g = newGame();
-    standard(g, { companions: ['elder-ilvena-of-the-conclave', 'pell-quillon-collegium-prodigy'] }, { companions: ['sergeant-waddle', 'pell-quillon-collegium-prodigy'] });
+    standard(g, { companions: ['elder-ilvena-of-the-conclave', 'pell-quillon-collegium-prodigy'] }, { companions: ['honk-the-goose-rout-veteran', 'pell-quillon-collegium-prodigy'] });
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
     const hand = player(g, g.A).hand.length;
     use(g, 'elder-ilvena-of-the-conclave', 'ruling');
-    pick(g, card(g, 'sergeant-waddle'));
+    pick(g, card(g, 'honk-the-goose-rout-veteran'));
     expect(player(g, g.A).hand.length).toBe(hand);
     const forced = g.s.turn.effects.find((e) => e.kind === 'forceStat')!;
-    expect(forced.stat).toBe('G'); // Sergeant Waddle: P4 M3 G2
+    expect(forced.stat).toBe('G'); // Honk: P4 M2 G1
   });
 
 
@@ -675,28 +677,25 @@ describe('challenge and encounter control', () => {
   });
 });
 
-describe('Pell Quillon and Tova are shown when they trigger', () => {
-  it('Pell adds +2 to each resource card once two are revealed, and announces it once', () => {
+describe('Tova is shown when she triggers', () => {
+  it('Pell, Nettle and Gnash each draw when their stat is the challenge', () => {
+    for (const [hero, enemy] of [['pell-quillon-collegium-prodigy', 'ironbound-vanguard'], ['nettle-burrows-trouble-maker', 'abbess-hollis-of-the-unremembered'], ['gnash-the-butcher-of-bloodmire', 'wyrmkin-warband']] as const) {
+      const g = newGame();
+      standard(g, { companions: [hero, 'moss-dire-wolf'] });
+      onTop(g.s, 'location', ['clover-hollow']); // no challenge-changing place
+      onTop(g.s, 'encounter', [enemy]);
+      restart(g);
+      until(g, bidFor(g.A));
+      expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === getDef(hero).name), hero).toHaveLength(1);
+    }
+    // And not when it is a different stat.
     const g = newGame();
-    standard(g, { companions: ['pell-quillon-collegium-prodigy', 'moss-dire-wolf'], hand: ['honey-biscuit', 'mask-of-many-faces'] });
+    standard(g, { companions: ['gnash-the-butcher-of-bloodmire', 'moss-dire-wolf'] });
+    onTop(g.s, 'location', ['clover-hollow']);
+    onTop(g.s, 'encounter', ['abbess-hollis-of-the-unremembered']); // Guile
     restart(g);
     until(g, bidFor(g.A));
-    const base = (n: number) => total(g, g.A, g.A) - n;
-    const without = base(0);
-    const playFirst = g.s.players.find((p) => p.id === g.A)!.hand[0]!;
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: playFirst });
-    expect(g.events.filter((e) => e.type === 'abilityUsed' && e.ability === 'multiBid')).toHaveLength(0);
-    until(g, bidFor(g.A));
-    const second = g.s.players.find((p) => p.id === g.A)!.hand[0]!;
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: second });
-    // Still bidding: the bonus waits for the reveal at the end of bidding.
-    expect(totalFor(new Ctx(g.s), player(g, g.A), () => true)!.bonus).toBe(0);
-    until(g, (s) => s.turn.step === 'winEndOfBidding' || s.turn.step === 'resolve');
-    // Two cards are out: each is worth two more than its printed value.
-    const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.bonus).toBe(4);
-    expect(without).toBeGreaterThan(-1);
-    expect(g.events.filter((e) => e.type === 'abilityUsed' && e.ability === 'multiBid')).toHaveLength(1);
+    expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason === getDef('gnash-the-butcher-of-bloodmire').name)).toBe(false);
   });
 
   it('Tova announces her return at the start of her controller turn', () => {
@@ -761,7 +760,7 @@ describe('companion movement', () => {
     expect(player(g, g.A).party).toContain(gnash);
   });
 
-  it('The Goose & Kettle lets everyone swap a hero', () => {
+  it('The Goose & Kettle: everyone may draw a hero into play, the party limit is one higher while it lasts', () => {
     const g = newGame();
     standard(g, {});
     onTop(g.s, 'location', ['the-goose-and-kettle']);
@@ -769,10 +768,12 @@ describe('companion movement', () => {
     until(g, (_s, d) => d.kind === 'choose' && d.purpose === 'waystoneDraw' && d.player === g.A);
     pick(g, 'draw');
     expect(player(g, g.A).party).toHaveLength(4);
-    const d = g.s.pending!;
-    expect(d.kind === 'choose' && d.purpose === 'discardHero').toBe(true);
-    act(g, { type: 'choose', decision: d.id, picks: [(d as Extract<Decision, { kind: 'choose' }>).options[0]!.value] });
+    expect(partySize(new Ctx(g.s), player(g, g.A))).toBe(4);
+    // No discard follows. When the place is left behind the extra hero has to go (their choice).
+    expect(until(g, (_s, d) => d.kind === 'choose' && d.purpose === 'discardHero' && d.player === g.A)).toBe(true);
+    pick(g, card(g, 'moss-dire-wolf'));
     expect(player(g, g.A).party).toHaveLength(3);
+    expect(partySize(new Ctx(g.s), player(g, g.A))).toBe(3);
   });
 
 
@@ -864,7 +865,7 @@ describe('falling', () => {
   /** Physical 12 (the Basilisk) against parties that cannot reach it, with nothing to spend. */
   const fall = (a: string[], rules?: Partial<HouseRules>) => {
     const g = newGame(2, 1, rules);
-    standard(g, { party: a, hand: ['honey-biscuit', 'mask-of-many-faces'] });
+    standard(g, { party: a, hand: ['honey-biscuit', 'mask-of-many-faces'] }, { party: ['fennick-puffcap-mycomancer', 'nettle-burrows-trouble-maker', 'sister-aurelie-dane-physician'] });
     onTop(g.s, 'encounter', ['basilisk']);
     restart(g);
     return g;
@@ -1022,21 +1023,6 @@ describe('hand model', () => {
 });
 
 describe('former heroes', () => {
-  it('Pip swaps in a random card from his hand when he has one', () => {
-    const g = newGame();
-    standard(g, { hand: ['honey-biscuit', 'the-axe-of-doom', 'feathered-cap'] }, { hero: 'pip-wanderfoot', hand: ['jesters-cap'] });
-    onTop(g.s, 'encounter', ['wyrmkin-warband']);
-    restart(g);
-    until(g, bidFor(g.A));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
-    until(g, bidFor(g.A));
-    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
-    until(g, activateFor(g.B, 'beforeReveal'));
-    use(g, 'pip-wanderfoot', 'pockets');
-    expect(player(g, g.B).bids.map((b) => b.card)).toContain(card(g, 'the-axe-of-doom'));
-    expect(player(g, g.A).bids.map((b) => b.card)).toEqual([card(g, 'honey-biscuit'), card(g, 'jesters-cap')]);
-    expect(player(g, g.B).hand).toHaveLength(0);
-  });
 
   it('Queen Maren can requisition only on her own turn', () => {
     const g = newGame();
@@ -1048,16 +1034,6 @@ describe('former heroes', () => {
     expect(g.s.pending?.kind).toBe('bid');
   });
 
-  it('Brunna ignores opponents\' silences', () => {
-    const g = newGame();
-    standard(g, { hero: 'aelthir-moonveil' }, { hero: 'high-thane-brunna-stonefast' });
-    restart(g);
-    until(g, activateFor(g.A, 'beforeBidding'));
-    const before = total(g, g.A, g.B);
-    use(g, 'aelthir-moonveil', 'torch');
-    pick(g, card(g, 'sergeant-waddle'));
-    expect(total(g, g.A, g.B)).toBe(before);
-  });
 
   it('Thorgar is Unburied once per game: a fall is prevented and he draws 3', () => {
     const g = newGame();
@@ -1072,15 +1048,14 @@ describe('former heroes', () => {
     expect(abilityOf('thorgar-twice-buried')?.unburied).toBe(true);
   });
 
-  it('Kazra: every Dwarf resource he bids is worth one more (not a curse)', () => {
+  it('Kazra draws when an Ironbound card enters play', () => {
     const g = newGame();
-    standard(g, { hero: 'kazra-emberdeep', hand: ['the-axe-of-doom', 'sprig-of-heather', 'cursed-locket'] });
+    standard(g, { hero: 'kazra-emberdeep' });
+    onTop(g.s, 'location', ['clover-hollow']);
+    onTop(g.s, 'encounter', ['ironbound-vanguard']);
     restart(g);
     until(g, bidFor(g.A));
-    const hand = (d: string) => viewFor(g.s, g.A).hand.find((h) => h.card.def === d)!.value;
-    expect(hand('the-axe-of-doom')).toBe(4 + 1); // Dwarf
-    expect(hand('sprig-of-heather')).toBe(2); // not a Dwarf card
-    expect(hand('cursed-locket')).toBe(-5);
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Kazra Emberdeep')).toHaveLength(1);
   });
 
   it('Corvin draws one extra resource, once per turn, on any turn', () => {
@@ -1114,13 +1089,14 @@ describe('former heroes', () => {
     }
   });
 
-  it('the seven set-aside cards are out of the game but kept in the register', () => {
+  it('the set-aside cards stay out of the game; Brisa and Grumma are back on the Heroes tab with new abilities', () => {
     expect(setAside.setAsideCards).toHaveLength(7);
     for (const c of setAside.setAsideCards) {
-      expect(hasDef(c.id), c.name).toBe(false);
-      expect(abilityOf(c.id), c.name).toBeUndefined();
+      const back = c.id === 'brisa-blastcap-bombardier' || c.id === 'grumma-ladlejaw-camp-cook';
+      expect(hasDef(c.id), c.name).toBe(back);
     }
-    expect(CARDS.heroes).toHaveLength(15 + 36 - 7);
+    expect(CARDS.heroes).toHaveLength(49);
+    expect(CARDS.locations.length + CARDS.encounters.length + CARDS.resources.length + CARDS.heroes.length).toBe(202);
   });
 
   it('no rules text anywhere still talks about companions', () => {
@@ -1139,8 +1115,8 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
   // The window closes (and the turn resolves) once the ability is used, so read the effect from the event log.
   const effectsOf = (g: Game) => g.events.flatMap((e) => (e.type === 'effect' && e.effect.kind === 'statBonus' ? [e.effect] : []));
 
-  it('Honk: a card worth 3+ gives +3 Physical; either way it is discarded and Honk keeps her stats', () => {
-    for (const [top, bonus] of [['hundred-year-journal', 3], ['feathered-cap', 0]] as const) {
+  it('Honk: a card worth 3+ gives +2 to all stats; either way it is discarded and Honk keeps her stats', () => {
+    for (const [top, bonus] of [['hundred-year-journal', 2], ['feathered-cap', 0]] as const) {
       const g = newGame();
       standard(g, { companions: ['honk-the-goose-rout-veteran', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
       restart(g);
@@ -1150,37 +1126,46 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
       use(g, 'honk-the-goose-rout-veteran', 'honk');
       const bonuses = effectsOf(g);
       expect(bonuses.length).toBe(bonus ? 1 : 0);
-      if (bonus) expect(bonuses[0]).toMatchObject({ stat: 'P', amount: bonus });
+      if (bonus) expect(bonuses[0]).toMatchObject({ stat: 'all', amount: bonus });
       expect(g.s.discards.resource).toContain(flipped);
       expect(g.events.some((e) => e.type === 'cardShown' && e.card.id === flipped)).toBe(true);
       expect(player(g, g.A).party).toContain(card(g, 'honk-the-goose-rout-veteran'));
     }
   });
 
-  it('Waddle needs an odd value, Duchess 4+ for +5 Guile, Cobra Chicken a Wand for +3 Guile', () => {
-    const cases: [string, string, string, number, string][] = [
-      ['sergeant-waddle', 'honk', 'honey-biscuit', 2, 'P'],
-      ['duchess-the-pub-goose', 'hiss', 'mask-of-many-faces', 5, 'G'],
-      ['cobra-chicken', 'hiss', 'willow-wand', 3, 'G'],
+  it('Waddle needs an odd value and Duchess an even one for +2 to all stats; Cobra Chicken needs a Wand to switch wands off', () => {
+    const cases: [string, string, string][] = [
+      ['sergeant-waddle', 'honk', 'honey-biscuit'],
+      ['duchess-the-pub-goose', 'hiss', 'feathered-cap'],
     ];
-    for (const [goose, ability, top, amount, stat] of cases) {
+    for (const [goose, ability, top] of cases) {
       const g = newGame();
       standard(g, { companions: [goose, 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
       restart(g);
       until(g, activateFor(g.A, 'endOfBidding'));
       onTop(g.s, 'resource', [top]);
       use(g, goose, ability);
-      expect(effectsOf(g)[0]).toMatchObject({ stat, amount });
+      expect(effectsOf(g)[0]).toMatchObject({ stat: 'all', amount: 2 });
     }
-    // And a miss: an even, non-Wand card does nothing for Waddle and Cobra Chicken.
-    for (const [goose, ability] of [['sergeant-waddle', 'honk'], ['cobra-chicken', 'hiss']] as const) {
+    // And a miss: the wrong parity does nothing.
+    for (const [goose, ability, top] of [['sergeant-waddle', 'honk', 'feathered-cap'], ['duchess-the-pub-goose', 'hiss', 'honey-biscuit']] as const) {
       const g = newGame();
       standard(g, { companions: [goose, 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
       restart(g);
       until(g, activateFor(g.A, 'endOfBidding'));
-      onTop(g.s, 'resource', ['feathered-cap']);
+      onTop(g.s, 'resource', [top]);
       use(g, goose, ability);
       expect(effectsOf(g)).toHaveLength(0);
+    }
+    // Cobra Chicken: a Wand turns every wand off for the turn; anything else does nothing.
+    for (const [top, off] of [['willow-wand', true], ['feathered-cap', false]] as const) {
+      const g = newGame();
+      standard(g, { companions: ['cobra-chicken', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+      restart(g);
+      until(g, activateFor(g.A, 'endOfBidding'));
+      onTop(g.s, 'resource', [top]);
+      use(g, 'cobra-chicken', 'wark');
+      expect(g.events.some((e) => e.type === 'ability' && /wands give no bonuses/.test(e.text))).toBe(off);
     }
   });
 
@@ -1196,12 +1181,10 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     // Only the Goose is on offer (plus "none").
     expect((d as Extract<Decision, { kind: 'choose' }>).options.map((o) => o.value)).toEqual([card(g, 'honk-the-goose-rout-veteran'), 'none']);
     pick(g, card(g, 'honk-the-goose-rout-veteran'));
-    // A is at the party size, so the usual discard follows: let Pell go.
-    const next = g.s.pending!;
-    expect(next.kind === 'choose' && next.purpose === 'discardHero').toBe(true);
-    pick(g, card(g, 'pell-quillon-collegium-prodigy'));
-    expect(player(g, g.A).party).toEqual([card(g, 'archmage-corvin-varro'), card(g, 'tobin-quill-goose-keeper'), card(g, 'honk-the-goose-rout-veteran')]);
-    expect(g.s.discards.hero).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'pell-quillon-collegium-prodigy')]));
+    // Honk is a companion to Tobin: she rides for free, so the party of three just grows to four.
+    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'discardHero').toBe(false);
+    expect(player(g, g.A).party).toEqual([card(g, 'archmage-corvin-varro'), card(g, 'tobin-quill-goose-keeper'), card(g, 'pell-quillon-collegium-prodigy'), card(g, 'honk-the-goose-rout-veteran')]);
+    expect(g.s.discards.hero).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw')]));
     expect(g.s.turn.setAside).not.toContain(card(g, 'gnash-the-butcher-of-bloodmire'));
   });
 
@@ -1216,13 +1199,13 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     expect(g.s.discards.hero).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'kesh-the-bog-huntress')]));
   });
 
-  it("Tansy draws a resource at the start of her controller's turn for every Goose in play, anyone's", () => {
+  it("Farmer Hobart draws a resource at the start of his controller's turn for every Goose in play, anyone's", () => {
     const g = newGame();
-    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'honk-the-goose-rout-veteran'], hand: [] }, { companions: ['duchess-the-pub-goose', 'varg-ironjaw'] });
+    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['farmer-hobart-thimblewick', 'honk-the-goose-rout-veteran'], hand: [] }, { companions: ['duchess-the-pub-goose', 'varg-ironjaw'] });
     restart(g);
     finishTurn(g); // A's turn 1 (triggers don't fire in the opening turn)
     finishTurn(g); // B's turn 2
-    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && /Tansy/.test(e.reason) && e.cards.length === 2)).toHaveLength(1);
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && /Hobart/.test(e.reason) && e.cards.length === 2)).toHaveLength(1);
   });
 
   it('Sigrun: look at three discarded cards and take one, once per turn', () => {
@@ -1304,27 +1287,87 @@ function atBidding(g: Game): Ctx {
 }
 
 
-describe('Bonus heroes (Varg and Moss, Goldie and Gimlet, Ysolde)', () => {
-  it('a complete pair raises the party size by one, and the second card may be played above the size', () => {
+describe('Companion To: heroes that ride for free', () => {
+  const load = (g: Game, who = g.A) => partyLoad(new Ctx(g.s), player(g, who));
+  const limit = (g: Game, who = g.A) => partySize(new Ctx(g.s), player(g, who));
+
+  it('a companion does not count against the party size while the hero it is a companion to is in the party', () => {
     const g = newGame();
-    standard(g, { companions: ['varg-ironjaw', 'pell-quillon-collegium-prodigy'] });
+    standard(g, { party: ['archmage-corvin-varro', 'moss-dire-wolf', 'pell-quillon-collegium-prodigy'] });
     const ctx = atBidding(g);
     const p = player(g, g.A);
-    expect(partySize(ctx, p)).toBe(3);
-    expect(partySize(ctx, p, card(g, 'moss-dire-wolf'))).toBe(4); // Moss would complete the pair
-    expect(partySize(ctx, p, card(g, 'gimlet-a-very-good-dog'))).toBe(3); // Gimlet's partner is not in play
+    expect(load(g)).toBe(3); // Moss is an ordinary member on her own
+    p.party.push(card(g, 'varg-ironjaw'));
+    expect(p.party).toHaveLength(4);
+    expect(load(g)).toBe(3); // Varg is in the party now: Moss rides
+    expect(limit(g)).toBe(3);
+    expect(partyLoad(ctx, p, card(g, 'tova-emberdeep-keeper-of-the-underway-door'))).toBe(4);
   });
 
+  it('either one may arrive last: a recruit that completes the pair needs no place to be made', () => {
+    for (const [have, drawn] of [['varg-ironjaw', 'moss-dire-wolf'], ['moss-dire-wolf', 'varg-ironjaw']] as const) {
+      const g = newGame();
+      standard(g, { party: ['archmage-corvin-varro', have, 'pell-quillon-collegium-prodigy'] });
+      const ctx = atBidding(g);
+      expect(partyLoad(ctx, player(g, g.A), card(g, drawn)) > partySize(ctx, player(g, g.A), card(g, drawn))).toBe(false);
+    }
+  });
 
-  it('Ysolde adds a fourth hero of her own, and under her both pairs stack: six heroes', () => {
+  it('companions chain: Moss rides on Varg, who rides on Sigrun', () => {
     const g = newGame();
-    standard(g, { hero: 'ysolde-of-the-wellspring', companions: ['varg-ironjaw', 'moss-dire-wolf'] });
+    standard(g, { party: ['sigrun-stonefast-metal-singer', 'archmage-corvin-varro', 'pell-quillon-collegium-prodigy'] });
+    atBidding(g);
+    const p = player(g, g.A);
+    p.party.push(card(g, 'varg-ironjaw'), card(g, 'moss-dire-wolf'));
+    expect(p.party).toHaveLength(5);
+    expect(load(g)).toBe(3);
+  });
+
+  it('a companion can be named by more than one hero (any one of them will do)', () => {
+    const g = newGame();
+    standard(g, { party: ['tobin-quill-goose-keeper', 'archmage-corvin-varro', 'pell-quillon-collegium-prodigy'] }, { party: ['queen-maren-ashcroft', 'fennick-puffcap-mycomancer', 'nettle-burrows-trouble-maker'] });
+    atBidding(g);
+    const p = player(g, g.A);
+    p.party.push(card(g, 'honk-the-goose-rout-veteran'), card(g, 'duchess-the-pub-goose'), card(g, 'sergeant-waddle'));
+    expect(load(g)).toBe(3); // Honk, Duchess and Waddle all ride on Tobin
+    p.party.push(card(g, 'cobra-chicken'));
+    expect(load(g)).toBe(3); // Cobra Chicken rides on Tobin or Tansy
+  });
+
+  it('a face-down or resting partner still counts as in the party', () => {
+    const g = newGame();
+    standard(g, { party: ['archmage-corvin-varro', 'moss-dire-wolf', 'pell-quillon-collegium-prodigy'] });
+    atBidding(g);
+    const p = player(g, g.A);
+    p.inactive.push(card(g, 'varg-ironjaw')); // turned face down by The Storybook Glade
+    expect(load(g)).toBe(3);
+    expect(p.party.length + p.inactive.length).toBe(4);
+  });
+
+  it('when the partner leaves, the companion stays if there is room for it', () => {
+    const g = newGame();
+    standard(g, { party: ['archmage-corvin-varro', 'varg-ironjaw', 'moss-dire-wolf'] });
     const ctx = atBidding(g);
     const p = player(g, g.A);
-    expect(partySize(ctx, p)).toBe(3 + 1 + 1); // three, Ysolde, the Varg-Moss pair
-    p.party.push(card(g, 'goldie-trickgrin-keeper-of-the-goose-and-kettle'), card(g, 'gimlet-a-very-good-dog'), card(g, 'pell-quillon-collegium-prodigy'));
-    expect(partySize(ctx, p)).toBe(6);
-    expect(p.party).toHaveLength(6);
+    p.party.push(card(g, 'pell-quillon-collegium-prodigy'));
+    expect(load(g)).toBe(3);
+    discardHero(ctx, p, card(g, 'varg-ironjaw'), 'test');
+    expect(p.party.map((c) => g.s.cards[c])).toEqual(['archmage-corvin-varro', 'moss-dire-wolf', 'pell-quillon-collegium-prodigy']);
+    expect(g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardHero')).toHaveLength(0);
+  });
+
+  it('when the partner leaves and the party is over its size, the companion leaves on its own (no choice)', () => {
+    const g = newGame();
+    standard(g, { party: ['sigrun-stonefast-metal-singer', 'archmage-corvin-varro', 'pell-quillon-collegium-prodigy'] });
+    const ctx = atBidding(g);
+    const p = player(g, g.A);
+    p.party.push(card(g, 'varg-ironjaw'), card(g, 'moss-dire-wolf'));
+    expect(load(g)).toBe(3); // Varg rides on Sigrun, Moss on Varg
+    // Varg goes: Sigrun, Corvin, Pell and Moss would be four, so Moss (now with nobody to ride with) has to go too.
+    discardHero(ctx, p, card(g, 'varg-ironjaw'), 'test');
+    expect(g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardHero')).toHaveLength(0);
+    expect(p.party.map((c) => g.s.cards[c]).sort()).toEqual(['archmage-corvin-varro', 'pell-quillon-collegium-prodigy', 'sigrun-stonefast-metal-singer']);
+    expect(ctx.events.filter((e) => e.type === 'heroLeft' && e.reason === 'Companion left')).toHaveLength(1);
   });
 
   it('a face-down Ysolde still counts: the Storybook Glade does not shrink the party', () => {
@@ -1338,40 +1381,123 @@ describe('Bonus heroes (Varg and Moss, Goldie and Gimlet, Ysolde)', () => {
     expect(partySize(ctx, p)).toBe(4);
   });
 
-
-  it('losing half of a pair drops the party to its size at once (the player chooses who goes)', () => {
+  it('Ysolde adds a place; riders are on top of that', () => {
     const g = newGame();
-    standard(g, { companions: ['varg-ironjaw', 'goldie-trickgrin-keeper-of-the-goose-and-kettle'] });
-    const ctx = atBidding(g);
+    standard(g, { party: ['ysolde-of-the-wellspring', 'varg-ironjaw', 'pell-quillon-collegium-prodigy'] });
+    atBidding(g);
     const p = player(g, g.A);
-    p.party.push(card(g, 'moss-dire-wolf')); // the bonus hero
-    expect(p.party).toHaveLength(4);
-    // Another hero replaces Varg: the pair is broken, so four is one too many.
-    heroEnters(ctx, p, card(g, 'pell-quillon-collegium-prodigy'), card(g, 'varg-ironjaw'));
-    const forced = g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardHero');
-    expect(forced).toHaveLength(1);
-    // Discarding down to the size does not queue a second one.
-    discardHero(ctx, p, card(g, 'moss-dire-wolf'), 'test');
-    expect(g.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardHero')).toHaveLength(1);
+    p.party.push(card(g, 'moss-dire-wolf'), card(g, 'archmage-corvin-varro'));
+    expect(limit(g)).toBe(4);
+    expect(load(g)).toBe(4); // Ysolde, Varg, Pell, Corvin (Moss rides)
+    expect(p.party).toHaveLength(5);
   });
 
+  it('every Companion To names a real hero, and never itself or a hero that names it back', () => {
+    for (const h of CARDS.heroes) for (const d of companionsOf(h.id)) {
+      expect(getDef(d).kind, h.name).toBe('hero');
+      expect(d, h.name).not.toBe(h.id);
+      expect(companionsOf(d), h.name).not.toContain(h.id);
+    }
+  });
+});
 
-  it('Varg and Sigrun each gain +2 while the other is in the party', () => {
+describe('Allied: +1 to all stats for each other matching card on your board', () => {
+  const part = (g: Game, who: PlayerId, def: string, viewer: PlayerId | null = null) => {
+    const vis = viewer === null ? () => true : visibleTo(viewer);
+    return totalFor(new Ctx(g.s), player(g, who), vis)!.party.find((c) => c.source === card(g, def))!.value;
+  };
+
+  it('counts other heroes in the party and face-up resources, not the hero itself', () => {
     const g = newGame();
-    standard(g, { companions: ['varg-ironjaw', 'sigrun-stonefast-metal-singer'] });
+    standard(g, { party: ['kazra-emberdeep', 'high-thane-brunna-stonefast', 'pell-quillon-collegium-prodigy'], hand: ['the-axe-of-doom', 'gold-filings'] });
     atBidding(g); // Physical
-    const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.party.find((c) => c.source === card(g, 'varg-ironjaw'))?.value).toBe(5 + 2);
-    expect(tb.party.find((c) => c.source === card(g, 'sigrun-stonefast-metal-singer'))?.value).toBe(2 + 2);
+    expect(part(g, g.A, 'kazra-emberdeep')).toBe(stat('kazra-emberdeep', 'P') + 1); // Brunna is a Dwarf
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') }); // Dwarf, played face up
+    expect(part(g, g.A, 'kazra-emberdeep')).toBe(stat('kazra-emberdeep', 'P') + 2);
   });
 
-  it('Gimlet gains +1 while Destiny the Frog is part of the encounter', () => {
+  it('a face-down resource only counts once it is revealed, and never for someone who cannot see it', () => {
     const g = newGame();
-    standard(g, { companions: ['gimlet-a-very-good-dog', 'pell-quillon-collegium-prodigy'] });
+    standard(g, { party: ['kazra-emberdeep', 'pell-quillon-collegium-prodigy', 'moss-dire-wolf'], hand: ['honey-biscuit', 'gold-filings'] });
+    atBidding(g);
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'gold-filings') }); // Dwarf, second bid: face down
+    const base = stat('kazra-emberdeep', 'P');
+    expect(part(g, g.A, 'kazra-emberdeep', g.B)).toBe(base); // B cannot see it
+    expect(part(g, g.A, 'kazra-emberdeep', g.A)).toBe(base + 1); // A knows their own card
+    expect(part(g, g.A, 'kazra-emberdeep')).toBe(base + 1); // revealed at the end
+  });
+
+  it('a card that matches several of the hero\'s targets counts once', () => {
+    const g = newGame();
+    standard(g, { party: ['aelthir-moonveil', 'caelan-halfelven', 'pell-quillon-collegium-prodigy'] });
+    atBidding(g);
+    // Aelthir is allied to Human and Elf: Caelan is both, Pell is Human.
+    expect(part(g, g.A, 'aelthir-moonveil')).toBe(stat('aelthir-moonveil', 'P') + 2);
+  });
+
+  it('a curse placed in front of a player is their card, so its tag counts for their Allied heroes', () => {
+    const g = newGame();
+    standard(g, { hand: ['rotten-apple'] }, { party: ['mayor-hobby-trickgrin', 'sergeant-waddle', 'tobin-quill-goose-keeper'] });
+    atBidding(g); // the Apple is Halfellow, and so is Hobby's Allied target
+    const before = part(g, g.B, 'mayor-hobby-trickgrin');
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'rotten-apple') });
+    expect(part(g, g.B, 'mayor-hobby-trickgrin')).toBe(before + 1);
+  });
+
+  it('can name one particular card: Varg is allied to Sigrun', () => {
+    const g = newGame();
+    standard(g, { party: ['varg-ironjaw', 'sigrun-stonefast-metal-singer', 'pell-quillon-collegium-prodigy'] });
+    atBidding(g);
+    expect(part(g, g.A, 'varg-ironjaw')).toBe(stat('varg-ironjaw', 'P') + 1);
+    expect(part(g, g.A, 'sigrun-stonefast-metal-singer')).toBe(stat('sigrun-stonefast-metal-singer', 'P') + 1);
+  });
+});
+
+describe('Nemesis: +1 to all stats for each matching location, encounter or minion', () => {
+  const thorgar = (g: Game) => totalFor(new Ctx(g.s), player(g, g.A), () => true)!.party.find((c) => c.source === card(g, 'thorgar-twice-buried'))!.value;
+  const rig = (loc: string, enc: string[]) => {
+    const g = newGame();
+    standard(g, { party: ['thorgar-twice-buried', 'pell-quillon-collegium-prodigy', 'moss-dire-wolf'] });
+    onTop(g.s, 'location', [loc]);
+    onTop(g.s, 'encounter', enc);
+    atBidding(g);
+    return g;
+  };
+
+  it('counts the location, the encounter and its minions', () => {
+    const g = rig('the-barrowlands', ['the-barrow-king']); // Undead place, Undead encounter, and it draws an Undead minion
+    expect(g.s.turn.minions).toHaveLength(1);
+    expect(thorgar(g)).toBe(stat('thorgar-twice-buried', 'M') + 3);
+  });
+
+  it('a card that does not match adds nothing', () => {
+    const g = rig('clover-hollow', ['wyrmkin-warband']);
+    expect(thorgar(g)).toBe(stat('thorgar-twice-buried', 'P'));
+  });
+
+  it('Barrowdeep makes every encounter and minion Undead, and draws one extra minion', () => {
+    const g = rig('barrowdeep', ['wyrmkin-warband']); // an Orc Beast, no minions of its own
+    expect(g.s.turn.minions).toHaveLength(1);
+    expect(thorgar(g)).toBe(stat('thorgar-twice-buried', 'P') + 3); // the place, the encounter and the minion
+  });
+
+  it('can name one particular card: Gimlet is a nemesis to Destiny the Frog', () => {
+    const g = newGame();
+    standard(g, { party: ['gimlet-a-very-good-dog', 'pell-quillon-collegium-prodigy', 'moss-dire-wolf'] });
     onTop(g.s, 'encounter', ['destiny-the-frog']);
     atBidding(g);
-    const tb = totalFor(new Ctx(g.s), player(g, g.A), () => true)!;
-    expect(tb.party.find((c) => c.source === card(g, 'gimlet-a-very-good-dog'))?.value).toBe(3 + 1);
+    expect(totalFor(new Ctx(g.s), player(g, g.A), () => true)!.party.find((c) => c.source === card(g, 'gimlet-a-very-good-dog'))!.value).toBe(3 + 1);
+  });
+
+  it('every Allied and Nemesis entry in the card data is a tag or exactly one card', () => {
+    for (const h of CARDS.heroes) {
+      for (const e of [...(h.allied ?? []), ...(h.nemesis ?? [])]) expect(() => resolveTarget(e, h.name), `${h.name}: ${e}`).not.toThrow();
+    }
+    expect(resolveTarget('Skarra', 'test')).toEqual({ tag: 'Skarra' });
+    expect(resolveTarget('Hobart Thimblewick', 'test')).toEqual({ def: 'farmer-hobart-thimblewick' });
+    expect(() => resolveTarget('Nobody Atall', 'test')).toThrow();
   });
 });
 
@@ -1388,15 +1514,14 @@ describe('New triggers', () => {
     expect(player(g, g.A).hand.length).toBe(hand + 1);
   });
 
-  it('Mogra draws when her controller wins a location', () => {
+  it('Mogra takes a random resource from an opponent when her controller does not win the encounter', () => {
     const g = newGame();
-    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['mogra-swiftfoot-goblin-runner', 'pell-quillon-collegium-prodigy'] });
-    const ctx = atBidding(g);
-    const hand = player(g, g.A).hand.length;
-    fire(ctx, 'locationWon', { player: g.B, margin: 3 });
-    expect(player(g, g.A).hand.length).toBe(hand);
-    fire(ctx, 'locationWon', { player: g.A, margin: 3 });
-    expect(player(g, g.A).hand.length).toBe(hand + 1);
+    standard(g, { party: ['archmage-corvin-varro', 'mogra-swiftfoot-goblin-runner', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'] }, { hand: ['feathered-cap'] });
+    restart(g);
+    finishTurn(g); // nobody bids: B survives and takes the location, A falls short
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Mogra Swiftfoot, Goblin Runner')).toHaveLength(1);
+    expect(player(g, g.A).hand).toContain(card(g, 'feathered-cap')); // B's only card
+    checkInvariants(g.s);
   });
 
 
@@ -1411,18 +1536,14 @@ describe('New triggers', () => {
   });
 
 
-  it('Varg draws at the start of his controller\'s turn for each other Orc in the party', () => {
-    const handAtTurnThree = (companions: string[]) => {
-      const g = newGame();
-      standard(g, { hero: 'professor-barnaby-pickwort', companions, hand: [] }, { hand: [] });
-      restart(g);
-      finishTurn(g);
-      finishTurn(g); // A's second turn has begun
-      return { n: player(g, g.A).hand.length, size: g.s.rules.drawSize === 'playerCount' ? 2 : g.s.rules.drawSize };
-    };
-    const withOrc = handAtTurnThree(['varg-ironjaw', 'gnash-the-butcher-of-bloodmire']);
-    const alone = handAtTurnThree(['varg-ironjaw', 'pell-quillon-collegium-prodigy']);
-    expect(withOrc.n).toBe(alone.n + 1);
+  it('Varg draws when an Orc card enters play, once per turn', () => {
+    const g = newGame();
+    standard(g, { hero: 'varg-ironjaw' });
+    onTop(g.s, 'location', ['gorewatch']); // Capital, Orc
+    onTop(g.s, 'encounter', ['fen-wyrmkin']); // Orc Beast
+    restart(g);
+    until(g, bidFor(g.A));
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Varg Ironjaw')).toHaveLength(1);
   });
 });
 
@@ -1456,9 +1577,9 @@ describe('Activated abilities of the redesign', () => {
     expect(g.s.discards.resource.at(-1)).toBe(card(g, 'honey-biscuit'));
   });
 
-  it('Goldie looks at a random face-down card another player has bid (shown to her player only)', () => {
+  it('Tansy looks at a random face-down card another player has bid (shown to her player only)', () => {
     const g = newGame();
-    standard(g, { companions: ['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
     restart(g);
     until(g, bidFor(g.A));
     act(g, { type: 'bid.pass', decision: g.s.pending!.id });
@@ -1467,7 +1588,7 @@ describe('Activated abilities of the redesign', () => {
     until(g, bidFor(g.B)); // B again after A passes
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') });
     until(g, bidFor(g.A));
-    use(g, 'goldie-trickgrin-keeper-of-the-goose-and-kettle', 'rumour');
+    use(g, 'tansy-brambleby-barmaid-and-volunteer', 'rumour');
     const d = g.s.pending!;
     expect(d.kind === 'choose' && d.purpose).toBe('rumourMill');
     const view = viewFor(g.s, g.A);
@@ -1477,9 +1598,9 @@ describe('Activated abilities of the redesign', () => {
     expect(viewFor(g.s, g.B).pending?.detail).toBeUndefined();
   });
 
-  it('Fog of the Fey (The Hollow Hills): Goldie cannot look at face-down cards', () => {
+  it('Fog of the Fey (The Hollow Hills): Tansy cannot look at face-down cards', () => {
     const g = newGame();
-    standard(g, { companions: ['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
     onTop(g.s, 'location', ['the-hollow-hills']);
     restart(g);
     until(g, bidFor(g.A));
@@ -1493,39 +1614,47 @@ describe('Activated abilities of the redesign', () => {
     expect(d.kind === 'bid' && d.abilities.some((a) => a.ability === 'rumour')).toBe(false);
   });
 
-  it('Hedda cancels the first opposing ability that would affect one of her controller\'s heroes each turn', () => {
+  it("Hedda may take a forced stat meant for another hero, once per turn, and her player draws a resource", () => {
     const g = newGame();
-    standard(g, { companions: ['liriel-nightbloom', 'kesh-the-bog-huntress'] }, { companions: ['marshal-hedda-ironvow', 'sergeant-waddle'] });
+    standard(g, { companions: ['liriel-nightbloom', 'thessaly-of-the-grove'] }, { companions: ['marshal-hedda-ironvow', 'sergeant-waddle'] });
     restart(g);
     until(g, bidFor(g.A));
+    const hand = player(g, g.B).hand.length;
     use(g, 'liriel-nightbloom', 'force');
     pick(g, card(g, 'sergeant-waddle'));
-    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(0);
-    expect(g.events.some((e) => e.type === 'abilityIgnored')).toBe(true);
-    use(g, 'kesh-the-bog-huntress', 'force');
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'redirectHero' && d.player === g.B).toBe(true);
+    pick(g, 'redirect');
+    expect(player(g, g.B).hand.length).toBe(hand + 1);
+    const forced = g.s.turn.effects.filter((e) => e.kind === 'forceStat');
+    expect(forced).toHaveLength(1);
+    expect(forced[0]!.target).toBe(card(g, 'marshal-hedda-ironvow'));
+    // Once per turn: the next one lands where it was aimed, without a question.
+    use(g, 'thessaly-of-the-grove', 'force');
     pick(g, card(g, 'sergeant-waddle'));
-    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(1); // her once per turn is spent
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat').map((e) => e.target)).toEqual([card(g, 'marshal-hedda-ironvow'), card(g, 'sergeant-waddle')]);
   });
 
-  it('Torvi: Fire in the Hole discards him and takes 4 off every opponent (6 with Mhorgrim\'s Hunt)', () => {
-    for (const [hand, amount] of [[['honey-biscuit'], 4], [['mhorgrims-hunt'], 6]] as const) {
-      const g = newGame();
-      standard(g, { companions: ['torvi-cinderkeg-master-gunner', 'pell-quillon-collegium-prodigy'], hand: [...hand] });
-      restart(g);
-      until(g, bidFor(g.A));
-      act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, hand[0]!) });
-      until(g, activateFor(g.A, 'endOfBidding'));
-      const before = total(g, g.A, g.B);
-      use(g, 'torvi-cinderkeg-master-gunner', 'fire');
-      expect(g.s.discards.hero).toContain(card(g, 'torvi-cinderkeg-master-gunner'));
-      expect(total(g, g.A, g.B)).toBe(before - amount);
-    }
+  it('Torvi: Uncontrolled Explosion discards a resource and him, and takes 6 off every opponent', () => {
+    const g = newGame();
+    standard(g, { companions: ['torvi-cinderkeg-master-gunner', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'feathered-cap'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
+    until(g, activateFor(g.A, 'endOfBidding'));
+    const before = total(g, g.A, g.B);
+    const spare = player(g, g.A).hand[0]!;
+    use(g, 'torvi-cinderkeg-master-gunner', 'fire');
+    pick(g, spare); // the resource that pays for it
+    expect(g.s.discards.hero).toContain(card(g, 'torvi-cinderkeg-master-gunner'));
+    expect(g.s.discards.resource).toContain(spare);
+    expect(total(g, g.A, g.B)).toBe(before - 6);
   });
 
   it('Oskar watches an opponent: when they use an ability against his heroes, he draws', () => {
     const g = newGame();
     standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: [] },
-      { hero: 'warchief-grukka-ironjaw', companions: ['kesh-the-bog-huntress', 'gnash-the-butcher-of-bloodmire'] });
+      { hero: 'warchief-grukka-ironjaw', companions: ['liriel-nightbloom', 'gnash-the-butcher-of-bloodmire'] });
     onTop(g.s, 'encounter', ['crawling-remnant']);
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
@@ -1533,7 +1662,7 @@ describe('Activated abilities of the redesign', () => {
     const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Loremaster Oskar Grimgate').length;
     expect(drawn()).toBe(0);
     until(g, bidFor(g.B));
-    use(g, 'kesh-the-bog-huntress', 'force'); // B forces one of A's heroes onto Physical
+    use(g, 'liriel-nightbloom', 'force'); // B forces one of A's heroes onto Guile
     pick(g, card(g, 'pell-quillon-collegium-prodigy'));
     expect(drawn()).toBe(1);
   });
@@ -1557,10 +1686,10 @@ describe('Activated abilities of the redesign', () => {
   });
 });
 
-describe("Goldie's Rumour Mill", () => {
+describe("Tansy's Rumour Mill", () => {
   it('shows every face-down card of one opponent and the viewer keeps seeing them this turn', () => {
     const g = newGame();
-    standard(g, { companions: ['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'] }, { hand: ['the-axe-of-doom', 'feathered-cap', 'jesters-cap'] });
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'] }, { hand: ['the-axe-of-doom', 'feathered-cap', 'jesters-cap'] });
     restart(g);
     until(g, bidFor(g.A));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
@@ -1569,7 +1698,7 @@ describe("Goldie's Rumour Mill", () => {
     until(g, bidFor(g.B));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') }); // face down
     until(g, bidFor(g.A));
-    use(g, 'goldie-trickgrin-keeper-of-the-goose-and-kettle', 'rumour'); // one opponent: no question
+    use(g, 'tansy-brambleby-barmaid-and-volunteer', 'rumour'); // one opponent: no question
     expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'rumourMill').toBe(true);
     expect(player(g, g.A).seen).toEqual([card(g, 'feathered-cap')]);
     pick(g, 'done');
@@ -1582,7 +1711,7 @@ describe("Goldie's Rumour Mill", () => {
 
   it('a normal bot waits until a few cards are down; an easy bot may look at once', () => {
     const g = newGame();
-    standard(g, { companions: ['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'bag-of-toffees'] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'bag-of-toffees'] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
     restart(g);
     until(g, bidFor(g.A));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
@@ -1736,5 +1865,145 @@ describe('Encounters and locations of the redesign', () => {
     restart(k);
     until(k, bidFor(k.A));
     expect(player(k, k.A).hand.length).toBeGreaterThanOrEqual(hand + 2); // two Elves
+  });
+});
+
+describe('Goldie, Brisa, Aelder, Grumma and the new places', () => {
+  /** A player's line in the turn's result (the turn is over once the end-of-bidding ability has been used). */
+  const rowOf = (g: Game, pid: PlayerId) => {
+    const e = g.events.find((x) => x.type === 'outcome');
+    if (!e || e.type !== 'outcome') throw new Error('no outcome');
+    return e.result.rows.find((r) => r.player === pid)!;
+  };
+
+  it('Tavern Keeper: Goldie draws three heroes in the recruit phase, keeps one to consider and discards the rest', () => {
+    const g = newGame();
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'] });
+    give(g.s, g.A, { party: ['moss-dire-wolf', 'pell-quillon-collegium-prodigy', 'goldie-trickgrin-keeper-of-the-goose-and-kettle'] });
+    restart(g);
+    until(g, (_s, d) => d.kind === 'recruit.offer' && d.player === g.A); // (the first hero in a party is the one that falls by default)
+    const discardedBefore = g.s.discards.hero.length;
+    act(g, { type: 'recruit.draw', decision: g.s.pending!.id });
+    const d = g.s.pending as Extract<Decision, { kind: 'choose' }>;
+    expect(d.kind === 'choose' && d.purpose).toBe('goldiePick');
+    expect(d.options).toHaveLength(3);
+    // The cards on offer are shown by definition only: no instance ids to track.
+    const view = viewFor(g.s, g.A).pending!.detail as { options: { card?: { id?: string } }[] };
+    expect(view.options.every((o) => o.card && o.card.id === undefined)).toBe(true);
+    checkInvariants(g.s);
+    const chosen = d.options[1]!.value;
+    pick(g, chosen);
+    const place = g.s.pending!;
+    expect(place.kind).toBe('recruit.place');
+    expect(place.kind === 'recruit.place' && g.s.cards[place.drawn]).toBe(chosen);
+    expect(g.s.discards.hero.length).toBe(discardedBefore + 2);
+    checkInvariants(g.s);
+  });
+
+  it('Brisa turns a revealed resource face down: it contributes 3 and stops counting as a face-up card', () => {
+    const g = newGame();
+    standard(g, { party: ['brisa-blastcap-bombardier', 'kazra-emberdeep', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'gold-filings'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') }); // worth 1
+    until(g, activateFor(g.A, 'endOfBidding'));
+    use(g, 'brisa-blastcap-bombardier', 'flip'); // one revealed resource: no question
+    finishTurn(g);
+    expect(rowOf(g, g.A).parts.filter((p) => p.kind === 'resource').map((p) => p.value)).toEqual([3]); // the Biscuit's 1 became 3
+    expect(g.events.some((e) => e.type === 'effect' && e.effect.kind === 'bidValue')).toBe(true);
+  });
+
+  it('Brisa could even turn a curse placed in front of her player into a 3', () => {
+    const g = newGame();
+    standard(g, { hand: ['marked-for-the-hunt'] }, { party: ['brisa-blastcap-bombardier', 'kazra-emberdeep', 'pell-quillon-collegium-prodigy'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'marked-for-the-hunt') });
+    until(g, activateFor(g.B, 'endOfBidding'));
+    use(g, 'brisa-blastcap-bombardier', 'flip');
+    expect(rowOf(g, g.B).parts.filter((p) => p.kind === 'resource').map((p) => p.value)).toEqual([3]); // the curse's -6 became 3
+  });
+
+  it('The Mirror Mire: every resource is played face up, and nothing can be turned face down', () => {
+    const g = newGame();
+    standard(g, { party: ['brisa-blastcap-bombardier', 'mayor-hobby-trickgrin', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'jesters-cap', 'sprig-of-heather'] });
+    onTop(g.s, 'location', ['the-mirror-marches']);
+    restart(g);
+    until(g, bidFor(g.A));
+    const first = g.s.pending!;
+    expect(first.kind === 'bid' && first.canFaceDown).toBe(false); // not even Hobby's A Little Plan
+    act(g, { type: 'bid.play', decision: first.id, card: card(g, 'honey-biscuit') });
+    until(g, bidFor(g.A));
+    const second = g.s.pending!;
+    expect(second.kind === 'bid' && second.faceUp).toBe(true);
+    act(g, { type: 'bid.play', decision: second.id, card: card(g, 'jesters-cap') });
+    expect(player(g, g.A).bids.every((b) => b.visible && b.playedFaceUp)).toBe(true);
+    const d = g.s.pending!;
+    expect(d.kind === 'bid' && d.abilities.some((a) => a.ability === 'flip')).toBe(false);
+  });
+
+  it('Aelder discards a resource for +3 until the end of the encounter', () => {
+    const g = newGame();
+    standard(g, { party: ['aelder-mossleaf-awakened-oak', 'aelthir-moonveil', 'pell-quillon-collegium-prodigy'], hand: ['honey-biscuit', 'feathered-cap'] });
+    restart(g);
+    until(g, activateFor(g.A, 'endOfBidding'));
+    const spare = player(g, g.A).hand[0]!;
+    use(g, 'aelder-mossleaf-awakened-oak', 'roots');
+    pick(g, spare);
+    expect(g.s.discards.resource).toContain(spare);
+    finishTurn(g);
+    expect(rowOf(g, g.A).parts.some((p) => p.kind === 'bonus' && p.value === 3)).toBe(true);
+  });
+
+  it('Grumma draws at the end of bidding if her player bid at least three resources of their own (curses placed on them do not count)', () => {
+    const run = (curses: boolean) => {
+      const g = newGame();
+      standard(g, { party: ['grumma-ladlejaw-camp-cook', 'pell-quillon-collegium-prodigy', 'moss-dire-wolf'], hand: ['honey-biscuit', 'feathered-cap', 'sprig-of-heather'] }, { hand: [] });
+      restart(g);
+      until(g, bidFor(g.A));
+      const bids = curses ? ['honey-biscuit'] : ['honey-biscuit', 'feathered-cap', 'sprig-of-heather'];
+      for (const c of bids) {
+        act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, c) });
+        until(g, bidFor(g.A));
+      }
+      if (curses) {
+        // Two curses from B land in front of A.
+        for (const c of ['rotten-apple', 'misdirecting-missive']) {
+          const id = card(g, c);
+          detach(g.s, id);
+          g.s.players.find((p) => p.id === g.A)!.bids.push({ card: id, visible: true, resolved: true, playedFaceUp: true, placedBy: g.B });
+        }
+      }
+      finishTurn(g);
+      return g.events.filter((e) => e.type === 'drew' && e.player === g.A && /Grumma/.test(e.reason)).length;
+    };
+    expect(run(false)).toBe(1);
+    expect(run(true)).toBe(0); // one resource of her own and two curses placed on her player
+  });
+
+  it('Kingsford: everyone draws a resource for every Human hero in their party', () => {
+    const g = newGame();
+    standard(g, { party: ['archmage-corvin-varro', 'queen-maren-ashcroft', 'moss-dire-wolf'], hand: [] }, { party: ['fennick-puffcap-mycomancer', 'nettle-burrows-trouble-maker', 'sister-aurelie-dane-physician'], hand: [] });
+    onTop(g.s, 'location', ['kingsford']);
+    restart(g);
+    until(g, bidFor(g.A));
+    const drew = (pid: PlayerId) => g.events.filter((e) => e.type === 'drew' && e.player === pid && e.reason === 'Kingsford').reduce((n, e) => n + (e.type === 'drew' ? e.cards.length : 0), 0);
+    expect(drew(g.A)).toBeGreaterThanOrEqual(2); // Corvin and Maren (Corvin may add one more of his own)
+  });
+
+  it("Hedda's redirect still goes past Aldric's counter", () => {
+    const g = newGame();
+    standard(g, { companions: ['liriel-nightbloom', 'thessaly-of-the-grove'] }, { party: ['lord-paladin-aldric-ashcroft', 'marshal-hedda-ironvow', 'sergeant-waddle'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    use(g, 'liriel-nightbloom', 'force');
+    pick(g, card(g, 'sergeant-waddle'));
+    expect(g.s.pending?.kind === 'choose' && g.s.pending.purpose).toBe('redirectHero');
+    pick(g, 'redirect');
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'counterAbility').toBe(true);
+    pick(g, 'counter');
+    expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(0);
+    checkInvariants(g.s);
   });
 });

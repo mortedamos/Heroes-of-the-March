@@ -9,7 +9,8 @@
 // Errors returned to clients are short codes and never include internals.
 
 import { Ctx, IllegalMove } from './context';
-import { heroEnters, noteMultiBid, partyCount, partySize } from './effects';
+import { abilityOf } from './abilities';
+import { heroEnters, partyLoad, partySize, peekOption, playerHas } from './effects';
 import { advance, applyChoice, resolveBid, useActivation } from './flow';
 import type { CardId, Command, GameEvent, GameState, PlayerId } from './types';
 
@@ -142,10 +143,25 @@ function handle(ctx: Ctx, seat: PlayerId, cmd: Command): void {
   switch (cmd.type) {
     case 'recruit.draw': {
       // One hero at random: keep it (replacing one at the party size) or let it go.
+      // Goldie's Tavern Keeper: draw three instead and choose one; the other two are discarded.
+      const tavern = playerHas(ctx, p, (a) => a.tavern);
+      if (tavern && abilityOf(ctx.defId(tavern))?.tavern) {
+        const drawn: CardId[] = [];
+        for (let i = 0; i < 3; i++) { const c = ctx.take('hero'); if (c) drawn.push(c); }
+        if (!drawn.length) { s.turn.cursor += 1; return; }
+        ctx.emit({ type: 'drew', player: p.id, deck: 'hero', cards: drawn.map((c) => ctx.ref(c)), reason: 'Recruit phase (Tavern Keeper)' });
+        s.turn.setAside.push(...drawn); // held here while the choice is open (so every card is always somewhere)
+        ctx.queueFirst({
+          t: 'choose', purpose: 'goldiePick', player: p.id, source: ctx.def(tavern).name,
+          prompt: 'Tavern Keeper: choose one of these heroes to consider. The others are discarded.',
+          options: drawn.map((c) => peekOption(ctx, ctx.defId(c), c, ctx.def(c).name)), min: 1, max: 1, data: { cards: drawn.join(',') },
+        });
+        return;
+      }
       const card = ctx.take('hero');
       if (!card) { s.turn.cursor += 1; return; }
       ctx.emit({ type: 'drew', player: p.id, deck: 'hero', cards: [ctx.ref(card)], reason: 'Recruit phase' });
-      ctx.decide({ kind: 'recruit.place', player: p.id, drawn: card, mustReplace: partyCount(p) >= partySize(ctx, p, card) });
+      ctx.decide({ kind: 'recruit.place', player: p.id, drawn: card, mustReplace: partyLoad(ctx, p, card) > partySize(ctx, p, card) });
       return;
     }
     case 'recruit.skip':
@@ -180,7 +196,7 @@ function handle(ctx: Ctx, seat: PlayerId, cmd: Command): void {
       const bid = { card: cmd.card, visible: faceUp, resolved: false, playedFaceUp: faceUp };
       p.bids.push(bid);
       ctx.emit({ type: 'bid', player: p.id, card: ctx.ref(cmd.card), faceUp });
-      if (faceUp) { resolveBid(ctx, p, bid); noteMultiBid(ctx, p); }
+      if (faceUp) resolveBid(ctx, p, bid);
       s.turn.passesInARow = 0;
       s.turn.bidder = (s.turn.bidder + 1) % s.players.length;
       return;

@@ -1,7 +1,7 @@
 // What a bot knows: card values and a model of the table built only from
 // its own GameView (never the secret state).
 
-import { CARDS, getDef } from '../engine/cards';
+import { alliedTargets, CARDS, companionsOf, getDef, matchesTarget, nemesisTargets } from '../engine/cards';
 import type { HeroDef, LocationDef, Stat } from '../engine/cardTypes';
 import type { CardRef } from '../engine/types';
 import type { GameView, PlayerPublicView } from '../engine/view';
@@ -21,21 +21,24 @@ export const SPECIAL_VALUE: Record<string, number> = {
   'an-apple-for-the-road': 3,
 };
 
-/** How much a hero's ability is worth on top of its stats (rough, in stat points). */
+/** How much a hero's ability is worth on top of its stats (rough, in stat points). Allied, Nemesis and Companion To are priced separately (synergy). */
 const HERO_ABILITY: Record<string, number> = {
-  'warchief-grukka-ironjaw': 3, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 4, 'lord-vaelis-nightbloom': 3,
-  'pip-wanderfoot': 4, 'kazra-emberdeep': 2, 'ysolde-of-the-wellspring': 5, 'mayor-hobby-trickgrin': 2,
-  'lord-paladin-aldric-ashcroft': 3, 'high-thane-brunna-stonefast': 1, 'loremaster-oskar-grimgate': 3,
-  'queen-maren-ashcroft': 3, 'archmage-corvin-varro': 5, 'professor-barnaby-pickwort': 3, 'urzha-half-tusk': 2,
-  'liriel-nightbloom': 2, 'thessaly-of-the-grove': 2, 'kesh-the-bog-huntress': 2,
-  'nettle-burrows-trouble-maker': 2, 'sister-aurelie-dane-physician': 2, 'gnash-the-butcher-of-bloodmire': 2,
+  'warchief-grukka-ironjaw': 3, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 1.5, 'lord-vaelis-nightbloom': 3,
+  'pip-wanderfoot': 0.5, 'kazra-emberdeep': 1, 'ysolde-of-the-wellspring': 5, 'mayor-hobby-trickgrin': 2,
+  'lord-paladin-aldric-ashcroft': 2.5, 'high-thane-brunna-stonefast': 2.5, 'loremaster-oskar-grimgate': 3,
+  'queen-maren-ashcroft': 3, 'archmage-corvin-varro': 4, 'professor-barnaby-pickwort': 3, 'urzha-half-tusk': 2,
+  'liriel-nightbloom': 2, 'thessaly-of-the-grove': 2, 'kesh-the-bog-huntress': 0.5,
+  'nettle-burrows-trouble-maker': 1.2, 'sister-aurelie-dane-physician': 1, 'gnash-the-butcher-of-bloodmire': 1.2, 'pell-quillon-collegium-prodigy': 1.2,
   'elder-ilvena-of-the-conclave': 3, 'hesk-of-two-homes': 2,
-  'dagny-coldhearth-the-grudge-bearer': 2, 'torvi-cinderkeg-master-gunner': 2, 'moss-dire-wolf': 1, 'gimlet-a-very-good-dog': 1.5, 'goldie-trickgrin-keeper-of-the-goose-and-kettle': 1, 'pell-quillon-collegium-prodigy': 2,
-  'seraphine-moonveil-warden-scholar': 1, 'varg-ironjaw': 1, 'tansy-brambleby-barmaid-and-volunteer': 1.5,
-  'fennick-puffcap-mycomancer': 1, 'captain-rook-halloran-skyship-captain': 1, 'marshal-hedda-ironvow': 1,
-  'elowen-leafwatch-treetop-warden': 1, 'mogra-swiftfoot-goblin-runner': 1, 'tova-emberdeep-keeper-of-the-underway-door': 1,
+  'dagny-coldhearth-the-grudge-bearer': 2, 'torvi-cinderkeg-master-gunner': 3, 'moss-dire-wolf': 1, 'gimlet-a-very-good-dog': 1.5,
+  'goldie-trickgrin-keeper-of-the-goose-and-kettle': 2,
+  'seraphine-moonveil-warden-scholar': 1, 'varg-ironjaw': 1.5, 'tansy-brambleby-barmaid-and-volunteer': 1.5,
+  'fennick-puffcap-mycomancer': 1, 'captain-rook-halloran-skyship-captain': 1, 'marshal-hedda-ironvow': 1.5,
+  'elowen-leafwatch-treetop-warden': 1, 'mogra-swiftfoot-goblin-runner': 2, 'tova-emberdeep-keeper-of-the-underway-door': 1,
   'sigrun-stonefast-metal-singer': 1.5, 'tobin-quill-goose-keeper': 1.5,
-  'honk-the-goose-rout-veteran': 1.5, 'duchess-the-pub-goose': 1.5, 'sergeant-waddle': 1, 'cobra-chicken': 0.5,
+  'honk-the-goose-rout-veteran': 1, 'duchess-the-pub-goose': 1.2, 'sergeant-waddle': 1.2, 'cobra-chicken': 0.5,
+  'caelan-halfelven': 1, 'brisa-blastcap-bombardier': 2, 'grumma-ladlejaw-camp-cook': 1, 'aelder-mossleaf-awakened-oak': 2.5,
+  'farmer-hobart-thimblewick': 2,
 };
 
 export function heroDef(ref: { def: string }): HeroDef { return getDef(ref.def) as HeroDef; }
@@ -62,7 +65,36 @@ export function partyScore(defIds: string[]): number {
     t.P += s.P; t.M += s.M; t.G += s.G;
     value += heroValue(id);
   }
-  return value + 0.6 * Math.min(t.P, t.M, t.G);
+  return value + 0.6 * Math.min(t.P, t.M, t.G) + synergy(defIds);
+}
+
+/** Resources bid in a typical encounter, and how many of the deck's resources carry each tag (for Allied). */
+const BIDS_PER_ENCOUNTER = 2.5;
+const RESOURCE_COUNT = CARDS.resources.length;
+const resourceShare = (t: ReturnType<typeof alliedTargets>[number]): number =>
+  CARDS.resources.filter((r) => matchesTarget(r, t)).length / RESOURCE_COUNT;
+/** How often a Nemesis target is on the table (a shared card in play), measured over the real decks. */
+const NEMESIS_RATE = 0.35;
+
+/**
+ * What the named abilities add to a party, in stat points: Allied is +1 to all three stats for each other matching
+ * hero (and for the matching resources it will usually bid), Nemesis a little for a target that is on the table
+ * about a third of the time, and a Companion To a hero whose partner is in the party rides for free, which is
+ * worth about half an extra hero.
+ */
+export function synergy(defIds: string[]): number {
+  let v = 0;
+  for (const id of defIds) {
+    const allied = alliedTargets(id);
+    if (allied.length) {
+      const heroes = defIds.filter((o) => o !== id && allied.some((t) => matchesTarget(getDef(o), t))).length;
+      const resources = allied.reduce((a, t) => a + resourceShare(t), 0) * BIDS_PER_ENCOUNTER;
+      v += 3 * (heroes + resources);
+    }
+    if (nemesisTargets(id).length) v += 3 * NEMESIS_RATE;
+    if (companionsOf(id).some((d) => defIds.includes(d))) v += AVG_HERO_VALUE * 0.5;
+  }
+  return v;
 }
 
 export function locationRenown(ref: CardRef | { def: string } | null): number {
@@ -97,13 +129,7 @@ export class Table {
   /** Best guess at a player's final total: visible total + hidden bids at the average. */
   estimate(p: PlayerPublicView): number {
     if (!p.projection) return 0;
-    return p.projection.total + p.projection.hiddenBids * HIDDEN_BID_ESTIMATE + this.pellBonus(p);
-  }
-
-  /** Pell's bonus only shows once the cards are revealed; until then, count it for whoever has her and has played enough. */
-  pellBonus(p: PlayerPublicView): number {
-    if (this.view.turn.step !== 'bidding' || p.bids.length < 2) return 0;
-    return p.party.some((c) => c.def === 'pell-quillon-collegium-prodigy') ? 2 * p.bids.length : 0;
+    return p.projection.total + p.projection.hiddenBids * HIDDEN_BID_ESTIMATE;
   }
 
   difficultyFor(p: PlayerPublicView): number { return p.projection?.difficulty ?? this.view.turn.challenge?.difficulty.total ?? 0; }
@@ -111,7 +137,7 @@ export class Table {
   myEstimate(): number {
     // Our own face-down Council cards count 0 until revealed; add what we expect them to bring.
     const pending = this.me.bids.reduce((a, b) => a + (!b.hidden && !b.faceUp ? SPECIAL_VALUE[b.card.def] ?? 0 : 0), 0);
-    return (this.me.projection?.total ?? 0) + pending + this.pellBonus(this.me);
+    return (this.me.projection?.total ?? 0) + pending;
   }
 
   /** How dangerous an opponent is right now: this encounter, and the race to win. */

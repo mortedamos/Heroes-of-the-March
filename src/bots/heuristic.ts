@@ -29,7 +29,6 @@ const EASY_BID_WHEN_AHEAD = 0.15;
 const FORCE: Record<string, Stat> = {
   'liriel-nightbloom': 'G',
   'thessaly-of-the-grove': 'M',
-  'kesh-the-bog-huntress': 'P',
 };
 
 /** The def ids of a party (face up, face down and resting). */
@@ -91,7 +90,6 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
   const stat = t.stat;
   switch (a.ability) {
     // Before bidding the bots hold back until the situation calls for it.
-    case 'torch': return torchWorthIt(t, level);
     case 'mineNow': case 'maps': return locationWorthChecking(t, level);
     // Free, but only worth aiming at a real threat.
     case 'ruling': return level !== 'easy' && Boolean(t.biggestThreat());
@@ -105,6 +103,12 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     case 'fetch': return fetchWorthIt(t);
     // Torvi, at the end of bidding when the numbers are exact.
     case 'fire': return fireWorthIt(t, a, level);
+    // Brisa: any revealed resource of ours that is worth less than 3 (a curse placed on us most of all).
+    case 'flip': return level !== 'easy' && brisaTarget(t) !== null;
+    // Aelder: a spare card for +3, unless the encounter is already settled.
+    case 'roots': return level !== 'easy' && t.view.hand.length > 0 && Math.min(...t.view.hand.map((h) => t.handValue(h.card.id))) <= 3 && !standing(t).safe;
+    // Cobra Chicken: wands give no bonuses; worth it when opponents hold more of them than we do.
+    case 'wark': return level !== 'easy' && wandsBid(t, t.others) > wandsBid(t, [t.me]);
     // Goldie: easy bots look at random; the others wait until a few cards are down, so there is something worth knowing.
     case 'rumour': {
       if (!t.others.some((p) => p.bids.some((b) => b.hidden))) return false;
@@ -124,14 +128,12 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     }
     case 'rest': return restWorthIt(t, a, level);
     // End of bidding: everything is revealed, so the numbers are exact.
-    case 'honk': case 'hiss': return flipWorthIt(t, a);
+    case 'honk': case 'hiss': return flipWorthIt(t);
     // Free to use: the cards it turns up are only discarded.
     case 'flock': return level !== 'easy' || rand() < 0.6;
     case 'stonetouched': return miraWorthIt(t, level);
     // During bidding.
     case 'force': return bestForce(t, a.source.def, level).gain >= (level === 'hard' ? 1.5 : 2);
-    case 'pockets': return t.others.some((p) => p.bids.some((b) => b.hidden));
-    case 'shield': return harmfulEffectsOnMe(t).length > 0;
     default: return false;
   }
 }
@@ -149,15 +151,14 @@ function fetchWorthIt(t: Table): boolean {
 }
 
 /**
- * Torvi's Fire in the Hole: discard him to take 4 off every opponent. Worth it when it turns a loss into a win
+ * Torvi's Uncontrolled Explosion: discard him (and a card) to take 6 off every opponent. Worth it when it turns a loss into a win
  * (or saves our hero) even without Torvi's own stat, or sinks a rival who would otherwise take the location.
  */
 function fireWorthIt(t: Table, a: AbilityOptionView, level: BotLevel): boolean {
   const proj = t.me.projection;
-  if (!proj || level === 'easy') return false;
+  if (!proj || level === 'easy' || t.view.hand.length === 0) return false;
   const torvi = proj.contributions.find((c) => c.card === a.source.id)?.value ?? 0;
-  const hunt = t.me.bids.some((b) => !b.hidden && b.card.def === 'mhorgrims-hunt');
-  const cut = hunt ? 5 : 4;
+  const cut = 6;
   const mine = proj.total - torvi;
   const diff = proj.difficulty;
   const rivals = t.others.filter((p) => p.projection);
@@ -168,26 +169,22 @@ function fireWorthIt(t: Table, a: AbilityOptionView, level: BotLevel): boolean {
   return mine > rivalBest && t.prize >= 2;
 }
 
-/**
- * Aelthir's silence: worth using when a rival who is actually in the running has a hero
- * that is giving them something in this challenge (and more so if it would sink them).
- */
-function torchWorthIt(t: Table, level: BotLevel): boolean {
-  const stat = t.stat;
-  if (!stat) return false;
-  const mine = t.myEstimate();
-  let best = 0;
-  for (const p of t.others) {
-    if (!p.projection || p.party.some((c) => c.def === 'high-thane-brunna-stonefast')) continue; // Brunna ignores silences
-    const est = t.estimate(p);
-    const diff = t.difficultyFor(p);
-    if (!(est >= mine - 4 && est >= diff - 2)) continue; // not a rival this turn
-    const top = Math.max(0, ...p.party.map((c) => heroDef(c).stats[stat]));
-    let gain = top;
-    if (est >= diff && est - top < diff) gain += 3; // it would make them lose a hero
-    best = Math.max(best, gain);
+/** The revealed resource Brisa would turn over: the one that gains most from counting as 3 (null if none gains). */
+function brisaTarget(t: Table): string | null {
+  let best: { id: string; gain: number } | null = null;
+  for (const b of t.me.bids) {
+    if (b.hidden || !b.faceUp) continue;
+    const d = getDef(b.card.def);
+    const value = d.kind === 'resource' ? d.value : 0;
+    const gain = 3 - value;
+    if (gain > 0 && (!best || gain > best.gain)) best = { id: b.card.id, gain };
   }
-  return best >= (level === 'hard' ? 2 : 3);
+  return best ? best.id : null;
+}
+
+/** How many wands the given players have revealed. */
+function wandsBid(t: Table, players: PlayerPublicView[]): number {
+  return players.reduce((n, p) => n + p.bids.filter((b) => !b.hidden && b.faceUp && (getDef(b.card.def) as { wand?: boolean }).wand).length, 0);
 }
 
 /** Grukka and Barnaby look at upcoming locations: worth doing when this one is not much of a prize. */
@@ -197,20 +194,17 @@ function locationWorthChecking(t: Table, level: BotLevel): boolean {
   return locationRenown({ def: loc.def }) <= (level === 'hard' ? 3 : 2);
 }
 
-function standing(t: Table): { mine: number; best: number; diff: number; winning: boolean } {
+function standing(t: Table): { mine: number; best: number; diff: number; winning: boolean; safe: boolean } {
   const mine = t.me.projection?.total ?? 0;
   const best = Math.max(-Infinity, ...t.others.filter((p) => p.projection && p.projection.total >= p.projection.difficulty).map((p) => p.projection!.total));
   const diff = t.difficultyFor(t.me);
-  return { mine, best, diff, winning: mine >= diff && mine > best };
+  const winning = mine >= diff && mine > best;
+  return { mine, best, diff, winning, safe: winning && mine >= diff + 5 && mine > best + 5 };
 }
 
-/** The geese reveal a card for a bonus in one stat; the stats are theirs to keep, so it costs nothing to try when it matters. */
-function flipWorthIt(t: Table, a: AbilityOptionView): boolean {
-  const stat = a.ability === 'honk' ? 'P' : 'G';
-  if (t.stat !== stat) return false;
-  const { mine, best, diff, winning } = standing(t);
-  const safe = winning && mine >= diff + 5 && mine > best + 5; // nothing the bonus could change
-  return !safe;
+/** Honk, Duchess and Waddle reveal a card for +2 to all stats; the stats are theirs to keep, so it costs nothing to try when it matters. */
+function flipWorthIt(t: Table): boolean {
+  return !standing(t).safe;
 }
 
 /**
@@ -247,12 +241,6 @@ function miraWorthIt(t: Table, level: BotLevel): boolean {
   return t.prize >= 5 && t.view.hand.length <= 2;
 }
 
-/** Active effects hurting us whose source we could switch off (Aldric). */
-function harmfulEffectsOnMe(t: Table) {
-  return t.view.turn.effects.filter((e) => e.active && e.owner !== t.me.id && e.targetPlayer === t.me.id
-    && (e.kind === 'forceStat' || e.kind === 'silenceHero' || e.kind === 'negateBid'));
-}
-
 interface ForceChoice { value: string; gain: number }
 
 /** The best target for a forced-stat ability, and how much it helps us. */
@@ -264,11 +252,10 @@ function bestForce(t: Table, sourceDef: string, level: BotLevel): ForceChoice {
   let best: ForceChoice = { value: '', gain: 0 };
   // Targets already forced this turn gain nothing from being forced again.
   const forced = new Set(t.view.turn.effects.filter((e) => e.active && e.kind === 'forceStat').map((e) => e.targetCard?.id));
-  // Mayor Hobby draws a card whenever anyone is forced: it costs us a little.
-  const hobbyCosts = t.view.players.some((x) => x.id !== t.me.id && x.party.some((c) => c.def === 'mayor-hobby-trickgrin'));
+  // Fennick and Aurelie draw a card when anyone is forced onto another stat: it costs us a little.
+  const hobbyCosts = t.view.players.some((x) => x.id !== t.me.id && x.party.some((c) => c.def === 'fennick-puffcap-mycomancer' || c.def === 'sister-aurelie-dane-physician'));
   for (const p of t.others) {
     if (!p.projection) continue;
-    if (p.party.some((c) => c.def === 'high-thane-brunna-stonefast')) continue; // Brunna ignores harmful forcing
     const est = t.estimate(p);
     const candidates = p.party.map((c) => ({ value: c.id, reduction: heroDef(c).stats[stat] - heroDef(c).stats[forceTo] }));
     for (const c of candidates) {
@@ -474,10 +461,31 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
 
   switch (c.purpose) {
     case 'counterAbility': {
-      // The prompt opens with the name of whoever used the ability: counter the players in front.
-      const user = t.others.find((p) => c.prompt.startsWith(p.name));
-      const worth = level !== 'easy' && user && (user === t.biggestThreat() || t.threat(user) > 8);
-      return [worth ? 'counter' : 'allow'];
+      // Counter what would hurt us; a location swap only if it lowers the Renown on offer.
+      if (level === 'easy') return [rand() < 0.5 ? 'counter' : 'allow'];
+      const m = /would change the location to (.+)\. Counter it with/.exec(c.prompt);
+      if (m) {
+        const next = [...allDefs()].find((d) => d.kind === 'location' && d.name === m[1]);
+        return [next && locationRenown({ def: next.id }) < locationRenown(t.view.turn.location) ? 'counter' : 'allow'];
+      }
+      return ['counter'];
+    }
+    case 'redirectHero':
+      // Hedda takes the hit and draws us a resource.
+      return [level === 'easy' ? 'allow' : 'redirect'];
+    case 'goldiePick': {
+      // The best of the three for the party we have (the keep-or-let-go decision comes next).
+      const mine = partyDefs(t);
+      return [pickMax((v) => partyScore([...mine, optionCard(v)?.def ?? v]))];
+    }
+    case 'mograSteal':
+      return [pickMax((v) => t.view.players.find((x) => x.id === v)?.handCount ?? 0)];
+    case 'torviFire':
+    case 'aelderRoots':
+      return [pickMin((v) => t.handValue(v))];
+    case 'brisaFlip': {
+      const target = brisaTarget(t);
+      return [target && values.includes(target) ? target : values[0]!];
     }
     case 'partyDraft': {
       // Pick the best party of the pool (easy bots pick at random).
@@ -498,8 +506,7 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const cheapest = pickMin((v) => t.handValue(v));
       return t.handValue(cheapest) < AVG_HERO_STAT ? [cheapest] : [];
     }
-    case 'rulingHero':
-    case 'silenceHero': {
+    case 'rulingHero': {
       // Hit the biggest threat's strongest hero: in the challenge stat if it's
       // known yet, otherwise overall.
       if (level === 'easy') return [random()];
@@ -517,26 +524,11 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const best = bestForce(t, defByName(c.source), level);
       return [values.includes(best.value) ? best.value : random()];
     }
-    case 'disableAbility': {
-      const harmful = harmfulEffectsOnMe(t).map((e) => e.source.id);
-      const cancel = values.find((v) => harmful.includes(v));
-      if (cancel) return [cancel];
-      const threat = t.biggestThreat();
-      const theirs = values.filter((v) => threat?.party.some((c) => c.id === v));
-      return [(theirs.length ? theirs : values).sort((a, b) => heroValue(optionCard(b)?.def) - heroValue(optionCard(a)?.def))[0]!];
-    }
     case 'marenTarget':
       return [pickMax((v) => {
         const p = t.view.players.find((x) => x.id === v);
         return (p?.handCount ?? 0) + (level === 'hard' && p ? t.threat(p) * 0.2 : 0);
       })];
-    case 'pipClaim': {
-      const threat = (v: string) => {
-        const p = t.view.players.find((x) => x.id === v.split(':')[0]);
-        return p ? t.threat(p) : 0;
-      };
-      return [level === 'easy' ? random() : pickMax(threat)];
-    }
     case 'appleSwap':
       return [pickMax((v) => {
         const owner = t.owner(v);

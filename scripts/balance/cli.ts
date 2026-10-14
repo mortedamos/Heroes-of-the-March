@@ -1,5 +1,5 @@
 // Usage (after `npm run balance:build`):
-//   node _build/balance/cli.mjs run <card|party|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--ease P,M,G] [--rules JSON] [--tweak JSON] [--only id,id] [--out file.json]
+//   node _build/balance/cli.mjs run <card|party|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--ease P,M,G] [--strip allied,nemesis,companion] [--rules JSON] [--tweak JSON] [--only id,id] [--out file.json]
 //   (--only keeps just the heroes whose id contains one of the given fragments; card experiment only)
 // Experiments are fully determined by (seed, game index): rerunning gives identical numbers.
 
@@ -9,7 +9,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BotLevel } from '../../src/bots/heuristic';
 import { ABILITIES } from '../../src/engine/abilities';
-import { allDefs } from '../../src/engine/cards';
+import { allDefs, stripNamedAbilities } from '../../src/engine/cards';
 import { addGameMetrics, heroIds, merge, mix, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
 
 
@@ -36,6 +36,8 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
     const by = { P: eP, M: eM, G: eG };
     for (const d of allDefs()) if (d.kind === 'encounter') d.difficulty += by[d.stat];
   }
+  // --strip allied,nemesis,companion: switch those named abilities off (a diagnostic experiment).
+  if (opt.strip) stripNamedAbilities(opt.strip.split(','));
   const ablate = opt.ablate === '1';
   // --tweak '{"card-id":{"field":value}}': patch ability registry entries for the whole run (a calibration experiment).
   if (opt.tweak) for (const [id, patch] of Object.entries(JSON.parse(opt.tweak) as Record<string, object>)) Object.assign(ABILITIES[id] ?? (ABILITIES[id] = { status: 'full' }), patch);

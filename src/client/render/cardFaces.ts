@@ -386,7 +386,12 @@ function drawFace(g: CanvasRenderingContext2D, def: CardDef, art: HTMLImageEleme
   // Rules text
   const blocks: TextBlock[] = [];
   if (def.kind === 'hero') {
-    if (def.abilityName) blocks.push({ text: def.abilityName, weight: 'bold', color: KIND_COLORS[def.kind].dark });
+    // The named abilities come first, as keywords: "Companion To: Varg Ironjaw", "Allied: Orc", "Nemesis: Undead".
+    const named: [string, string[] | undefined][] = [['Companion To', def.companionTo], ['Allied', def.allied], ['Nemesis', def.nemesis]];
+    for (const [label, list] of named) {
+      if (list?.length) blocks.push({ text: `${label}: ${list.join(', ')}`, weight: 'bold', color: KIND_COLORS[def.kind].dark, ...(blocks.length ? { gapBefore: 2 } : {}) });
+    }
+    if (def.abilityName) blocks.push({ text: def.abilityName, weight: 'bold', color: KIND_COLORS[def.kind].dark, ...(blocks.length ? { gapBefore: 4 } : {}) });
     if (def.abilityText) blocks.push({ text: def.abilityText, gapBefore: 2, glow: true, ...(emphasis ? { weight: 'bold' } : {}) });
   } else if (def.conditionText) {
     blocks.push({ text: def.conditionText, glow: true, ...(emphasis ? { weight: 'bold' } : {}) });

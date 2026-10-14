@@ -24,12 +24,21 @@ interface BaseDef {
   revision?: string;
 }
 
-/** A member of an adventuring party. (The old hero triggers and Kin bonuses are set aside: data/set-aside.json.) */
+/**
+ * A member of an adventuring party. Three named abilities are data, not text:
+ *  - allied: +1 to all stats for every other matching card on your board (your heroes, your resources);
+ *  - nemesis: +1 to all stats for every matching location, encounter or minion;
+ *  - companionTo: does not count against the party size while any of the named heroes is in your party.
+ * Each entry names a tag ("Goose") or a single card ("Varg Ironjaw"); cards.ts resolves them.
+ */
 export interface HeroDef extends BaseDef {
   kind: 'hero';
   stats: StatBlock;
   abilityName: string;
   abilityText: string;
+  allied?: string[];
+  nemesis?: string[];
+  companionTo?: string[];
 }
 
 export interface LocationDef extends BaseDef {

@@ -7,10 +7,10 @@
 // a "wands disabled" flag.
 
 import { abilityOf } from './abilities';
-import { getDef } from './cards';
+import { alliedTargets, getDef, matchesTarget, nemesisTargets } from './cards';
 import type { Challenge, HeroDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
-import { activeAbility, activeEffects, bidsBeingRevealed, hasGroup, playerHas } from './effects';
+import { activeEffects, hasGroup, isOfGroup } from './effects';
 import type { Bid, CardId, PlayerId, PlayerState } from './types';
 
 export type Visible = (owner: PlayerState, bid: Bid) => boolean;
@@ -85,67 +85,69 @@ export interface TotalBreakdown {
   hiddenBids: number;
 }
 
-/** Brunna: forced stats only apply to her player's cards if they help. */
-function applyForced(ctx: Ctx, p: PlayerState, normal: number, forced: number | null): number {
-  if (forced === null) return normal;
-  return playerHas(ctx, p, (a) => a.ignoreForcedStat || a.ignoreHostileEffects) ? Math.max(normal, forced) : forced;
+/**
+ * Allied: +1 to all stats for every other card on the owner's board that matches one of the hero's targets: the
+ * owner's other heroes (face up, in the party) and the owner's resources that are face up (or that the viewer may
+ * see: your own bids, and the ones everyone can see; a curse placed on the owner is theirs). A card counts once
+ * even if it matches several targets.
+ */
+export function alliedBonus(ctx: Ctx, p: PlayerState, hero: CardId, visible: Visible): number {
+  const targets = alliedTargets(ctx.defId(hero));
+  if (!targets.length) return 0;
+  const cards = [
+    ...p.party.filter((c) => c !== hero).map((c) => ctx.def(c)),
+    ...p.bids.filter((b) => visible(p, b) && !b.flipped).map((b) => ctx.def(b.card)),
+  ];
+  return cards.filter((d) => targets.some((t) => matchesTarget(d, t))).length;
 }
 
-/** Does this effect count against `p`? (Ignored when one of their heroes shrugs off opponents' effects.) */
-function hostileApplies(ctx: Ctx, p: PlayerState, effectOwner: string): boolean {
-  return effectOwner === p.id || !playerHas(ctx, p, (a) => a.ignoreHostileEffects);
+/**
+ * Nemesis: +1 to all stats for every location, encounter or minion in play that matches one of the hero's targets
+ * (a tag, or the card itself). Only shared, face-up cards count. Barrowdeep makes every encounter and minion Undead.
+ */
+export function nemesisBonus(ctx: Ctx, hero: CardId): number {
+  const targets = nemesisTargets(ctx.defId(hero));
+  if (!targets.length) return 0;
+  const t = ctx.s.turn;
+  const cards = [...(t.location ? [t.location] : []), ...(t.encounter ? [t.encounter] : []), ...t.minions, ...t.heroMinions];
+  return cards.filter((c) => targets.some((tg) => ('tag' in tg ? isOfGroup(ctx, c, tg.tag) : ctx.defId(c) === tg.def))).length;
 }
 
-function heroValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat): number {
-  if (activeEffects(ctx, 'silenceHero').some((e) => e.target === card && hostileApplies(ctx, p, e.owner))) return 0;
+function heroValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat, visible: Visible): number {
+  if (activeEffects(ctx, 'silenceHero').some((e) => e.target === card)) return 0;
   const d = getDef(ctx.defId(card)) as HeroDef;
   let v = d.stats[stat];
-  const sub = activeAbility(ctx, card)?.selfStatSub;
-  if (sub) v = Math.max(v, d.stats[sub]);
   const forced = activeEffects(ctx, 'forceStat').filter((e) => e.target === card).at(-1);
-  v = applyForced(ctx, p, v, forced ? d.stats[forced.stat as Stat] : null);
-  const a = activeAbility(ctx, card);
-  // Varg and Sigrun: +2 while the other is in the party.
-  if (a?.partnerBonus && p.party.some((c) => ctx.defId(c) === a.partnerBonus!.with)) v += a.partnerBonus.amount;
-  // Gimlet: +1 while Destiny the Frog is part of the encounter.
-  if (a?.encounterBonus) {
-    const t = ctx.s.turn;
-    if ([t.encounter, ...t.minions].some((e) => e && ctx.defId(e) === a.encounterBonus!.def)) v += a.encounterBonus.amount;
-  }
+  if (forced) v = d.stats[forced.stat as Stat];
+  v += alliedBonus(ctx, p, card, visible) + nemesisBonus(ctx, card);
   return Math.max(0, v);
 }
 
 /** Value of one resource for its owner in the current context. */
 export function resourceValue(ctx: Ctx, owner: PlayerState, card: CardId): number {
   const d = getDef(ctx.defId(card)) as ResourceDef;
+  // Brisa: a resource she turned face down contributes 3 whatever it says.
+  const set = activeEffects(ctx, 'bidValue').filter((e) => e.target === card).at(-1);
+  if (set) return set.amount ?? 3;
   let v = abilityOf(d.id)?.resourceValue?.(ctx, owner, d.value) ?? d.value;
   if (d.wand) {
     if (ctx.s.turn.wandsDisabled) return 0;
   }
-  // Kazra: every Dwarf resource he bids is worth one more (a curse placed in front of him is not his bid).
-  if (d.groups.includes('Dwarf') && d.value >= 0) {
-    const kazra = playerHas(ctx, owner, (a) => a.bidBonus !== undefined);
-    if (kazra) v += abilityOf(ctx.defId(kazra))!.bidBonus!;
-  }
-  // Oskar: "any numeric bonus it grants counts as zero instead".
-  if (v > 0 && activeEffects(ctx, 'negateBid').some((e) => e.target === card && hostileApplies(ctx, owner, e.owner))) v = 0;
+  // "Any numeric bonus it grants counts as zero instead."
+  if (v > 0 && activeEffects(ctx, 'negateBid').some((e) => e.target === card)) v = 0;
   return v;
 }
 
 export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverride?: Stat): TotalBreakdown | null {
   const stat = statOverride ?? challengeStat(ctx, p);
   if (!stat) return null;
-  const party = p.party.map((c) => ({ source: c, value: heroValue(ctx, p, c, stat) }));
+  const party = p.party.map((c) => ({ source: c, value: heroValue(ctx, p, c, stat, visible) }));
   const council = p.borrowed.map((h) => ({ source: h, value: (getDef(ctx.defId(h)) as HeroDef).stats[stat] }));
   const counted = p.bids.filter((b) => visible(p, b));
   const resources = counted.map((b) => ({ source: b.card, value: resourceValue(ctx, p, b.card) }));
   let bonus = 0;
   const bonuses: TotalBreakdown['bonuses'] = [];
   const add = (source: CardId | null, label: string, amount: number) => { if (amount === 0) return; bonus += amount; bonuses.push({ source, label, amount }); };
-  for (const c of p.party) {
-    const mb = activeAbility(ctx, c)?.multiBidBonus;
-    if (mb && bidsBeingRevealed(ctx) && counted.length >= mb.cards) add(c, ctx.def(c).name.split(',')[0]!, mb.bonus * counted.length);
-  }
   for (const e of activeEffects(ctx, 'statBonus')) {
     if (e.target === p.id && (e.stat === 'all' || e.stat === stat)) add(e.source, ctx.def(e.source).name.split(',')[0]!, e.amount ?? 0);
   }
@@ -161,5 +163,5 @@ export function totalFor(ctx: Ctx, p: PlayerState, visible: Visible, statOverrid
 
 /** Raw party strength in a stat (used for "may change the stat" choices). */
 export function baseStrength(ctx: Ctx, p: PlayerState, stat: Stat): number {
-  return p.party.reduce((a, c) => a + heroValue(ctx, p, c, stat), 0);
+  return p.party.reduce((a, c) => a + heroValue(ctx, p, c, stat, ALL_VISIBLE), 0);
 }

@@ -3,15 +3,31 @@
 import { KINGDOMS, type CardDef, type CardKind, type Stat } from './cardTypes';
 import type { Ctx } from './context';
 import { abilityOf, type Ability, type Source, type TriggerName, type TriggerPayload } from './abilities';
+import { companionsOf } from './cards';
 import { nextInt } from './rng';
 import { challengeStat, difficultyFor } from './totals';
-import type { CardId, DeckName, EffectKind, PlayerId, PlayerState, TurnEffect } from './types';
+import type { CardId, DeckName, DefendedEffect, EffectKind, PlayerId, PlayerState, TurnEffect } from './types';
 
 // --- groups ---------------------------------------------------------------
 
 /** Group check. Cards whose groups include "All" (The Old Quarry) match every group. */
 export function hasGroup(def: CardDef, group: string): boolean {
   return def.groups.includes(group) || def.groups.includes('All');
+}
+
+/**
+ * Group check for a card in play. Barrowdeep makes every encounter and minion count as Undead, and a hero
+ * turned into a zombie by the Infectious Zombie gains the Undead tag.
+ */
+export function isOfGroup(ctx: Ctx, card: CardId, group: string): boolean {
+  const d = ctx.def(card);
+  if (hasGroup(d, group)) return true;
+  const t = ctx.s.turn;
+  if (d.kind === 'encounter' && (card === t.encounter || t.minions.includes(card))) {
+    const loc = ctx.location;
+    if (loc && abilityOf(loc.id)?.encountersCountAs === group) return true;
+  }
+  return group === 'Undead' && t.heroMinions.includes(card);
 }
 
 /** A card's kingdoms (a half-breed like Hesk has two). */
@@ -46,30 +62,30 @@ export function activeEffects(ctx: Ctx, kind?: EffectKind): TurnEffect[] {
 export const PLAYER_TARGET_KINDS: readonly EffectKind[] = ['statBonus', 'autoWin', 'grudge', 'grudgeWatch'];
 
 /**
- * Marshal Hedda Ironvow's "Hold the Line": once per turn, an opponent's ability that would affect one of
- * her controller's heroes is cancelled. Returns true if it was.
+ * An effect that lands on another player's hero (forcing a stat) first goes through that player's defences, one
+ * after another: Hedda may take it instead (redirect), then Aldric may counter it. What survives is added with
+ * addEffect and, for a forced stat, the "forced to use a different stat" trigger fires.
  */
-function heldTheLine(ctx: Ctx, e: Omit<TurnEffect, 'id'>): boolean {
-  if (e.kind !== 'silenceHero' && e.kind !== 'forceStat' && e.kind !== 'disableAbilities') return false;
-  if (!ctx.s.cards[e.target] || ctx.def(e.target).kind !== 'hero') return false;
-  const victim = ownerOf(ctx, e.target);
-  if (!victim || victim === e.owner) return false;
-  const off = disabledCards(ctx);
-  for (const c of ctx.player(victim).party) {
-    if (off.has(c) || !abilityOf(ctx.defId(c))?.holdTheLine) continue;
-    const key = `${c}:hold`;
-    if (ctx.s.turn.used[key]) continue;
-    ctx.s.turn.used[key] = 1;
-    ctx.emit({ type: 'abilityUsed', player: victim, source: ctx.ref(c), ability: 'hold', label: 'Cancel an opponent\'s ability that would affect your hero' });
-    ctx.emit({ type: 'abilityIgnored', player: victim, by: ctx.ref(c), source: ctx.ref(e.source), targetCard: ctx.ref(e.target) });
-    return true;
-  }
-  return false;
+export function defendHeroEffect(ctx: Ctx, effect: DefendedEffect, then?: 'statForced'): void {
+  ctx.queueFirst({ t: 'defend', effect, stage: 'redirect', ...(then ? { then } : {}) });
 }
 
-/** Add a turn effect. Returns null if it was cancelled (Hold the Line). */
+/** A live hero of `p` with this kind of defence that has not been used this turn. */
+export function defenderOf(ctx: Ctx, p: PlayerState, kind: 'redirect' | 'heroes' | 'resources', not?: CardId): CardId | null {
+  const off = disabledCards(ctx);
+  for (const c of p.party) {
+    if (c === not || off.has(c)) continue;
+    const a = abilityOf(ctx.defId(c));
+    const has = kind === 'redirect' ? a?.redirect : a?.counter === kind;
+    if (!has) continue;
+    if ((ctx.s.turn.used[`${c}:${kind === 'redirect' ? 'redirect' : 'shield'}`] ?? 0) > 0) continue;
+    return c;
+  }
+  return null;
+}
+
+/** Add a turn effect. Returns null if it was cancelled. */
 export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect | null {
-  if (heldTheLine(ctx, e)) return null;
   const t = ctx.s.turn;
   t.effectSeq += 1;
   const effect: TurnEffect = { ...e, id: t.effectSeq };
@@ -91,49 +107,13 @@ export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect | nul
       }
     }
   }
-  const shield = hostileShield(ctx, effect);
-  if (shield) {
-    // Brunna's "Walls First": make it visible that her ability is shielding the target.
-    ctx.emit({ type: 'abilityIgnored', player: shield.victim.id, by: ctx.ref(shield.by), source: ctx.ref(e.source), targetCard: cardTarget && ctx.s.cards[cardTarget] ? ctx.ref(cardTarget) : null });
-  }
   return effect;
-}
-
-/** The player an opponent's hurtful effect lands on, and the hero that shrugs such effects off (Brunna), if any. */
-function hostileShield(ctx: Ctx, e: TurnEffect): { victim: PlayerState; by: CardId } | null {
-  if (e.kind !== 'silenceHero' && e.kind !== 'forceStat' && e.kind !== 'negateBid') return null;
-  const id = ownerOf(ctx, e.target);
-  const victim = id ? ctx.s.players.find((p) => p.id === id) ?? null : null;
-  if (!victim || victim.id === e.owner) return null;
-  const by = playerHas(ctx, victim, (a) => a.ignoreHostileEffects || a.ignoreForcedStat);
-  return by ? { victim, by } : null;
-}
-
-export function isIgnored(ctx: Ctx, e: TurnEffect): boolean {
-  return hostileShield(ctx, e) !== null;
 }
 
 /** The turn has reached the end of bidding: resource cards are being (or have been) revealed. */
 export function bidsBeingRevealed(ctx: Ctx): boolean {
   const step = ctx.s.turn.step;
   return step === 'reveal' || step === 'winEndOfBidding' || step === 'resolve' || step === 'turnEnd';
-}
-
-/**
- * Pell Quillon's "Proofs and Theorems": at the end of bidding, as the cards are revealed, if two or more
- * were played each gains value. Show it the first time it takes effect in a turn.
- */
-export function noteMultiBid(ctx: Ctx, p: PlayerState): void {
-  if (!bidsBeingRevealed(ctx)) return;
-  const confirmed = p.bids.filter((b) => b.visible).length;
-  for (const c of p.party) {
-    const mb = activeAbility(ctx, c)?.multiBidBonus;
-    if (!mb || confirmed < mb.cards) continue;
-    const key = `multiBid:${c}`;
-    if (ctx.s.turn.used[key]) continue;
-    ctx.s.turn.used[key] = 1;
-    ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(c), ability: 'multiBid', label: `+${mb.bonus} to the value of each resource card played` });
-  }
 }
 
 /** Who controls a card in play (a hero or a bid), if anyone. */
@@ -270,32 +250,47 @@ export function councilHeroes(ctx: Ctx, player: PlayerId, n: number, source: str
   if (called > 0) ctx.log(player, source, `called ${called} hero${called > 1 ? 'es' : ''} to their side`);
 }
 
+/** Every hero of `p` that is in the party: face up, face down or resting (they give nothing for now, but they are there). */
+const heroesOfParty = (p: PlayerState): CardId[] => [...p.party, ...p.inactive, ...p.resting];
+
 /**
- * How many heroes `p` may keep: the house party size, plus one for Ysolde, plus one for every bonus pair
- * (Varg and Moss, Goldie and Gimlet) with both members in the party. `incoming` is a card about to join,
- * counted as if it were already in play (so the second of a pair may be played above the limit). Face-down and
- * resting heroes still count: they are in the party, they just give nothing for now.
+ * The party limit: the house party size, plus Ysolde's extra place, plus the extra place some locations give
+ * (The Goose & Kettle). Companions are not part of the limit: see partyLoad.
  */
 export function partySize(ctx: Ctx, p: PlayerState, incoming?: CardId): number {
-  const inPlay = new Set([...p.party, ...p.inactive, ...p.resting].map((c) => ctx.defId(c)));
-  if (incoming) inPlay.add(ctx.defId(incoming));
   let size = ctx.s.rules.partySize;
-  for (const id of inPlay) {
-    size += abilityOf(id)?.partyBonus ?? 0;
-    const partner = abilityOf(id)?.pair;
-    if (partner && id < partner && inPlay.has(partner)) size++;
-  }
+  const defs = new Set(heroesOfParty(p).map((c) => ctx.defId(c)));
+  if (incoming) defs.add(ctx.defId(incoming));
+  for (const id of defs) size += abilityOf(id)?.partyBonus ?? 0;
+  const loc = ctx.location;
+  if (loc) size += abilityOf(loc.id)?.partyBonus ?? 0;
   return size;
 }
 
-/** Heroes counting toward the party size (including face-down and resting ones). */
-export function partyCount(p: PlayerState): number {
-  return p.party.length + p.inactive.length + p.resting.length;
+/**
+ * The heroes of `p` that ride for free: a hero that is a Companion To another hero does not count against the
+ * party limit while any of the heroes it names is in the party (face down and resting heroes are still in the
+ * party). It is an ordinary member whenever those heroes are away, and chains work (Moss to Varg to Sigrun).
+ * `incoming` is a card about to join, counted as if it were already in play.
+ */
+export function ridingHeroes(ctx: Ctx, p: PlayerState, incoming?: CardId): Set<CardId> {
+  const cards = heroesOfParty(p);
+  if (incoming) cards.push(incoming);
+  const defs = new Set(cards.map((c) => ctx.defId(c)));
+  const out = new Set<CardId>();
+  for (const c of cards) if (companionsOf(ctx.defId(c)).some((d) => defs.has(d))) out.add(c);
+  return out;
+}
+
+/** Heroes counting toward the party limit: everyone in the party except the companions riding for free. */
+export function partyLoad(ctx: Ctx, p: PlayerState, incoming?: CardId): number {
+  return heroesOfParty(p).length + (incoming ? 1 : 0) - ridingHeroes(ctx, p, incoming).size;
 }
 
 // --- heroes joining and leaving ------------------------------------------------------
 
 export function heroEnters(ctx: Ctx, p: PlayerState, card: CardId, replaced: CardId | null): void {
+  const riders = replaced ? ridingHeroes(ctx, p) : null;
   if (replaced) {
     ctx.removeFromPlayer(p, replaced);
     ctx.discard('hero', replaced);
@@ -308,8 +303,8 @@ export function heroEnters(ctx: Ctx, p: PlayerState, card: CardId, replaced: Car
   }
   if (replaced) fire(ctx, 'heroLeft', { card: replaced, player: p.id });
   enterPlayEffects(ctx, p, card);
-  // Replacing half of a bonus pair breaks it: drop back to the limit.
-  if (replaced) enforcePartyLimit(ctx, p, 'Bonus hero lost');
+  // Replacing the hero a companion rode with (or Ysolde) may leave the party over the limit.
+  if (replaced) { dropLostCompanions(ctx, p, riders!); enforcePartyLimit(ctx, p, 'Bonus hero lost'); }
 }
 
 function enterPlayEffects(ctx: Ctx, p: PlayerState, card: CardId): void {
@@ -331,19 +326,36 @@ export function flushOpeningEntrants(ctx: Ctx): void {
 
 export function discardHero(ctx: Ctx, p: PlayerState, card: CardId, reason: string): void {
   if (!p.party.includes(card) && !p.inactive.includes(card) && !p.resting.includes(card)) return;
+  const riders = ridingHeroes(ctx, p);
   ctx.removeFromPlayer(p, card);
   ctx.discard('hero', card);
   ctx.emit({ type: 'heroLeft', player: p.id, card: ctx.ref(card), reason });
   fire(ctx, 'heroLeft', { card, player: p.id });
-  // Losing half of a bonus pair (or Ysolde) drops the limit: discard down to it at once.
+  // Losing the hero a companion rode with (or Ysolde) may put the party over the limit: the companions go first.
+  dropLostCompanions(ctx, p, riders);
   enforcePartyLimit(ctx, p, 'Bonus hero lost');
+}
+
+/**
+ * A hero that was riding for free lost its place when the hero it rode with left. If the party is now over its
+ * limit those companions leave on their own (no choice), one at a time, until it is back within the limit.
+ * A companion stays if there is room for it.
+ */
+function dropLostCompanions(ctx: Ctx, p: PlayerState, ridersBefore: Set<CardId>): void {
+  for (let guard = 0; guard < 12; guard++) {
+    if (partyLoad(ctx, p) <= partySize(ctx, p)) return;
+    const now = ridingHeroes(ctx, p);
+    const lost = heroesOfParty(p).find((c) => ridersBefore.has(c) && !now.has(c));
+    if (!lost) return;
+    discardHero(ctx, p, lost, 'Companion left');
+  }
 }
 
 /** Queue discards until the player is within their party size. */
 export function enforcePartyLimit(ctx: Ctx, p: PlayerState, reason: string): void {
   // Discards already waiting in the queue count (each one resolves with a fresh check).
   const queued = ctx.s.tasks.filter((t) => t.t === 'choose' && t.purpose === 'discardHero' && t.player === p.id && t.data?.['enforce']).length;
-  const excess = partyCount(p) - partySize(ctx, p) - queued;
+  const excess = partyLoad(ctx, p) - partySize(ctx, p) - queued;
   for (let i = 0; i < excess; i++) {
     ctx.queueFirst({
       t: 'choose', purpose: 'discardHero', player: p.id, prompt: `${reason}: discard a hero`,
@@ -366,12 +378,30 @@ export function locationEnters(ctx: Ctx, card: CardId, reason: string): void {
   const after = t.encounter ? challengeStat(ctx, null) : null;
   if (before && after && before !== after) {
     ctx.emit({ type: 'challengeSelected', stat: after, difficulty: difficultyFor(ctx, null)?.total ?? 0 });
+    fire(ctx, 'statChanged', { stat: after });
     fire(ctx, 'challengeFaced', { stat: after, player: ctx.active.id });
   }
 }
 
-/** Swap the current location (Wayfinder's Die, Portal Rune, The Umbral Ring...). */
-export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'discard', reason: string): void {
+/**
+ * Swap the current location (Wayfinder's Die, Portal Rune, The Umbral Ring, Grukka, Barnaby...). Brunna's player
+ * may counter it first (the first such player clockwise is asked); `answered` is set once they have.
+ */
+export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'discard', reason: string, answered = false): void {
+  if (!answered && ctx.s.turn.location) {
+    for (const p of ctx.clockwise()) {
+      const shield = defenderOf(ctx, p, 'resources');
+      if (!shield) continue;
+      ctx.s.turn.pendingLocation = next;
+      ctx.queueFirst({
+        t: 'choose', purpose: 'counterAbility', player: p.id, source: ctx.def(shield).name,
+        prompt: `${reason} would change the location to ${ctx.def(next).name}. Counter it with ${ctx.def(shield).name.split(',')[0]}?`,
+        options: [{ value: 'counter', label: 'Counter it' }, { value: 'allow', label: 'Let it happen' }], min: 1, max: 1,
+        data: { kind: 'location', next, mode, reason, shield },
+      });
+      return;
+    }
+  }
   const prev = ctx.s.turn.location;
   if (prev) {
     leaveLocation(ctx, prev);
@@ -381,6 +411,12 @@ export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'd
   }
   locationEnters(ctx, next, reason);
   if (prev) fire(ctx, 'locationReplaced', { from: prev, to: next });
+  enforceAllLimits(ctx);
+}
+
+/** The party limit can fall when a location leaves (The Goose & Kettle's extra place): everyone is brought back within it. */
+export function enforceAllLimits(ctx: Ctx): void {
+  for (const p of ctx.clockwise()) enforcePartyLimit(ctx, p, 'Bonus hero lost');
 }
 
 /** Undo lingering location effects (The Storybook Glade turns heroes back up). */

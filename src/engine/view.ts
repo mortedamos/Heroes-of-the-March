@@ -13,7 +13,7 @@
 import { cardStatus } from './abilities';
 import type { Stat } from './cardTypes';
 import { Ctx } from './context';
-import { isIgnored, partySize, PLAYER_TARGET_KINDS } from './effects';
+import { partySize, PLAYER_TARGET_KINDS } from './effects';
 import { challengeStat, currentChallenge, difficultyFor, resourceValue, totalFor, visibleTo, type DifficultyBreakdown } from './totals';
 import {
   DECKS, type AbilityWindow, type CardId, type CardRef, type ChoiceOption, type ChoosePurpose, type DeckName, type EffectKind,
@@ -171,7 +171,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       targetCard: cardTarget && state.cards[cardTarget] !== undefined ? ref(cardTarget) : null,
       stat: e.stat ?? null, amount: e.amount ?? null,
       active: e.kind === 'disableAbilities' || !disabled.has(e.source),
-      ignored: isIgnored(ctx, e),
+      ignored: false,
     };
   });
 

@@ -14,10 +14,9 @@ import { CARDS, getDef } from './cards';
 import type { CardKind, EncounterDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import {
-  addEffect, cardOption, councilHeroes, discardHero, drawResources, hasGroup, heroesInPlay, kingdomsOf,
+  addEffect, cardOption, councilHeroes, drawResources, fire, hasGroup, heroesInPlay, isOfGroup, kingdomsOf,
   peekOption, revealTop, statName,
 } from './effects';
-import { nextInt } from './rng';
 import { baseStrength, challengeStat } from './totals';
 import type { AbilityWindow, CardId, DeckName, PlayerId, PlayerState } from './types';
 import { DECKS } from './types';
@@ -26,7 +25,7 @@ export interface Source { card: CardId; owner: PlayerId | null; kind: CardKind }
 export interface OwnedSource extends Source { owner: PlayerId }
 
 export type TriggerName = 'challengeFaced' | 'encounterReplaced' | 'locationEntered' | 'encounterEntered' | 'heroEntered' | 'locationWon' | 'statForced' | 'turnStart'
-  | 'minionDrawn' | 'locationReplaced' | 'heroLeft' | 'resourceEntered';
+  | 'minionDrawn' | 'locationReplaced' | 'heroLeft' | 'resourceEntered' | 'statChanged' | 'bidLost' | 'endOfBidding';
 export interface TriggerPayload {
   /** The turn's encounter challenge was announced (stat as modified by the location); player is the active player. */
   challengeFaced: { stat: Stat; player: PlayerId };
@@ -46,6 +45,12 @@ export interface TriggerPayload {
   heroLeft: { card: CardId; player: PlayerId };
   /** A resource was revealed or played face up under `player`'s control (face-down bids do not count until then). */
   resourceEntered: { card: CardId; player: PlayerId };
+  /** A card changed the stat needed to beat the challenge (a resource, or a location that changes the challenge type). */
+  statChanged: { stat: Stat };
+  /** `player` did not win the encounter: they fell, or survived without taking the location. */
+  bidLost: { player: PlayerId };
+  /** Bidding is over and every card is revealed; the totals are about to be counted. */
+  endOfBidding: { turn: number };
 }
 
 export type ImplStatus = 'full' | 'partial' | 'todo';
@@ -74,42 +79,26 @@ export interface Ability {
   activations?: Activation[];
 
   // Static modifiers read by totals.ts / flow.ts -----------------------------
-  /** Ysolde: the party may have this many more heroes. */
+  /** Ysolde (and The Goose & Kettle while it is in play): the party limit is this much higher. */
   partyBonus?: number;
-  /** This hero may contribute its X stat in place of another (applied when higher). */
-  selfStatSub?: Stat;
   /** Corvin: draw one more whenever you draw ('ownTurn': only on your own turn). */
   extraDrawOnDraw?: boolean | 'ownTurn' | 'oncePerTurn';
-  /** Aldric: may counter another player's activated ability as it is used (once per turn, shared with Shield of the Dawn). */
-  counter?: boolean;
-  /** Pip: a claimed face-down card is replaced by a random card from your hand (balance option). */
-  claimSwapsCard?: boolean;
-  /** Opponents' silences, forced stats and negations don't affect your cards (balance option). */
-  ignoreHostileEffects?: boolean;
+  /** Once per turn, counter an ability that would affect your heroes (Aldric) or your resources or the location (Brunna). */
+  counter?: 'heroes' | 'resources';
+  /** Hedda: once per turn, an ability that targets one of your heroes may target this hero instead (and you draw a resource). */
+  redirect?: boolean;
+  /** Goldie: when you draw a new hero in the recruit phase, draw three and keep one. */
+  tavern?: boolean;
   /** Once per game, a fall of this hero's player is prevented and they draw 3 resources (Thorgar). */
   unburied?: boolean;
-  /** Every Dwarf resource this hero's player bids is worth this much more (Kazra). */
-  bidBonus?: number;
-  /** If you play at least `cards` resources, each gains `bonus`. */
-  multiBidBonus?: { cards: number; bonus: number };
   /** Override a resource's value in context. */
   resourceValue?: (ctx: Ctx, owner: PlayerState, base: number) => number;
   /** Sigrun: once per turn, a draw may instead take one of three random discarded cards. */
   drawFromDiscardChoice?: boolean;
-  /** Brunna: forced-stat effects on your cards apply only if they help you. */
-  ignoreForcedStat?: boolean;
   /** Hobby: your first bid may be face down too. */
   mayBidFaceDown?: boolean;
   /** Hesk: one extra use per turn of another hero's once-per-turn ability. */
   reuseHeroAbility?: boolean;
-  /** Bonus pair (Varg and Moss, Goldie and Gimlet): with both in the party the party size is one higher. */
-  pair?: string;
-  /** +amount to every stat while the named hero is in the same party (Varg and Sigrun). */
-  partnerBonus?: { with: string; amount: number };
-  /** +amount to every stat while the named encounter card is part of the encounter (Gimlet and Destiny). */
-  encounterBonus?: { def: string; amount: number };
-  /** Hedda: once per turn, an opponent's ability that would affect one of your heroes is cancelled. */
-  holdTheLine?: boolean;
   /** Encounter: when it comes into play as the encounter, an encounter of this group is drawn instead and this card becomes its minion (Destiny). */
   fetchesGroup?: string;
   /** Encounter: its difficulty when the challenge is on these stats (the Runeforged Titan). */
@@ -118,8 +107,12 @@ export interface Ability {
   onDefeated?: (ctx: Ctx, self: Source, survivors: PlayerId[]) => void;
   /** Location: face-down resource cards stay hidden until the reveal step; no ability may look at or reveal them (The Hollow Hills). */
   hidesFaceDown?: boolean;
-  /** Location: if the encounter is in this group it draws one extra minion of that group (Barrowdeep). */
-  extraMinion?: string;
+  /** Location: every resource is played face up and none can be turned face down (The Mirror Mire). */
+  facesUp?: boolean;
+  /** Location: the encounter draws one extra minion (Barrowdeep). */
+  extraMinion?: boolean;
+  /** Location: every encounter and minion counts as this group (Barrowdeep: Undead). */
+  encountersCountAs?: string;
   /** Tova: when this resting hero returns, draw a resource. */
   restReturnDraw?: boolean;
   // Location statics
@@ -141,17 +134,40 @@ function drawFor(ctx: Ctx, self: Source, n = 1): void {
 function encounterEntered(group: string) {
   return (ctx: Ctx, self: Source, e: TriggerPayload['encounterEntered']) => {
     if (e.asMinion && !ctx.s.rules.minionsTriggerEntersPlay) return;
-    if (hasGroup(ctx.def(e.card), group)) drawFor(ctx, self);
+    if (isOfGroup(ctx, e.card, group)) drawFor(ctx, self);
   };
 }
 
-/** Once a turn per card, "the first time anyone is forced to use a different stat". */
-const firstForcedStat = (key: string) => (ctx: Ctx, self: Source) => {
+/** Draw a resource, but only the first time each turn this card's trigger `key` fires. */
+const oncePerTurn = (key: string) => (ctx: Ctx, self: Source) => {
   const used = ctx.s.turn.used;
   const k = `${self.card}:${key}`;
   if (used[k]) return;
   used[k] = 1;
   drawFor(ctx, self);
+};
+
+/**
+ * "When a card of one of these groups enters play, draw a resource." Every kind of card enters play: heroes,
+ * locations, encounters, minions and resources (when they are revealed or played face up). Some are once per turn.
+ */
+function entersPlay(groups: string[], once = false): NonNullable<Ability['on']> {
+  const hit = (ctx: Ctx, self: Source, card: CardId) => {
+    if (!groups.some((g) => isOfGroup(ctx, card, g))) return;
+    if (once) oncePerTurn('enters')(ctx, self);
+    else drawFor(ctx, self);
+  };
+  return {
+    heroEntered: (ctx, self, e) => hit(ctx, self, e.card),
+    locationEntered: (ctx, self, e) => hit(ctx, self, e.card),
+    encounterEntered: (ctx, self, e) => { if (!e.asMinion || ctx.s.rules.minionsTriggerEntersPlay) hit(ctx, self, e.card); },
+    resourceEntered: (ctx, self, e) => hit(ctx, self, e.card),
+  };
+}
+
+/** Pell, Nettle, Gnash: "When a <stat> challenge is faced, draw a resource." */
+const challengeDraw = (stat: Stat) => (ctx: Ctx, self: Source, e: TriggerPayload['challengeFaced']) => {
+  if (e.stat === stat) drawFor(ctx, self);
 };
 
 /** A location drawing a resource per hero of one kingdom in each player's party (the capitals). */
@@ -167,7 +183,7 @@ function drawPerOwn(pred: (ctx: Ctx, p: PlayerState) => number): Ability {
   };
 }
 
-const groupBoost = (group: string): Ability => ({ status: 'full', groupBoost: { group, amount: 2 } });
+const groupBoost = (group: string, amount = 2): Ability => ({ status: 'full', groupBoost: { group, amount } });
 const valueAgainst = (groups: string[], value: number): Ability => ({
   status: 'full',
   resourceValue: (ctx, _owner, base) => {
@@ -196,6 +212,7 @@ function statChange(stat: Stat): Ability {
       if (cur && cur !== stat && baseStrength(ctx, p, stat) > baseStrength(ctx, p, cur)) {
         p.statOverride = stat;
         ctx.log(p.id, nameOf(ctx, self.card), `now faces the challenge with ${stat}`);
+        fire(ctx, 'statChanged', { stat });
       }
     },
   };
@@ -259,15 +276,14 @@ function forceHero(stat: Stat): Ability {
 }
 
 /**
- * The four geese: at the end of bidding, reveal the top resource card; if it is the goose's kind of card,
- * gain a bonus in the goose's stat. The card is discarded either way and the goose keeps its stats.
+ * The four geese: at the end of bidding, reveal the top resource card and discard it; if it is the goose's
+ * kind of card, something good (or odd) happens. The goose keeps its stats either way.
  */
-function flipBonus(o: { id: 'honk' | 'hiss'; stat: Stat; bonus: number; test: (d: ResourceDef) => boolean; when: string }): Ability {
-  const word = o.id === 'honk' ? 'HONK!' : 'Hiss';
+function flipBonus(o: { id: 'honk' | 'hiss' | 'wark'; word: string; test: (d: ResourceDef) => boolean; when: string; result: string; hit: (ctx: Ctx, self: OwnedSource) => void }): Ability {
   return {
     status: 'full',
     activations: [{
-      id: o.id, label: `${word} Reveal the top resource card: ${o.when} gains +${o.bonus} ${statName(o.stat)}`, windows: ['endOfBidding'], per: 'turn',
+      id: o.id, label: `${o.word} Reveal the top resource card: ${o.when}, ${o.result}`, windows: ['endOfBidding'], per: 'turn',
       canUse: (ctx) => ctx.s.decks.resource.length + ctx.s.discards.resource.length > 0,
       use: (ctx, self) => {
         const cards = revealTop(ctx, self.owner, 'resource', 1, nameOf(ctx, self.card));
@@ -277,18 +293,23 @@ function flipBonus(o: { id: 'honk' | 'hiss'; stat: Stat; bonus: number; test: (d
           ctx.emit({ type: 'resourceDiscarded', player: self.owner, card: ctx.ref(c), reason: nameOf(ctx, self.card) });
         }
         if (hit) {
-          addEffect(ctx, { kind: 'statBonus', source: self.card, owner: self.owner, target: self.owner, stat: o.stat, amount: o.bonus });
-          ctx.log(self.owner, nameOf(ctx, self.card), `${word} +${o.bonus} ${statName(o.stat)}`);
-        } else ctx.log(self.owner, nameOf(ctx, self.card), `${word} Nothing this time`);
+          o.hit(ctx, self);
+          ctx.log(self.owner, nameOf(ctx, self.card), `${o.word} ${o.result}`);
+        } else ctx.log(self.owner, nameOf(ctx, self.card), `${o.word} Nothing this time`);
       },
     }],
   };
 }
 
-const honk = flipBonus({ id: 'honk', stat: 'P', bonus: 3, when: 'a value of 3 or more', test: (d) => d.value >= 3 });
-const waddle = flipBonus({ id: 'honk', stat: 'P', bonus: 2, when: 'an odd value', test: (d) => d.value % 2 === 1 });
-const duchess = flipBonus({ id: 'hiss', stat: 'G', bonus: 5, when: 'a value of 4 or more', test: (d) => d.value >= 4 });
-const cobra = flipBonus({ id: 'hiss', stat: 'G', bonus: 3, when: 'a Wand', test: (d) => d.wand });
+/** +2 to all stats for the rest of the encounter (Honk, Duchess, Waddle). */
+const plusTwo = (ctx: Ctx, self: OwnedSource) => { addEffect(ctx, { kind: 'statBonus', source: self.card, owner: self.owner, target: self.owner, stat: 'all', amount: 2 }); };
+const honk = flipBonus({ id: 'honk', word: 'HONK!', when: 'a value of 3 or more', result: '+2 to all stats', test: (d) => d.value >= 3, hit: plusTwo });
+const waddle = flipBonus({ id: 'honk', word: 'HONK!', when: 'an odd value', result: '+2 to all stats', test: (d) => Math.abs(d.value) % 2 === 1, hit: plusTwo });
+const duchess = flipBonus({ id: 'hiss', word: 'Hiss', when: 'an even value', result: '+2 to all stats', test: (d) => Math.abs(d.value) % 2 === 0, hit: plusTwo });
+const cobra = flipBonus({ id: 'wark', word: 'WARK!', when: 'a Wand', result: 'wands give no bonuses this turn', test: (d) => d.wand, hit: (ctx) => { ctx.s.turn.wandsDisabled = true; } });
+
+/** Brisa: the revealed resources she may turn face down (not ones already turned). */
+const brisaTargets = (ctx: Ctx, p: PlayerState): CardId[] => p.bids.filter((b) => b.visible && !b.flipped).map((b) => b.card);
 
 /** Top `n` cards of a stack without removing them (refills from the discard if empty). */
 export function peekTop(ctx: Ctx, deck: DeckName, n: number): CardId[] {
@@ -307,7 +328,7 @@ const TODO = (note?: string): Ability => ({ status: 'todo', ...(note ? { note } 
 // --- registry ---------------------------------------------------------------
 
 export const ABILITIES: Record<string, Ability> = {
-  // Heroes (the former heroes' triggers and Kin bonuses are set aside: data/set-aside.json)
+  // Heroes. Allied, Nemesis and Companion To are data on the card (src/data/cards.json); everything else is here.
   'warchief-grukka-ironjaw': {
     status: 'full',
     activations: [{
@@ -331,19 +352,7 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   'thorgar-twice-buried': { status: 'full', unburied: true },
-  'aelthir-moonveil': {
-    status: 'full',
-    activations: [{
-      id: 'torch', label: "Silence an opponent's hero this turn", windows: ['beforeBidding'], per: 'turn',
-      canUse: (ctx, self) => opposingHeroes(ctx, self).length > 0,
-      use: (ctx, self) => ctx.queueFirst({
-        t: 'choose', purpose: 'silenceHero', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: 'I Held the Torch: choose an opponent\'s hero. It contributes no stats this turn.',
-        options: opposingHeroes(ctx, self).map(({ c, p }) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`)),
-        min: 1, max: 1, data: { source: self.card },
-      }),
-    }],
-  },
+  'aelthir-moonveil': { status: 'full', on: entersPlay(['Elf', 'Human'], true) },
   'lord-vaelis-nightbloom': {
     status: 'full',
     activations: [{
@@ -365,41 +374,15 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'pip-wanderfoot': {
-    status: 'full', claimSwapsCard: true,
-    activations: [{
-      id: 'pockets', label: "Claim another player's face-down bid", windows: ['beforeReveal'], per: 'turn',
-      canUse: (ctx, self) => others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
-      use: (ctx, self) => {
-        const options = others(ctx, self).flatMap((p) => p.bids.flatMap((b, i) => (b.visible ? [] : [{
-          value: `${p.id}:${i}`, label: `${p.name}'s face-down card #${p.bids.slice(0, i + 1).filter((x) => !x.visible).length}`,
-        }])));
-        ctx.queueFirst({
-          t: 'choose', purpose: 'pipClaim', player: self.owner, source: nameOf(ctx, self.card),
-          prompt: 'Pockets Full of Everything: claim a face-down card as your own bid', options, min: 1, max: 1,
-        });
-      },
-    }],
-  },
-  'kazra-emberdeep': { status: 'full', bidBonus: 1 },
+  'pip-wanderfoot': { status: 'full', on: { locationReplaced: oncePerTurn('wander') } },
+  'kazra-emberdeep': { status: 'full', on: entersPlay(['Ironbound']) },
   'ysolde-of-the-wellspring': { status: 'full', partyBonus: 1 },
   'mayor-hobby-trickgrin': {
     status: 'full', mayBidFaceDown: true,
     note: 'Face-down cards still reveal in the normal reveal step.',
   },
-  'lord-paladin-aldric-ashcroft': {
-    status: 'full', counter: true,
-    activations: [{
-      id: 'shield', label: "Disable another player's hero ability this turn", windows: ['bidding'], per: 'turn',
-      use: (ctx, self) => ctx.queueFirst({
-        t: 'choose', purpose: 'disableAbility', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: "Shield of the Dawn: disable a hero's ability for the rest of the turn (cancels its effects)",
-        options: others(ctx, self).flatMap((p) => p.party.map((c) => cardOption(ctx, c, `${shortName(ctx, c)} (${p.name})`))),
-        min: 1, max: 1, data: { source: self.card },
-      }),
-    }],
-  },
-  'high-thane-brunna-stonefast': { status: 'full', ignoreForcedStat: true, ignoreHostileEffects: true },
+  'lord-paladin-aldric-ashcroft': { status: 'full', counter: 'heroes' },
+  'high-thane-brunna-stonefast': { status: 'full', counter: 'resources' },
   'queen-maren-ashcroft': {
     status: 'full',
     activations: [{
@@ -474,9 +457,11 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
 
-  // Goldie: once per turn, during bidding, look at all of one other player's face-down bids.
-  'goldie-trickgrin-keeper-of-the-goose-and-kettle': {
-    status: 'full', pair: 'gimlet-a-very-good-dog',
+  // Goldie: when you draw a new hero in the recruit phase you draw three and keep one (commands.ts).
+  'goldie-trickgrin-keeper-of-the-goose-and-kettle': { status: 'full', tavern: true },
+  // Tansy: once per turn, during bidding, look at all of one other player's face-down bids.
+  'tansy-brambleby-barmaid-and-volunteer': {
+    status: 'full',
     activations: [{
       id: 'rumour', label: "Look at all the face-down cards another player has bid", windows: ['bidding'], per: 'turn',
       canUse: (ctx, self) => !(ctx.location && abilityOf(ctx.location.id)?.hidesFaceDown) && others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
@@ -494,7 +479,7 @@ export const ABILITIES: Record<string, Ability> = {
   },
   // Gimlet: swap a card from your hand with the top card of the resource discard pile.
   'gimlet-a-very-good-dog': {
-    status: 'full', pair: 'goldie-trickgrin-keeper-of-the-goose-and-kettle', encounterBonus: { def: 'destiny-the-frog', amount: 1 },
+    status: 'full',
     activations: [{
       id: 'fetch', label: 'Swap a card from your hand with the top card of the resource discard stack', windows: ['beforeBidding'], per: 'turn',
       canUse: (ctx, self) => ctx.player(self.owner).hand.length > 0 && ctx.s.discards.resource.length > 0,
@@ -511,23 +496,21 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  // Torvi: a one-shot. Discard him at the end of bidding and every opponent loses 4 (5 with Mhorgrim's Hunt).
+  // Torvi: a one-shot. At the end of bidding, discard a resource and Torvi, and every opponent has -6.
   'torvi-cinderkeg-master-gunner': {
     status: 'full',
     activations: [{
-      id: 'fire', label: 'Discard Torvi: every opponent has -4 (-6 with Mhorgrim\'s Hunt) this encounter', windows: ['endOfBidding'], per: 'turn',
-      canUse: (ctx, self) => others(ctx, self).length > 0,
-      use: (ctx, self) => {
-        const p = ctx.player(self.owner);
-        const hunt = p.bids.some((b) => b.visible && ctx.defId(b.card) === 'mhorgrims-hunt');
-        const amount = hunt ? 6 : 4;
-        discardHero(ctx, p, self.card, 'Fire in the Hole');
-        for (const o of others(ctx, self)) addEffect(ctx, { kind: 'statBonus', source: self.card, owner: p.id, target: o.id, stat: 'all', amount: -amount });
-        ctx.log(p.id, nameOf(ctx, self.card), `Fire in the Hole! Every opponent has -${amount}`);
-      },
+      id: 'fire', label: 'Discard a resource and Torvi: every opponent has -6 this encounter', windows: ['endOfBidding'], per: 'turn',
+      canUse: (ctx, self) => others(ctx, self).length > 0 && ctx.player(self.owner).hand.length > 0,
+      use: (ctx, self) => ctx.queueFirst({
+        t: 'choose', purpose: 'torviFire', player: self.owner, source: nameOf(ctx, self.card),
+        prompt: 'Uncontrolled Explosion: discard a resource from your hand (and Torvi). Every opponent has -6 this encounter.',
+        options: ctx.player(self.owner).hand.map((c) => cardOption(ctx, c)), min: 1, max: 1, data: { source: self.card },
+      }),
     }],
   },
-  'moss-dire-wolf': { status: 'full', pair: 'varg-ironjaw' },
+  // Moss: whenever a minion is drawn for an encounter, a resource.
+  'moss-dire-wolf': { status: 'full', on: { minionDrawn: (ctx, self) => drawFor(ctx, self) } },
   'hesk-of-two-homes': { status: 'full', reuseHeroAbility: true },
   'tova-emberdeep-keeper-of-the-underway-door': {
     status: 'full', restReturnDraw: true,
@@ -541,29 +524,21 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  // Varg: at the start of your turn, a resource for every other Orc in your party.
-  'varg-ironjaw': {
-    status: 'full', pair: 'moss-dire-wolf', partnerBonus: { with: 'sigrun-stonefast-metal-singer', amount: 2 },
-    on: {
-      turnStart: (ctx, self, e) => {
-        if (e.player !== self.owner) return;
-        const orcs = ctx.player(self.owner).party.filter((c) => c !== self.card && kingdomsOf(ctx.def(c)).includes('Orc')).length;
-        if (orcs > 0) drawFor(ctx, self, orcs);
-      },
-    },
-  },
-  // Tansy: at the start of her controller's turn, a resource for every Goose in play anywhere.
-  'tansy-brambleby-barmaid-and-volunteer': {
+  'varg-ironjaw': { status: 'full', on: entersPlay(['Orc'], true) },
+  // Farmer Hobart: at the start of his controller's turn, a resource for every Goose in play anywhere.
+  'farmer-hobart-thimblewick': {
     status: 'full',
     on: {
       turnStart: (ctx, self, e) => {
         if (e.player !== self.owner) return;
-        const geese = heroesInPlay(ctx).filter((c) => hasGroup(ctx.def(c.card), 'Goose')).length;
+        const t = ctx.s.turn;
+        const cards = [...heroesInPlay(ctx).map((c) => c.card), ...(t.encounter ? [t.encounter] : []), ...t.minions];
+        const geese = cards.filter((c) => isOfGroup(ctx, c, 'Goose')).length;
         if (geese > 0) drawFor(ctx, self, geese);
       },
     },
   },
-  'fennick-puffcap-mycomancer': { status: 'full', on: { statForced: firstForcedStat('spore') } },
+  'fennick-puffcap-mycomancer': { status: 'full', on: { statForced: oncePerTurn('spore') } },
   // Rook: discard a resource, draw a resource.
   'captain-rook-halloran-skyship-captain': {
     status: 'full',
@@ -581,15 +556,16 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  'marshal-hedda-ironvow': { status: 'full', holdTheLine: true },
-  'pell-quillon-collegium-prodigy': { status: 'full', multiBidBonus: { cards: 2, bonus: 2 } },
-  'nettle-burrows-trouble-maker': { status: 'full', selfStatSub: 'G' },
-  'sister-aurelie-dane-physician': { status: 'full', selfStatSub: 'M' },
-  'gnash-the-butcher-of-bloodmire': { status: 'full', selfStatSub: 'P' },
-  'sigrun-stonefast-metal-singer': { status: 'full', drawFromDiscardChoice: true, partnerBonus: { with: 'varg-ironjaw', amount: 2 } },
+  'marshal-hedda-ironvow': { status: 'full', redirect: true },
+  'pell-quillon-collegium-prodigy': { status: 'full', on: { challengeFaced: challengeDraw('M') } },
+  'nettle-burrows-trouble-maker': { status: 'full', on: { challengeFaced: challengeDraw('G') } },
+  'gnash-the-butcher-of-bloodmire': { status: 'full', on: { challengeFaced: challengeDraw('P') } },
+  // Aurelie: the first time each turn anyone is forced onto another stat, or the stat needed to beat the challenge is changed.
+  'sister-aurelie-dane-physician': { status: 'full', on: { statForced: oncePerTurn('adapt'), statChanged: oncePerTurn('adapt') } },
+  'sigrun-stonefast-metal-singer': { status: 'full', drawFromDiscardChoice: true },
   'liriel-nightbloom': forceHero('G'),
   'thessaly-of-the-grove': forceHero('M'),
-  'kesh-the-bog-huntress': { ...forceHero('P'), on: { encounterEntered: encounterEntered('Beast') } },
+  'kesh-the-bog-huntress': { status: 'full', on: { encounterEntered: encounterEntered('Beast') } },
   'elowen-leafwatch-treetop-warden': {
     status: 'full',
     activations: [{
@@ -639,10 +615,21 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
-  // Mogra: when you win a location, draw a resource.
+  // Mogra: when you do not win the encounter (you fell, or survived without the location), take a random resource from an opponent.
   'mogra-swiftfoot-goblin-runner': {
     status: 'full',
-    on: { locationWon: (ctx, self, e) => { if (e.player === self.owner) drawFor(ctx, self); } },
+    on: {
+      bidLost: (ctx, self, e) => {
+        if (e.player !== self.owner) return;
+        const victims = others(ctx, self as OwnedSource).filter((p) => p.hand.length > 0);
+        if (!victims.length) return;
+        ctx.queue({
+          t: 'choose', purpose: 'mograSteal', player: self.owner!, source: nameOf(ctx, self.card),
+          prompt: 'Smash and Grab: take a random resource card from which opponent?',
+          options: victims.map((p) => ({ value: p.id, label: `${p.name} (${p.hand.length} cards)` })), min: 1, max: 1, data: { source: self.card },
+        });
+      },
+    },
   },
   // Tobin: once per turn before bidding, reveal three heroes; a Goose among them may join you, the rest are discarded.
   'tobin-quill-goose-keeper': {
@@ -669,33 +656,73 @@ export const ABILITIES: Record<string, Ability> = {
       },
     }],
   },
+  // Caelan: once per turn, when a Warden or Marchguard card enters play, a resource.
+  'caelan-halfelven': { status: 'full', on: entersPlay(['Warden', 'Marchguard'], true) },
+  // Brisa: at the end of bidding, turn one of your revealed resources face down; it counts for 3.
+  'brisa-blastcap-bombardier': {
+    status: 'full',
+    activations: [{
+      id: 'flip', label: 'Turn one of your revealed resources face down: it contributes 3', windows: ['endOfBidding'], per: 'turn',
+      canUse: (ctx, self) => !(ctx.location && abilityOf(ctx.location.id)?.facesUp) && brisaTargets(ctx, ctx.player(self.owner)).length > 0,
+      use: (ctx, self) => ctx.queueFirst({
+        t: 'choose', purpose: 'brisaFlip', player: self.owner, source: nameOf(ctx, self.card),
+        prompt: 'Improvised Explosives: turn one of your revealed resources face down. It contributes 3 instead of its value.',
+        options: brisaTargets(ctx, ctx.player(self.owner)).map((c) => cardOption(ctx, c)), min: 1, max: 1, data: { source: self.card },
+      }),
+    }],
+  },
+  // Grumma: at the end of bidding, if you bid at least 3 resources, a resource.
+  'grumma-ladlejaw-camp-cook': {
+    status: 'full',
+    on: {
+      endOfBidding: (ctx, self) => {
+        const p = ctx.player(self.owner!);
+        if (p.bids.filter((b) => !b.placedBy).length >= 3) drawFor(ctx, self);
+      },
+    },
+  },
+  // Aelder: once per turn, at the end of bidding, discard a resource and gain +3 until the end of the encounter.
+  'aelder-mossleaf-awakened-oak': {
+    status: 'full',
+    activations: [{
+      id: 'roots', label: 'Discard a resource: this hero gains +3 until the end of the encounter', windows: ['endOfBidding'], per: 'turn',
+      canUse: (ctx, self) => ctx.player(self.owner).hand.length > 0,
+      use: (ctx, self) => ctx.queueFirst({
+        t: 'choose', purpose: 'aelderRoots', player: self.owner, source: nameOf(ctx, self.card),
+        prompt: 'Inexorable Roots: discard a resource from your hand. This hero gains +3 until the end of the encounter.',
+        options: ctx.player(self.owner).hand.map((c) => cardOption(ctx, c)), min: 1, max: 1, data: { source: self.card },
+      }),
+    }],
+  },
   // Locations
   'the-goose-and-kettle': {
-    status: 'full',
+    status: 'full', partyBonus: 1,
     onEnter: (ctx, self) => {
       if (ctx.s.decks.hero.length + ctx.s.discards.hero.length === 0) return;
       for (const p of ctx.clockwise()) {
         ctx.queue({
           t: 'choose', purpose: 'waystoneDraw', player: p.id, source: nameOf(ctx, self.card),
-          prompt: 'The Goose & Kettle: draw a hero into play (then discard one of your heroes)?',
+          prompt: 'The Goose & Kettle: draw a hero into play? (Your party may have one more hero while this place is in play.)',
           options: [{ value: 'draw', label: 'Draw a hero' }, { value: 'skip', label: 'No thanks' }], min: 1, max: 1,
         });
       }
     },
   },
-  'the-barrowlands': groupBoost('Undead'),
-  'the-mirror-marches': groupBoost('Ironbound'),
+  'kingsford': drawPerOwn((ctx, p) => p.party.filter((c) => hasGroup(ctx.def(c), 'Human')).length),
+  'the-barrowlands': groupBoost('Undead', 3),
+  'the-deep-forge-of-karrak': groupBoost('Ironbound'),
+  'the-mirror-marches': { status: 'full', facesUp: true }, // The Mirror Mire
   'tomb-of-the-first-wardens': { status: 'full', challengeStat: 'G' },
   'the-silverwood-hunt': { status: 'full', challengeStat: 'P' },
   'the-sealed-archive': { status: 'full', challengeStat: 'M' },
-  'the-speaking-stones': { status: 'full', minionBonus: 1 },
+  'the-speaking-stones': { status: 'full', minionBonus: 2 },
   'the-old-quarry': { status: 'full' }, // "All" group handled by hasGroup()
   'the-storybook-glade': {
     status: 'full',
     onEnter: (ctx, self) => {
       for (const p of ctx.clockwise()) {
         if (p.party.length === 0) continue;
-        ctx.queue({ t: 'choose', purpose: 'faceDownHero', player: p.id, prompt: 'The Storybook Glade: choose a hero to turn face down', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        ctx.queue({ t: 'choose', purpose: 'faceDownHero', player: p.id, prompt: 'The Storybook Glade: choose a hero to turn face down', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card), data: { counter: 'heroes' } });
       }
     },
   },
@@ -704,13 +731,13 @@ export const ABILITIES: Record<string, Ability> = {
   'grimgate': drawPerKin('Dwarf'),
   'gorewatch': drawPerKin('Orc'),
   'hearthmeadow': drawPerKin('Halfellow'),
-  'barrowdeep': { status: 'full', extraMinion: 'Undead' },
+  'barrowdeep': { status: 'full', extraMinion: true, encountersCountAs: 'Undead' },
   'the-crack-in-the-marchstone': {
     status: 'full',
     onEnter: (ctx, self) => {
       for (const p of ctx.clockwise()) {
         if (p.party.length === 0) continue;
-        ctx.queue({ t: 'choose', purpose: 'discardHero', player: p.id, prompt: 'The Crack in the Marchstone: discard a hero', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        ctx.queue({ t: 'choose', purpose: 'discardHero', player: p.id, prompt: 'The Crack in the Marchstone: discard a hero', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card), data: { counter: 'heroes' } });
       }
       ctx.queue({ t: 'replaceLocation', mode: 'shuffleBack', source: nameOf(ctx, self.card) });
     },
@@ -726,7 +753,7 @@ export const ABILITIES: Record<string, Ability> = {
         if (ctx.s.turn.location !== self.card) return;
         const p = ctx.player(e.player);
         if (p.party.length === 0) return;
-        ctx.queue({ t: 'choose', purpose: 'discardHero', player: p.id, prompt: 'Parting Strand: discard a hero', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        ctx.queue({ t: 'choose', purpose: 'discardHero', player: p.id, prompt: 'Parting Strand: discard a hero', options: p.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card), data: { counter: 'heroes' } });
       },
     },
   },
@@ -735,7 +762,7 @@ export const ABILITIES: Record<string, Ability> = {
     onEnter: (ctx, self) => {
       for (const p of ctx.clockwise()) {
         if (p.hand.length === 0) continue;
-        ctx.queue({ t: 'choose', purpose: 'discardResource', player: p.id, prompt: 'The Hollow Between: discard a resource card', options: p.hand.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card) });
+        ctx.queue({ t: 'choose', purpose: 'discardResource', player: p.id, prompt: 'The Hollow Between: discard a resource card', options: p.hand.map((c) => cardOption(ctx, c)), min: 1, max: 1, source: nameOf(ctx, self.card), data: { counter: 'resources' } });
       }
     },
   },
@@ -780,7 +807,7 @@ export const ABILITIES: Record<string, Ability> = {
         ctx.queue({
           t: 'choose', purpose: 'heroMinion', player: loser.id, source: 'Infectious Zombie',
           prompt: 'Infectious Zombie: choose one of your heroes to join the encounter as a minion',
-          options: loser.party.map((c) => cardOption(ctx, c)), min: 1, max: 1,
+          options: loser.party.map((c) => cardOption(ctx, c)), min: 1, max: 1, data: { counter: 'heroes' },
         });
       },
     },

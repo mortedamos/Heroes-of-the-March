@@ -30,6 +30,10 @@ export interface Bid {
   resolved: boolean;
   /** Played face up rather than face down. */
   playedFaceUp: boolean;
+  /** Turned face down again after the reveal (Brisa): it still counts, but as a flat 3, and no longer as a face-up card. */
+  flipped?: boolean;
+  /** Set when an opponent's curse was placed here: the player who placed it (so it is not "your bid"). */
+  placedBy?: PlayerId;
 }
 
 export interface PlayerState {
@@ -64,13 +68,14 @@ export interface PlayerState {
 // of the turn. Each remembers its source so it can be countered (Aldric).
 
 export type EffectKind =
-  | 'silenceHero'        // target hero contributes no stats (Aelthir, failed goose roll)
+  | 'silenceHero'        // target hero contributes no stats (no card creates it now)
   | 'forceStat'          // target hero contributes `stat` instead (Liriel, Thessaly, Kesh, Ilvena)
   | 'statBonus'          // target player gains `amount` to `stat` ('all' = every stat) (Vaelis, geese)
   | 'negateBid'          // target bid's value counts as zero (no card uses it now)
   | 'grudge'             // target player: if they win this encounter they have -`amount` in the next (Oskar)
   | 'grudgeWatch'        // target player: when they use an ability against the owner's heroes, the owner draws a resource (Oskar)
-  | 'disableAbilities'   // target hero's abilities are off this turn (Aldric)
+  | 'disableAbilities'   // target hero's abilities are off this turn (no card creates it now)
+  | 'bidValue'           // target bid contributes `amount` instead of its value (Brisa)
   | 'autoWin';           // target player wins this encounter (Dagny)
 
 export interface TurnEffect {
@@ -147,6 +152,8 @@ export interface TurnState {
   heroMinions: CardId[];
   /** Cards set aside by effects this turn, discarded at the end (Vaelis's encounter card). */
   setAside: CardId[];
+  /** A location waiting for a player to answer a counter (Walls First): it replaces the current one unless it is countered. */
+  pendingLocation: CardId | null;
   /** An encounter found by a location's search (The Frostfells, Wreck of the Skyship Gallant): it is this turn's encounter. */
   chosenEncounter: CardId | null;
   /** Heroes chosen in the opening party draft; their enter-play effects wait for the end of the opening phase. */
@@ -227,12 +234,12 @@ export interface ChooseDecision extends DecisionBase {
 
 export type ChoosePurpose =
   | 'discardHero' | 'discardResource' | 'faceDownHero' | 'discardForCouncil' | 'fallHero'
-  | 'silenceHero' | 'forceHero' | 'rulingHero' | 'disableAbility'
-  | 'marenTarget' | 'marenGive' | 'pipClaim'
+  | 'forceHero' | 'rulingHero'
+  | 'marenTarget' | 'marenGive'
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
   | 'counterAbility' | 'oskarGrudge' | 'rumourMill' | 'fetch' | 'pickFight' | 'appleSwap'
   | 'curseTarget' | 'vaelisGive' | 'rumourTarget' | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'heroMinion'
-  | 'partyDraft';
+  | 'partyDraft' | 'redirectHero' | 'goldiePick' | 'torviFire' | 'aelderRoots' | 'brisaFlip' | 'mograSteal';
 
 export type Decision = RecruitOfferDecision | RecruitPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;
 
@@ -254,7 +261,12 @@ export type Task =
   /** A player loses a hero of their choice (run one at a time, so each faller finishes before the next starts). */
   | { t: 'heroFalls'; player: PlayerId }
   /** Draw resources (queued so it can follow a choice, e.g. Skyship Manifest). */
-  | { t: 'draw'; player: PlayerId; n: number; source: string };
+  | { t: 'draw'; player: PlayerId; n: number; source: string }
+  /** A hostile effect on a hero on its way to the table: its player may redirect it (Hedda) or counter it (Aldric) first. */
+  | { t: 'defend'; effect: DefendedEffect; stage: 'redirect' | 'counter' | 'apply'; then?: 'statForced' };
+
+/** An effect waiting for the defences of the player it would land on. */
+export interface DefendedEffect { kind: EffectKind; source: CardId; owner: PlayerId; target: string; stat?: Stat | 'all'; amount?: number }
 
 // ---------------------------------------------------------------------------
 

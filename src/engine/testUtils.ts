@@ -38,6 +38,7 @@ export function locateAll(s: GameState): Map<CardId, string[]> {
   for (const c of t.minions) put(c, 'minion');
   for (const c of t.heroMinions) put(c, 'heroMinion');
   for (const c of t.setAside) put(c, 'setAside');
+  if (t.pendingLocation) put(t.pendingLocation, 'pendingLocation');
   if (t.chosenEncounter) put(t.chosenEncounter, 'chosenEncounter');
   if (s.pending?.kind === 'recruit.place') put(s.pending.drawn, 'pendingDrawn');
   return where;

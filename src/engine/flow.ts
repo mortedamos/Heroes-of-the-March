@@ -12,15 +12,15 @@ import type { Ctx } from './context';
 import { IllegalMove } from './context';
 import type { EncounterDef, HeroDef, Stat } from './cardTypes';
 import {
-  activeEffects, addEffect, cardOption, heroEnters, councilHeroes, disabledCards, discardHero,
-  drawRaw, drawResources, enforcePartyLimit, fire, flushOpeningEntrants, noteMultiBid, hasGroup, leaveLocation, locationEnters, ownerOf, peekOption,
+  activeEffects, addEffect, cardOption, heroEnters, councilHeroes, defenderOf, defendHeroEffect, disabledCards, discardHero,
+  drawRaw, drawResources, enforceAllLimits, enforcePartyLimit, fire, flushOpeningEntrants, hasGroup, leaveLocation, locationEnters, ownerOf, partyLoad, partySize, peekOption,
   playerHas, replaceLocation, statName,
 } from './effects';
 import { nextFloat } from './rng';
 import { ALL_VISIBLE, challengeStat, difficultyFor, totalFor } from './totals';
 import {
   type AbilityOption, type AbilityWindow, type Bid, type CardId, type ChooseTask, type ChoosePurpose, type DeckName,
-  type HoldReason, type PlayerId, type PlayerState, type ResultPart, type Step, type Task, type TurnResult,
+  type DefendedEffect, type HoldReason, type PlayerId, type PlayerState, type ResultPart, type Step, type Task, type TurnResult,
 } from './types';
 
 export function drawSize(ctx: Ctx): number {
@@ -130,37 +130,7 @@ export function useActivation(ctx: Ctx, p: PlayerState, window: AbilityWindow, s
     t.used[key] = (t.used[key] ?? 0) + 1;
   }
   ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(source), ability: abilityId, label: act.label });
-  // Aldric's player gets to answer before it resolves.
-  const shield = counterer(ctx, p);
-  if (shield) {
-    ctx.queueFirst({
-      t: 'choose', purpose: 'counterAbility', player: shield.owner, source: ctx.def(shield.card).name,
-      prompt: `${p.name} used ${ctx.def(source).name}. Counter it with Shield of the Dawn?`,
-      options: [{ value: 'counter', label: 'Counter it' }, { value: 'allow', label: 'Let it resolve' }],
-      min: 1, max: 1, data: { user: p.id, source, ability: abilityId, shield: shield.card },
-    });
-    return;
-  }
-  runActivation(ctx, p, source, abilityId);
-}
-
-function runActivation(ctx: Ctx, p: PlayerState, source: CardId, abilityId: string): void {
-  const act = abilityOf(ctx.defId(source))!.activations!.find((a) => a.id === abilityId)!;
   act.use(ctx, { card: source, owner: p.id, kind: 'hero' });
-}
-
-/** The first other player (clockwise) holding a live counter ability (Aldric) that is still unused this turn. */
-function counterer(ctx: Ctx, user: PlayerState): { card: CardId; owner: PlayerId } | null {
-  const off = disabledCards(ctx);
-  for (const o of ctx.clockwise()) {
-    if (o.id === user.id) continue;
-    for (const card of o.party) {
-      if (off.has(card) || !abilityOf(ctx.defId(card))?.counter) continue;
-      if ((ctx.s.turn.used[usageKey(card, 'shield')] ?? 0) > 0) continue;
-      return { card, owner: o.id };
-    }
-  }
-  return null;
 }
 
 /** Walk players clockwise from the current player, offering abilities usable in this window. */
@@ -207,20 +177,22 @@ export function revealEncounter(ctx: Ctx): boolean {
     fire(ctx, 'encounterEntered', { card: m, asMinion: true });
     fire(ctx, 'minionDrawn', { card: m });
   };
-  if (sidekick) addMinion(sidekick);
-  for (let i = 0; i < (sidekick ? 0 : def.minions.count); i++) {
+  const drawMinion = (): CardId | null => {
     const group = def.minions.group;
     // Skarra's minion can be anyone but another Skarra.
     const skarra = hasGroup(def, 'Skarra') && !group;
-    const m = group ? ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), group))
+    return group ? ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), group))
       : skarra ? ctx.takeMatching('encounter', (c) => !hasGroup(ctx.def(c), 'Skarra')) : ctx.take('encounter');
+  };
+  if (sidekick) addMinion(sidekick);
+  for (let i = 0; i < (sidekick ? 0 : def.minions.count); i++) {
+    const m = drawMinion();
     if (!m) break;
     addMinion(m);
   }
-  // Barrowdeep: an Undead encounter draws one extra Undead minion.
-  const extra = ctx.location ? abilityOf(ctx.location.id)?.extraMinion : undefined;
-  if (extra && hasGroup(def, extra)) {
-    const m = ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), extra));
+  // Barrowdeep: the encounter draws one extra minion.
+  if (ctx.location && abilityOf(ctx.location.id)?.extraMinion) {
+    const m = drawMinion();
     if (m) addMinion(m);
   }
   return true;
@@ -364,8 +336,9 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       t.bidder = (t.bidder + 1) % n;
       return;
     }
-    const faceUp = p.bids.length === 0;
-    const canFaceDown = faceUp && Boolean(playerHas(ctx, p, (a) => a.mayBidFaceDown));
+    const mirror = Boolean(ctx.location && abilityOf(ctx.location.id)?.facesUp);
+    const faceUp = p.bids.length === 0 || mirror;
+    const canFaceDown = faceUp && !mirror && Boolean(playerHas(ctx, p, (a) => a.mayBidFaceDown));
     ctx.decide({ kind: 'bid', player: p.id, faceUp, canFaceDown, abilities });
   },
 
@@ -382,7 +355,6 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
         bid.visible = true;
         ctx.emit({ type: 'revealed', player: p.id, card: ctx.ref(bid.card) });
         resolveBid(ctx, p, bid);
-        noteMultiBid(ctx, p);
         t.revealCursor = (seat + 1) % n;
         return;
       }
@@ -394,6 +366,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
 
   resolve(ctx) {
     const t = ctx.s.turn;
+    fire(ctx, 'endOfBidding', { turn: t.number });
     const rows: TurnResult['rows'] = [];
     for (const p of ctx.clockwise()) {
       if (!ctx.s.rules.allPlayersFaceEncounter && p.bids.length === 0) continue;
@@ -437,6 +410,9 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     t.result = result;
     ctx.emit({ type: 'outcome', result });
 
+    // Everyone who did not win the encounter (Mogra): they fell, or survived without taking the location.
+    for (const r of rows) if (r.player !== winner) fire(ctx, 'bidLost', { player: r.player });
+
     // Cards that reward the survivors (The Treasure Trow).
     const survivorIds = rows.filter((r) => r.survived).map((r) => r.player);
     if (survivorIds.length) {
@@ -469,6 +445,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       wp.renown += renown;
       t.location = null;
       t.extraLocations = [];
+      enforceAllLimits(ctx);
       ctx.emit({ type: 'renownGained', player: winner, amount: renown, total: wp.renown, locations: locations.map((c) => ctx.ref(c)) });
     }
 
@@ -525,7 +502,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
   turnEnd(ctx) {
     const t = ctx.s.turn;
     discardEncounterCards(ctx, t.encounter, t.minions);
-    for (const c of t.setAside) ctx.discard('encounter', c);
+    for (const c of t.setAside) ctx.discard(ctx.def(c).kind === 'hero' ? 'hero' : 'encounter', c);
     for (const c of t.heroMinions) ctx.discard('hero', c);
     t.encounter = null;
     t.minions = [];
@@ -535,6 +512,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       leaveLocation(ctx, t.location);
       ctx.discard('location', t.location);
       t.location = null;
+      enforceAllLimits(ctx);
     }
     // Unclaimed bonus locations were never revealed: return them unseen.
     if (t.extraLocations.length) ctx.returnToDeck('location', t.extraLocations);
@@ -649,20 +627,17 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
     case 'heroMinion': return keep((v) => p.party.includes(v));
     case 'discardResource':
     case 'discardForCouncil':
+    case 'torviFire':
+    case 'aelderRoots':
     case 'marenGive': return keep(inHand);
+    case 'brisaFlip': return keep((v) => p.bids.some((b) => b.card === v && b.visible && !b.flipped));
+    case 'mograSteal': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p && o.hand.length > 0));
     case 'fetch': return keep((v) => v === 'skip' || inHand(v));
     // Another draw may have reshuffled the discard pile while this choice waited: those cards are hidden again.
     case 'sigrunPick': return keep((v) => v === 'deck' || ctx.s.discards.resource.includes(v));
-    case 'silenceHero':
     case 'forceHero':
-    case 'rulingHero':
-    case 'disableAbility': return keep(opposingHero);
+    case 'rulingHero': return keep(opposingHero);
     case 'marenTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o.hand.length > 0));
-    case 'pipClaim': return keep((v) => {
-      const [pid, idx] = v.split(':');
-      const bid = ctx.s.players.find((o) => o.id === pid)?.bids[Number(idx)];
-      return Boolean(bid && !bid.visible);
-    });
     case 'rumourTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p && o.bids.some((b) => !b.visible)));
     case 'curseTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p));
     case 'appleSwap': return keep((v) => ctx.s.players.some((o) => o.bids.some((b) => b.card === v && b.visible)));
@@ -671,9 +646,75 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
   }
 }
 
+/** Ask `victim` whether to counter (their once-per-turn Shield of the Dawn / Walls First). */
+function counterPrompt(ctx: Ctx, victimId: PlayerId, shield: CardId, prompt: string, data: Record<string, string | number>): ChooseTask {
+  return {
+    t: 'choose', purpose: 'counterAbility', player: victimId, source: ctx.def(shield).name, prompt,
+    options: [{ value: 'counter', label: 'Counter it' }, { value: 'allow', label: 'Let it happen' }], min: 1, max: 1,
+    data: { ...data, shield },
+  };
+}
+
+const shortOf = (ctx: Ctx, card: CardId) => ctx.def(card).name.split(',')[0]!;
+
+const flatten = (e: DefendedEffect): Record<string, string | number> => ({
+  ek: e.kind, es: e.source, eo: e.owner, et: e.target, estat: e.stat ?? '', eamt: e.amount ?? 0,
+});
+const unflatten = (d: Record<string, string | number>): DefendedEffect => ({
+  kind: String(d['ek']) as DefendedEffect['kind'], source: String(d['es']), owner: String(d['eo']), target: String(d['et']),
+  ...(d['estat'] ? { stat: String(d['estat']) as Stat | 'all' } : {}), ...(Number(d['eamt']) ? { amount: Number(d['eamt']) } : {}),
+});
+
+/** One step of a hostile effect's walk past the defences of the hero's player: Hedda's redirect, then Aldric's counter, then it lands. */
+function defend(ctx: Ctx, task: Extract<Task, { t: 'defend' }>): void {
+  const e = task.effect;
+  const then = task.then ?? '';
+  const heroOwner = ctx.s.cards[e.target] ? ownerOf(ctx, e.target) : null;
+  const victim = heroOwner && heroOwner !== e.owner ? ctx.player(heroOwner) : null;
+  if (victim && task.stage === 'redirect') {
+    const hedda = defenderOf(ctx, victim, 'redirect', e.target);
+    if (hedda) {
+      ctx.queueFirst({
+        t: 'choose', purpose: 'redirectHero', player: victim.id, source: ctx.def(hedda).name,
+        prompt: `${shortOf(ctx, e.source)} targets ${shortOf(ctx, e.target)}. Have ${shortOf(ctx, hedda)} take it instead, and draw a resource?`,
+        options: [{ value: 'redirect', label: 'Take it instead' }, { value: 'allow', label: 'Let it land' }], min: 1, max: 1,
+        data: { ...flatten(e), then, hedda },
+      });
+      return;
+    }
+    ctx.queueFirst({ ...task, stage: 'counter' });
+    return;
+  }
+  if (victim && task.stage === 'counter') {
+    const shield = defenderOf(ctx, victim, 'heroes');
+    if (shield) {
+      ctx.queueFirst(counterPrompt(ctx, victim.id, shield,
+        `${shortOf(ctx, e.source)} would affect your hero ${shortOf(ctx, e.target)}. Counter it with ${shortOf(ctx, shield)}?`,
+        { kind: 'effect', ...flatten(e), then, src: e.source }));
+      return;
+    }
+  }
+  const added = addEffect(ctx, e);
+  if (added && then === 'statForced' && heroOwner) fire(ctx, 'statForced', { player: heroOwner, target: e.target });
+}
+
 function runTask(ctx: Ctx, task: Task): void {
   switch (task.t) {
+    case 'defend':
+      defend(ctx, task);
+      return;
     case 'choose': {
+      // A location's or encounter's effect on your heroes (or resources) can be countered first.
+      const kind = task.data?.['counter'];
+      if ((kind === 'heroes' || kind === 'resources') && !task.data?.['checked']) {
+        const shield = defenderOf(ctx, ctx.player(task.player), kind);
+        if (shield) {
+          ctx.s.tasks.unshift({ ...task, data: { ...task.data, checked: 1 } });
+          ctx.s.tasks.unshift(counterPrompt(ctx, task.player, shield,
+            `${task.source} would affect your ${kind}. Counter it with ${shortOf(ctx, shield)}?`, { kind: 'task', src: shield }));
+          return;
+        }
+      }
       const options = stillValid(ctx, task);
       const min = Math.min(task.min, options.length);
       const max = Math.min(task.max, options.length);
@@ -753,44 +794,62 @@ export function applyChoice(
         ctx.emit({ type: 'resourceDiscarded', player: p.id, card: ctx.ref(pick), reason: 'Crossed Paths' });
         councilHeroes(ctx, p.id, 1, 'Crossed Paths');
         break;
-      case 'silenceHero':
-        addEffect(ctx, { kind: 'silenceHero', source: String(data['source']), owner: p.id, target: pick });
-        break;
       case 'forceHero': {
         const stat = data['stat'] as Stat;
-        const added = addEffect(ctx, { kind: 'forceStat', source: String(data['source']), owner: p.id, target: pick, stat });
-        const victim = ownerOf(ctx, pick);
-        if (added && victim) fire(ctx, 'statForced', { player: victim, target: pick });
+        defendHeroEffect(ctx, { kind: 'forceStat', source: String(data['source']), owner: p.id, target: pick, stat }, 'statForced');
         break;
       }
       case 'rulingHero': {
         // Ruling of the Conclave: the hero must use whichever of its stats is lowest.
         const d = ctx.def(pick) as HeroDef;
         const stat = (['P', 'M', 'G'] as Stat[]).reduce((lo, s) => (d.stats[s] < d.stats[lo] ? s : lo));
-        const added = addEffect(ctx, { kind: 'forceStat', source: String(data['source']), owner: p.id, target: pick, stat });
-        if (added) ctx.log(p.id, 'Ruling of the Conclave', `${d.name} must use ${statName(stat)}`);
-        const victim = ownerOf(ctx, pick);
-        if (added && victim) fire(ctx, 'statForced', { player: victim, target: pick });
+        ctx.log(p.id, 'Ruling of the Conclave', `${d.name} must use ${statName(stat)}`);
+        defendHeroEffect(ctx, { kind: 'forceStat', source: String(data['source']), owner: p.id, target: pick, stat }, 'statForced');
+        break;
+      }
+      case 'redirectHero': {
+        // Hedda: take the effect instead, and draw a resource. Then Aldric may still counter it.
+        const effect = unflatten(data);
+        const then = data['then'] ? 'statForced' as const : undefined;
+        if (pick === 'redirect') {
+          const hedda = String(data['hedda']);
+          t.used[`${hedda}:redirect`] = 1;
+          ctx.emit({ type: 'abilityUsed', player: p.id, source: ctx.ref(hedda), ability: 'redirect', label: 'Takes the effect instead of one of your other heroes' });
+          effect.target = hedda;
+          drawResources(ctx, p.id, 1, ctx.def(hedda).name);
+        }
+        ctx.queueFirst({ t: 'defend', effect, stage: 'counter', ...(then ? { then } : {}) });
         break;
       }
       case 'counterAbility': {
-        const user = ctx.player(String(data['user']));
-        const source = String(data['source']);
+        const kind = String(data['kind']);
         const shield = String(data['shield']);
-        if (pick === 'counter') {
-          t.used[usageKey(shield, 'shield')] = 1; // shares Shield of the Dawn's once per turn
-          ctx.emit({ type: 'abilityCountered', player: p.id, source: ctx.ref(source), by: ctx.ref(shield) });
-          const cancelled = activeEffects(ctx).filter((e) => e.source === source);
-          if (addEffect(ctx, { kind: 'disableAbilities', source: shield, owner: p.id, target: source })) {
-            for (const e of cancelled) ctx.emit({ type: 'effectCancelled', effectId: e.id });
-          }
-        } else runActivation(ctx, user, source, String(data['ability']));
-        break;
-      }
-      case 'disableAbility': {
-        const cancelled = activeEffects(ctx).filter((e) => e.source === pick);
-        if (addEffect(ctx, { kind: 'disableAbilities', source: String(data['source']), owner: p.id, target: pick })) {
-          for (const e of cancelled) ctx.emit({ type: 'effectCancelled', effectId: e.id });
+        const countered = pick === 'counter';
+        if (countered) {
+          t.used[`${shield}:shield`] = 1; // once per turn per card
+          ctx.emit({ type: 'abilityCountered', player: p.id, source: ctx.ref(String(data['src'] ?? shield)), by: ctx.ref(shield) });
+        }
+        if (kind === 'effect') {
+          if (!countered) ctx.queueFirst({ t: 'defend', effect: unflatten(data), stage: 'apply', ...(data['then'] ? { then: 'statForced' as const } : {}) });
+        } else if (kind === 'task') {
+          if (countered) ctx.s.tasks.shift(); // the effect it would have had on this player's cards (the next task) does not happen
+        } else if (kind === 'location') {
+          const next = String(data['next']);
+          t.pendingLocation = null;
+          if (countered) ctx.returnToDeck('location', [next]);
+          else replaceLocation(ctx, next, String(data['mode']) as 'shuffleBack' | 'discard', String(data['reason']), true);
+        } else if (kind === 'curse') {
+          if (countered) {
+            const from = ctx.player(String(data['from']));
+            const card = String(data['card']);
+            from.bids = from.bids.filter((b) => b.card !== card);
+            ctx.discard('resource', card);
+            ctx.emit({ type: 'resourceDiscarded', player: from.id, card: ctx.ref(card), reason: 'Countered' });
+          } else placeCurse(ctx, String(data['card']), String(data['from']), String(data['to']));
+        } else if (kind === 'trade') {
+          if (!countered) swapCards(ctx, ctx.player(String(data['from'])), ctx.player(String(data['to'])), String(data['give']));
+        } else if (kind === 'steal') {
+          if (!countered) stealRandom(ctx, ctx.player(String(data['to'])), ctx.player(String(data['from'])), String(data['source']));
         }
         break;
       }
@@ -804,26 +863,59 @@ export function applyChoice(
       case 'marenGive': {
         const target = ctx.player(String(data['target']));
         if (!target.hand.length) break;
-        const taken = target.hand.splice(Math.floor(randomUnit(ctx) * target.hand.length), 1)[0]!;
-        p.hand = p.hand.filter((c) => c !== pick);
-        target.hand.push(pick);
-        p.hand.push(taken);
-        ctx.emit({ type: 'cardsTraded', from: p.id, to: target.id, gave: ctx.ref(pick), got: ctx.ref(taken) });
+        const shield = defenderOf(ctx, target, 'resources');
+        if (shield) {
+          ctx.queueFirst(counterPrompt(ctx, target.id, shield, `Royal Requisition would trade a card with your hand. Counter it with ${shortOf(ctx, shield)}?`,
+            { kind: 'trade', from: p.id, to: target.id, give: pick, src: String(data['src'] ?? shield) }));
+        } else swapCards(ctx, p, target, pick);
         break;
       }
-      case 'pipClaim': {
-        const [pid, idx] = pick.split(':');
-        const from = ctx.player(pid!);
-        const bid = from.bids[Number(idx)];
-        if (!bid || bid.visible) break;
-        from.bids.splice(Number(idx), 1);
-        p.bids.push(bid);
-        // Balance option: the victim gets a random card from Pip's hand in its place, face down.
-        if (p.hand.length && playerHas(ctx, p, (a) => a.claimSwapsCard)) {
-          const given = p.hand.splice(Math.floor(randomUnit(ctx) * p.hand.length), 1)[0]!;
-          from.bids.splice(Number(idx), 0, { card: given, visible: false, resolved: false, playedFaceUp: false });
-        }
-        ctx.emit({ type: 'bidClaimed', from: from.id, to: p.id });
+      case 'mograSteal': {
+        const victim = ctx.player(pick);
+        const shield = defenderOf(ctx, victim, 'resources');
+        const source = ctx.def(String(data['source'])).name;
+        if (shield) {
+          ctx.queueFirst(counterPrompt(ctx, victim.id, shield, `${p.name} would take a random card from your hand. Counter it with ${shortOf(ctx, shield)}?`,
+            { kind: 'steal', from: victim.id, to: p.id, source, src: String(data['source']) }));
+        } else stealRandom(ctx, p, victim, source);
+        break;
+      }
+      case 'torviFire': {
+        // Uncontrolled Explosion: discard the chosen resource and Torvi himself; every opponent has -6.
+        const torvi = String(data['source']);
+        p.hand = p.hand.filter((c) => c !== pick);
+        ctx.discard('resource', pick);
+        ctx.emit({ type: 'resourceDiscarded', player: p.id, card: ctx.ref(pick), reason: 'Uncontrolled Explosion' });
+        discardHero(ctx, p, torvi, 'Uncontrolled Explosion');
+        for (const o of ctx.s.players) if (o.id !== p.id) addEffect(ctx, { kind: 'statBonus', source: torvi, owner: p.id, target: o.id, stat: 'all', amount: -6 });
+        ctx.log(p.id, ctx.def(torvi).name, 'Uncontrolled Explosion! Every opponent has -6');
+        break;
+      }
+      case 'aelderRoots': {
+        const aelder = String(data['source']);
+        p.hand = p.hand.filter((c) => c !== pick);
+        ctx.discard('resource', pick);
+        ctx.emit({ type: 'resourceDiscarded', player: p.id, card: ctx.ref(pick), reason: 'Inexorable Roots' });
+        addEffect(ctx, { kind: 'statBonus', source: aelder, owner: p.id, target: p.id, stat: 'all', amount: 3 });
+        ctx.log(p.id, ctx.def(aelder).name, 'Inexorable Roots: +3 until the end of the encounter');
+        break;
+      }
+      case 'brisaFlip': {
+        const bid = p.bids.find((b) => b.card === pick);
+        if (!bid) break;
+        bid.flipped = true;
+        addEffect(ctx, { kind: 'bidValue', source: String(data['source']), owner: p.id, target: pick, amount: 3 });
+        ctx.log(p.id, ctx.def(String(data['source'])).name, `turns ${ctx.def(pick).name} face down: it contributes 3`);
+        break;
+      }
+      case 'goldiePick': {
+        // Tavern Keeper: three heroes were drawn; the one chosen goes on to the usual keep-or-let-go decision, the others are discarded.
+        const drawn = String(data['cards']).split(',').filter(Boolean);
+        t.setAside = t.setAside.filter((c) => !drawn.includes(c));
+        const chosen = drawn.find((c) => ctx.defId(c) === pick);
+        for (const c of drawn) if (c !== chosen) ctx.discard('hero', c);
+        if (!chosen) { t.cursor += 1; break; }
+        ctx.decide({ kind: 'recruit.place', player: p.id, drawn: chosen, mustReplace: partyLoad(ctx, p, chosen) > partySize(ctx, p, chosen) });
         break;
       }
       case 'peekReplace': {
@@ -908,9 +1000,11 @@ export function applyChoice(
         const from = ctx.s.players.find((o) => o.bids.some((b) => b.card === card));
         const to = ctx.s.players.find((o) => o.id === pick && o !== from);
         if (!from || !to) break;
-        const [bid] = from.bids.splice(from.bids.findIndex((b) => b.card === card), 1);
-        to.bids.push(bid!);
-        ctx.emit({ type: 'cursePlaced', from: from.id, to: to.id, card: ctx.ref(card) });
+        const shield = defenderOf(ctx, to, 'resources');
+        if (shield) {
+          ctx.queueFirst(counterPrompt(ctx, to.id, shield, `${ctx.def(card).name} would be placed in front of you. Counter it with ${shortOf(ctx, shield)}?`,
+            { kind: 'curse', card, from: from.id, to: to.id, src: card }));
+        } else placeCurse(ctx, card, from.id, to.id);
         break;
       }
       case 'appleSwap': {
@@ -988,11 +1082,7 @@ export function applyChoice(
         if (!c) break;
         ctx.emit({ type: 'drew', player: p.id, deck: 'hero', cards: [ctx.ref(c)], reason: 'The Goose & Kettle' });
         heroEnters(ctx, p, c, null);
-        ctx.queueFirst({
-          t: 'choose', purpose: 'discardHero', player: p.id, source: 'The Goose & Kettle',
-          prompt: 'The Goose & Kettle: now discard one of your heroes',
-          options: [...p.party, ...p.inactive, ...p.resting].map((x) => cardOption(ctx, x)), min: 1, max: 1,
-        });
+        enforcePartyLimit(ctx, p, 'The Goose & Kettle');
         break;
       }
       case 'heroMinion':
@@ -1002,6 +1092,36 @@ export function applyChoice(
         break;
     }
   }
+}
+
+/** A curse leaves its player's bids and is placed in front of the target, where its value counts against them. */
+function placeCurse(ctx: Ctx, card: CardId, fromId: PlayerId, toId: PlayerId): void {
+  const from = ctx.player(fromId);
+  const to = ctx.player(toId);
+  const at = from.bids.findIndex((b) => b.card === card);
+  if (at < 0) return;
+  const [bid] = from.bids.splice(at, 1);
+  to.bids.push({ ...bid!, placedBy: fromId });
+  ctx.emit({ type: 'cursePlaced', from: fromId, to: toId, card: ctx.ref(card) });
+}
+
+/** Royal Requisition: `p` gives `give` and takes a random card from `target`'s hand. */
+function swapCards(ctx: Ctx, p: PlayerState, target: PlayerState, give: CardId): void {
+  if (!target.hand.length || !p.hand.includes(give)) return;
+  const taken = target.hand.splice(Math.floor(randomUnit(ctx) * target.hand.length), 1)[0]!;
+  p.hand = p.hand.filter((c) => c !== give);
+  target.hand.push(give);
+  p.hand.push(taken);
+  ctx.emit({ type: 'cardsTraded', from: p.id, to: target.id, gave: ctx.ref(give), got: ctx.ref(taken) });
+}
+
+/** Smash and Grab: `thief` takes a random card from `victim`'s hand. */
+function stealRandom(ctx: Ctx, thief: PlayerState, victim: PlayerState, source: string): void {
+  if (!victim.hand.length) return;
+  const taken = victim.hand.splice(Math.floor(randomUnit(ctx) * victim.hand.length), 1)[0]!;
+  thief.hand.push(taken);
+  ctx.emit({ type: 'drew', player: thief.id, deck: 'resource', cards: [ctx.ref(taken)], reason: source });
+  ctx.log(thief.id, source, `takes a random card from ${victim.name}`);
 }
 
 /** Uniform [0,1) from the game RNG (e.g. a random card from another hand). */
