@@ -1,5 +1,5 @@
 // Usage (after `npm run balance:build`):
-//   node _build/balance/cli.mjs run <card|party|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--ease P,M,G] [--strip allied,nemesis,companion] [--stripcard id,id] [--rules JSON] [--tweak JSON] [--only id,id] [--out file.json]
+//   node _build/balance/cli.mjs run <card|party|nat> [--games N] [--ns 3,4] [--ablate] [--level normal] [--seed S] [--shards K] [--ease P,M,G] [--strip allied,nemesis,companion] [--stripcard id,id] [--stats JSON] [--rules JSON] [--tweak JSON] [--only id,id] [--out file.json]
 //   (--only keeps just the heroes whose id contains one of the given fragments; card experiment only)
 // Experiments are fully determined by (seed, game index): rerunning gives identical numbers.
 
@@ -9,7 +9,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BotLevel } from '../../src/bots/heuristic';
 import { ABILITIES } from '../../src/engine/abilities';
-import { allDefs, stripNamedAbilities, stripNamedAbilitiesOf } from '../../src/engine/cards';
+import { allDefs, getDef, stripNamedAbilities, stripNamedAbilitiesOf } from '../../src/engine/cards';
 import { addGameMetrics, heroIds, merge, mix, newCell, playGame, strip, type AggMap, type Cell, type GameSpec, type Shard } from './sim';
 
 
@@ -38,6 +38,8 @@ function runShard(experiment: string, opt: Record<string, string>, shard: number
   }
   // --strip allied,nemesis,companion: switch those named abilities off (a diagnostic experiment).
   if (opt.strip) stripNamedAbilities(opt.strip.split(','));
+  // --stats '{"hero-id":[P,M,G]}': change those heroes' printed stats for the run (a what-if experiment).
+  if (opt.stats) for (const [id, s] of Object.entries(JSON.parse(opt.stats) as Record<string, number[]>)) { const d = getDef(id); if (d.kind === 'hero') d.stats = { P: s[0]!, M: s[1]!, G: s[2]! }; }
   // --stripcard id-fragment,...: take those heroes' Allied, Nemesis and Companion To away (a what-if experiment).
   if (opt.stripcard) for (const frag of opt.stripcard.split(',')) { const id = heroIds().find((h) => h.includes(frag)); if (!id) throw new Error('no hero ' + frag); stripNamedAbilitiesOf(id); }
   const ablate = opt.ablate === '1';

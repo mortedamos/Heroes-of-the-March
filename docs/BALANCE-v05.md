@@ -154,3 +154,35 @@ Taking a thing away "anywhere" also changes the random opponents, so those rows 
 | At most 2 free riders | 97.2% | 8.8 | 2.92 | 2.66 | 2.23 | 1.99 | 1.79 |
 | At most 1 free rider | 97.2% | 8.9 | 2.97 | 2.67 | 1.55 | 1.94 | 1.74 |
 
+### Single-hero what-ifs (2000 games each at 3 and 4 players, margin about 0.07)
+
+The same hero forced into one seat, with one thing changed. Nothing here is applied to the cards.
+
+| Hero | Change | Relative win rate |
+|---|---|---|
+| **Aelthir Moonveil** | as written | 1.83 |
+|  | no Allied | 1.22 |
+|  | no draw trigger | 1.12 |
+| **Caelan Halfelven** | as written | 1.35 |
+|  | no Allied | 1.06 |
+|  | no draw trigger | 0.92 |
+| **Kazra Emberdeep** | as written | 1.23 |
+|  | no Allied | 0.98 |
+|  | no draw trigger | 1.04 |
+| **Varg Ironjaw** | as written | 1.28 |
+|  | no draw trigger | 1.02 |
+|  | no Companion To | 1.13 |
+| **Aelder Mossleaf** | as written | 1.33 |
+|  | stats 4/1/3 | 1.06 |
+|  | stats 4/1/3, no +3 | 0.93 |
+|  | no Companion To | 1.15 |
+| **Brunna Stonefast** | as written | 1.14 |
+|  | stats 3/2/3 | 1.00 |
+|  | no Companion To | 0.87 |
+| **Torvi Cinderkeg** | as written | 1.00 |
+|  | stats 3/2/3 | 0.99 |
+| **Moss** | as written | 1.04 |
+|  | stats 3/2/3 | 0.97 |
+| **Ysolde** | as written | 1.58 |
+|  | no Allied or Nemesis | 1.36 |
+
