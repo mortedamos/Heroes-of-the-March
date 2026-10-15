@@ -621,7 +621,10 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
         const o = t.view.players.find((x) => x.id === v);
         if (!o) return -99;
         const stat = t.stat;
-        const lost = stat ? o.party.filter((h) => companionsOf(h.def).length > 0).reduce((a, h) => a + t.heroIn(h, stat), 0) : 0;
+        // A Companion rides free while a hero it is Companion To is in the party (face down or resting heroes count as present).
+        const present = new Set([...o.party, ...o.inactive, ...o.resting].map((h) => h.def));
+        const riding = o.party.filter((h) => companionsOf(h.def).some((d) => present.has(d)));
+        const lost = stat ? riding.reduce((a, h) => a + t.heroIn(h, stat), 0) : 0;
         return lost + t.threat(o) * 0.1;
       })];
   }

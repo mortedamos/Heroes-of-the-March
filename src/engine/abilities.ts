@@ -10,12 +10,12 @@
 // Hooks run inside the authoritative engine only. They must use ctx helpers
 // and never read from anything but the GameState, so they stay deterministic.
 
-import { CARDS, companionsOf, getDef } from './cards';
+import { CARDS, getDef } from './cards';
 import type { CardKind, EncounterDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import {
   addEffect, cardOption, councilHeroes, drawMinionNow, drawResources, fire, hasGroup, heroesInPlay, isOfGroup, kingdomsOf,
-  peekOption, revealTop, statName,
+  peekOption, revealTop, ridingHeroes, statName,
 } from './effects';
 import { baseStrength, challengeStat } from './totals';
 import type { AbilityWindow, CardId, DeckName, PlayerId, PlayerState } from './types';
@@ -859,11 +859,11 @@ export const ABILITIES: Record<string, Ability> = {
   'pariapt-of-peace': { status: 'full', onReveal: (ctx) => { ctx.s.turn.namedDisabled = true; } },
   // The Tome of Nethrak: an Undead minion joins this encounter, for everyone.
   'the-tome-of-nethrak': { status: 'full', onReveal: (ctx) => { drawMinionNow(ctx, 'Undead'); } },
-  // Immobilizing Word: its player picks an opponent whose Companion heroes (heroes that are Companion To others) are turned face down for this encounter.
+  // Immobilizing Word: its player picks an opponent whose Companion heroes (those riding free with a hero they are Companion To) are turned face down for this encounter.
   'immobilizing-word': {
     status: 'full',
     onReveal: (ctx, self) => {
-      const targets = ctx.s.players.filter((p) => p.id !== self.owner && p.party.some((c) => companionsOf(ctx.defId(c)).length > 0));
+      const targets = ctx.s.players.filter((p) => { const riding = ridingHeroes(ctx, p); return p.id !== self.owner && p.party.some((c) => riding.has(c)); });
       if (!targets.length) return;
       ctx.queue({
         t: 'choose', purpose: 'immobilizeTarget', player: self.owner!, source: nameOf(ctx, self.card),

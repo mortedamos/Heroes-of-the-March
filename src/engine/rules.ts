@@ -155,7 +155,7 @@ export const RULE_NOTES: RuleNote[] = [
   { id: 'tome-of-nethrak', topic: 'The Tome of Nethrak',
     ruling: 'When revealed or played face up, an Undead minion is drawn from the encounter stack and joins the current encounter until the end of the turn. Its bonus raises the difficulty for every player (including the player of the Tome), and its own "comes into play" text applies. If there is no Undead card left in the stack nothing is drawn.' },
   { id: 'immobilizing-word', topic: 'Immobilizing Word',
-    ruling: 'When revealed or played face up, its player chooses an opponent with at least one Companion hero (a hero that is a Companion To another hero). Those heroes are turned face down for the encounter: no stats, no abilities, and they do not count for the Allied bonus of the heroes beside them. They still count toward party size. Aldric may counter it (Shield of the Dawn, for the player it targets).' },
+    ruling: 'When revealed or played face up, its player chooses an opponent with at least one Companion hero, a hero riding free beside a hero it is Companion To (it does not use a party place). Those heroes are turned face down for the encounter: no stats, no abilities, and they do not count for the Allied bonus of the heroes beside them. They still count toward party size. Aldric may counter it (Shield of the Dawn, for the player it targets).' },
   { id: 'game-end', topic: 'Running out of locations',
     ruling: 'If the location stack and its discard are both empty, the game ends and the highest Renown wins (ties: earliest seat after the current player). A safety cap of maxTurns also ends the game.' },
   { id: 'bonus-pairs', topic: 'Companion To',

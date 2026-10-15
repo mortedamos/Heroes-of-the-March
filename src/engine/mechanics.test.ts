@@ -2120,37 +2120,39 @@ describe('the third sheet pass (v0.7): Grukka, Pariapt of Peace, The Tome of Net
 
   it('Immobilizing Word turns the Companion heroes of an opponent face down: no stats this encounter', () => {
     const g = newGame(3);
-    standard(g, { hand: ['immobilizing-word'] }, { party: ['queen-maren-ashcroft', 'varg-ironjaw', 'moss-dire-wolf'] });
+    // Gimlet rides free beside Goldie (she is his Companion To); Goldie and Maren are ordinary members.
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['queen-maren-ashcroft', 'goldie-trickgrin-keeper-of-the-goose-and-kettle', 'gimlet-a-very-good-dog'] });
     give(g.s, g.C!, { party: idle });
     restart(g);
     until(g, bidFor(g.A));
     const before = total(g, g.A, g.B);
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') }); // only B has Companions, so no question is asked
     const down = g.s.turn.effects.filter((e) => e.kind === 'facedown');
-    expect(down.map((e) => e.target).sort()).toEqual([card(g, 'varg-ironjaw'), card(g, 'moss-dire-wolf')].sort());
-    // Physical challenge: Varg 4 and Moss 4 are gone.
-    expect(total(g, g.A, g.B)).toBe(before - stat('varg-ironjaw', 'P') - stat('moss-dire-wolf', 'P'));
+    expect(down.map((e) => e.target)).toEqual([card(g, 'gimlet-a-very-good-dog')]);
+    // Gimlet's stat in the challenge and his own Allied bonus (Goldie) are gone.
+    const st = viewFor(g.s, g.A).turn.challenge!.stat;
+    expect(total(g, g.A, g.B)).toBe(before - stat('gimlet-a-very-good-dog', st) - 1);
     expect(player(g, g.B).party).toHaveLength(3); // still in the party
     finishTurn(g);
     expect(g.s.turn.effects.filter((e) => e.kind === 'facedown')).toHaveLength(0);
   });
 
-  it('Immobilizing Word asks which opponent when several have Companions, and an opponent without any cannot be picked', () => {
+  it('Immobilizing Word asks which opponent when several have Companions riding free', () => {
     const g = newGame(3);
-    standard(g, { hand: ['immobilizing-word'] }, { party: ['queen-maren-ashcroft', 'varg-ironjaw', 'moss-dire-wolf'] });
-    give(g.s, g.C!, { party: ['sergeant-waddle', 'honk-the-goose-rout-veteran', 'duchess-the-pub-goose'] });
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['queen-maren-ashcroft', 'goldie-trickgrin-keeper-of-the-goose-and-kettle', 'gimlet-a-very-good-dog'] });
+    give(g.s, g.C!, { party: ['tobin-quill-goose-keeper', 'honk-the-goose-rout-veteran', 'duchess-the-pub-goose'] }); // both geese ride beside Tobin
     restart(g);
     until(g, bidFor(g.A));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') });
     const d = g.s.pending!;
     expect(d.kind === 'choose' && d.purpose === 'immobilizeTarget' && d.options.map((o) => o.value).sort()).toEqual([g.B, g.C!].sort());
     pick(g, g.C!);
-    expect(g.s.turn.effects.filter((e) => e.kind === 'facedown')).toHaveLength(3);
+    expect(g.s.turn.effects.filter((e) => e.kind === 'facedown').map((e) => e.target).sort()).toEqual([card(g, 'honk-the-goose-rout-veteran'), card(g, 'duchess-the-pub-goose')].sort());
   });
 
-  it('Immobilizing Word does nothing when no opponent has a Companion hero', () => {
+  it('Immobilizing Word does nothing when no opponent has a Companion riding free (Moss without Varg is an ordinary hero)', () => {
     const g = newGame(3);
-    standard(g, { hand: ['immobilizing-word'] }, { party: idle });
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['queen-maren-ashcroft', 'moss-dire-wolf', 'kesh-the-bog-huntress'] });
     give(g.s, g.C!, { party: idle });
     restart(g);
     until(g, bidFor(g.A));
@@ -2160,7 +2162,7 @@ describe('the third sheet pass (v0.7): Grukka, Pariapt of Peace, The Tome of Net
 
   it('Immobilizing Word can be countered by Aldric, once per turn', () => {
     const g = newGame(3);
-    standard(g, { hand: ['immobilizing-word'] }, { party: ['lord-paladin-aldric-ashcroft', 'varg-ironjaw', 'moss-dire-wolf'] });
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['lord-paladin-aldric-ashcroft', 'goldie-trickgrin-keeper-of-the-goose-and-kettle', 'gimlet-a-very-good-dog'] });
     give(g.s, g.C!, { party: idle });
     restart(g);
     until(g, bidFor(g.A));

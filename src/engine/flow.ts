@@ -8,14 +8,13 @@
 //   -> [endOfBidding window] -> resolve -> turnEnd
 
 import { abilityOf, peekTop, type OwnedSource } from './abilities';
-import { companionsOf } from './cards';
 import type { Ctx } from './context';
 import { IllegalMove } from './context';
 import type { EncounterDef, HeroDef, Stat } from './cardTypes';
 import {
   activeEffects, addEffect, cardOption, heroEnters, councilHeroes, defenderOf, defendHeroEffect, disabledCards, discardHero,
   drawRaw, drawResources, enforceAllLimits, enforcePartyLimit, fire, flushOpeningEntrants, hasGroup, leaveLocation, locationEnters, ownerOf, partyLoad, partySize, peekOption,
-  playerHas, replaceLocation, statName,
+  playerHas, replaceLocation, ridingHeroes, statName,
 } from './effects';
 import { nextFloat } from './rng';
 import { ALL_VISIBLE, challengeStat, difficultyFor, totalFor } from './totals';
@@ -642,7 +641,7 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
     case 'marenTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o.hand.length > 0));
     case 'rumourTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p && o.bids.some((b) => !b.visible)));
     case 'curseTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p));
-    case 'immobilizeTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p && o.party.some((c) => companionsOf(ctx.defId(c)).length > 0)));
+    case 'immobilizeTarget': return keep((v) => ctx.s.players.some((o) => { const riding = ridingHeroes(ctx, o); return o.id === v && o !== p && o.party.some((c) => riding.has(c)); }));
     case 'appleSwap': return keep((v) => ctx.s.players.some((o) => o.bids.some((b) => b.card === v && b.visible)));
     case 'gauntlet': return keep((v) => ctx.s.discards.hero.includes(v));
     default: return task.options;
@@ -660,11 +659,13 @@ function counterPrompt(ctx: Ctx, victimId: PlayerId, shield: CardId, prompt: str
 
 const shortOf = (ctx: Ctx, card: CardId) => ctx.def(card).name.split(',')[0]!;
 
-/** Immobilizing Word: the victim's Companion heroes (those that are Companion To another hero) are turned face down for this encounter. */
+/** Immobilizing Word: the victim's Companion heroes (those riding free beside a hero they are Companion To) are turned face down for this encounter. */
 function immobilize(ctx: Ctx, word: CardId, owner: PlayerId, victimId: PlayerId): void {
   let first = true;
-  for (const c of ctx.player(victimId).party) {
-    if (!companionsOf(ctx.defId(c)).length) continue;
+  const victim = ctx.player(victimId);
+  const riding = ridingHeroes(ctx, victim);
+  for (const c of victim.party) {
+    if (!riding.has(c)) continue;
     addEffect(ctx, { kind: 'facedown', source: word, owner, target: c }, first); // one ability use, one Book of Grudges draw
     first = false;
   }
