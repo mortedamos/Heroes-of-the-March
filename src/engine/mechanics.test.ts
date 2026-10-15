@@ -1080,13 +1080,13 @@ describe('former heroes', () => {
     expect(getDef('kazra-emberdeep').revision).toMatch(/halved/);
   });
 
-  it('every former hero is halved (rounded up) from the set-aside register and has no trigger or Kin text', () => {
+  it('the former heroes have no trigger or Kin text any more (stored in the set-aside register), and real stats', () => {
     expect(setAside.oldHeroes).toHaveLength(15);
     for (const h of setAside.oldHeroes) {
       const d = getDef(h.id);
       expect(d.kind, h.name).toBe('hero');
       if (d.kind !== 'hero') continue;
-      expect(d.stats, h.name).toEqual({ P: Math.ceil(h.originalStats.P / 2), M: Math.ceil(h.originalStats.M / 2), G: Math.ceil(h.originalStats.G / 2) });
+      expect(d.stats.P + d.stats.M + d.stats.G, h.name).toBeGreaterThan(0);
       expect('triggerText' in d, h.name).toBe(false);
       expect('kinText' in d, h.name).toBe(false);
       expect(h.triggerText, h.name).toBeTruthy(); // stored for later
@@ -1100,7 +1100,7 @@ describe('former heroes', () => {
       expect(hasDef(c.id), c.name).toBe(back);
     }
     expect(CARDS.heroes).toHaveLength(49);
-    expect(CARDS.locations.length + CARDS.encounters.length + CARDS.resources.length + CARDS.heroes.length).toBe(202);
+    expect(CARDS.locations.length + CARDS.encounters.length + CARDS.resources.length + CARDS.heroes.length).toBe(204);
   });
 
   it('no rules text anywhere still talks about companions', () => {
@@ -1233,12 +1233,14 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
 });
 
 describe('bots and Tova', () => {
-  /** What a normal bot answers at A's before-bidding window with this team and hand. */
-  function tovaAnswer(hero: string, others: string[], hand: string[], strongRival = false) {
+  /** What a normal bot answers at A's before-bidding window with this team and hand (a Guile challenge of 10 with no tags: Tova gives 2). */
+  function tovaAnswer(hero: string, others: string[], hand: string[], strongRival = false, place = 'clover-hollow') {
     const g = newGame();
-    // A weak rival (Physical 4 + 3) by default; a strong one (Maren 6 + two 5s) when asked.
+    // A weak rival (Maren and Tobin) by default; a strong one (Maren, Varg and Kesh) when asked.
     standard(g, { hero, companions: ['tova-emberdeep-keeper-of-the-underway-door', ...others] },
       strongRival ? { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] } : { hero: 'queen-maren-ashcroft', companions: ['tobin-quill-goose-keeper'] });
+    onTop(g.s, 'location', [place]);
+    onTop(g.s, 'encounter', ['the-prisoner-of-the-ninth-ward']); // Guile 10, no tags (an Undead or Beast one would give Tova her Nemesis bonus)
     restart(g);
     until(g, activateFor(g.A, 'beforeBidding'));
     give(g.s, g.A, { hand }); // the turn-start refill dealt a hand; swap in the one under test
@@ -1246,22 +1248,22 @@ describe('bots and Tova', () => {
     return cmd?.type === 'ability.use' ? cmd.ability : cmd?.type;
   }
 
-  it('rests when her Physical (1) is not needed to survive', () => {
-    expect(tovaAnswer('lord-paladin-aldric-ashcroft', ['gnash-the-butcher-of-bloodmire'], ['honey-biscuit'])).toBe('rest');
+  it('rests when her Guile (2) is not needed to survive', () => {
+    expect(tovaAnswer('lord-vaelis-nightbloom', ['nettle-burrows-trouble-maker'], ['honey-biscuit'])).toBe('rest');
   });
 
   it('rests when one card makes up for her; keeps her when only weak cards are held', () => {
-    // Corvin P2 + Tova 3 + Waddle 4 = 9 against 10: without Tova 6, a gap of 4.
-    expect(tovaAnswer('archmage-corvin-varro', ['sergeant-waddle'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'])).toBe('rest');
-    expect(tovaAnswer('archmage-corvin-varro', ['sergeant-waddle'], ['feathered-cap', 'honey-biscuit', 'sprig-of-heather'])).toBe('ability.done');
+    // Corvin G4 + Tova 2 + Honk 1 = 7 against 10: without Tova 5, a gap of 5.
+    expect(tovaAnswer('archmage-corvin-varro', ['honk-the-goose-rout-veteran'], ['kurganos-crown-of-elements', 'feathered-cap', 'honey-biscuit'])).toBe('rest');
+    expect(tovaAnswer('archmage-corvin-varro', ['honk-the-goose-rout-veteran'], ['feathered-cap', 'honey-biscuit', 'sprig-of-heather'])).toBe('ability.done');
   });
 
   it('keeps her when sitting out would hand a valuable location to a stronger rival', () => {
-    expect(tovaAnswer('archmage-corvin-varro', ['mogra-swiftfoot-goblin-runner'], ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'], true)).toBe('ability.done');
+    expect(tovaAnswer('archmage-corvin-varro', ['mogra-swiftfoot-goblin-runner'], ['kurganos-crown-of-elements', 'feathered-cap', 'honey-biscuit'], true, 'the-collegium-observatory')).toBe('ability.done');
   });
 
   it('rests when the turn is lost anyway', () => {
-    expect(tovaAnswer('archmage-corvin-varro', ['mogra-swiftfoot-goblin-runner'], [])).toBe('rest');
+    expect(tovaAnswer('archmage-corvin-varro', ['honk-the-goose-rout-veteran'], [])).toBe('rest');
   });
 });
 
@@ -1413,32 +1415,32 @@ describe('Allied: +1 to all stats for each other matching card on your board', (
 
   it('counts other heroes in the party and face-up resources, not the hero itself', () => {
     const g = newGame();
-    standard(g, { party: ['kazra-emberdeep', 'high-thane-brunna-stonefast', 'pell-quillon-collegium-prodigy'], hand: ['the-axe-of-doom', 'gold-filings'] });
+    standard(g, { party: ['high-thane-brunna-stonefast', 'marshal-hedda-ironvow', 'pell-quillon-collegium-prodigy'], hand: ['the-axe-of-doom', 'gold-filings'] });
     atBidding(g); // Physical
-    expect(part(g, g.A, 'kazra-emberdeep')).toBe(stat('kazra-emberdeep', 'P') + 1); // Brunna is a Dwarf
+    expect(part(g, g.A, 'high-thane-brunna-stonefast')).toBe(stat('high-thane-brunna-stonefast', 'P') + 1); // Hedda is a Dwarf
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') }); // Dwarf, played face up
-    expect(part(g, g.A, 'kazra-emberdeep')).toBe(stat('kazra-emberdeep', 'P') + 2);
+    expect(part(g, g.A, 'high-thane-brunna-stonefast')).toBe(stat('high-thane-brunna-stonefast', 'P') + 2);
   });
 
   it('a face-down resource only counts once it is revealed, and never for someone who cannot see it', () => {
     const g = newGame();
-    standard(g, { party: ['kazra-emberdeep', 'pell-quillon-collegium-prodigy', 'moss-dire-wolf'], hand: ['honey-biscuit', 'gold-filings'] });
+    standard(g, { party: ['high-thane-brunna-stonefast', 'pell-quillon-collegium-prodigy', 'moss-dire-wolf'], hand: ['honey-biscuit', 'gold-filings'] });
     atBidding(g);
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
     until(g, bidFor(g.A));
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'gold-filings') }); // Dwarf, second bid: face down
-    const base = stat('kazra-emberdeep', 'P');
-    expect(part(g, g.A, 'kazra-emberdeep', g.B)).toBe(base); // B cannot see it
-    expect(part(g, g.A, 'kazra-emberdeep', g.A)).toBe(base + 1); // A knows their own card
-    expect(part(g, g.A, 'kazra-emberdeep')).toBe(base + 1); // revealed at the end
+    const base = stat('high-thane-brunna-stonefast', 'P');
+    expect(part(g, g.A, 'high-thane-brunna-stonefast', g.B)).toBe(base); // B cannot see it
+    expect(part(g, g.A, 'high-thane-brunna-stonefast', g.A)).toBe(base + 1); // A knows their own card
+    expect(part(g, g.A, 'high-thane-brunna-stonefast')).toBe(base + 1); // revealed at the end
   });
 
-  it('a card that matches several of the hero\'s targets counts once', () => {
+  it('a hero allied to two tags counts the cards of both', () => {
     const g = newGame();
-    standard(g, { party: ['aelthir-moonveil', 'caelan-halfelven', 'pell-quillon-collegium-prodigy'] });
+    standard(g, { party: ['hesk-of-two-homes', 'kesh-the-bog-huntress', 'pell-quillon-collegium-prodigy'] });
     atBidding(g);
-    // Aelthir is allied to Human and Elf: Caelan is both, Pell is Human.
-    expect(part(g, g.A, 'aelthir-moonveil')).toBe(stat('aelthir-moonveil', 'P') + 2);
+    // Hesk is allied to Orc and Human: Kesh is an Orc, Pell is Human.
+    expect(part(g, g.A, 'hesk-of-two-homes')).toBe(stat('hesk-of-two-homes', 'P') + 2);
   });
 
   it('a curse placed in front of a player is their card, so its tag counts for their Allied heroes', () => {

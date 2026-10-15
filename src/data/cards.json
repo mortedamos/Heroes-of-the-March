@@ -1,5 +1,5 @@
 {
- "version": "v0.5",
+ "version": "v0.6",
  "heroes": [
   {
    "id": "warchief-grukka-ironjaw",
@@ -12,7 +12,7 @@
    "stats": {
     "P": 6,
     "M": 3,
-    "G": 4
+    "G": 5
    },
    "abilityName": "Strike the Heart",
    "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
@@ -57,14 +57,10 @@
    "stats": {
     "P": 2,
     "M": 4,
-    "G": 5
+    "G": 4
    },
-   "abilityName": "Progenetor",
+   "abilityName": "Progenitor",
    "abilityText": "Once per turn, when an Elf or Human card enters play, draw a resource.",
-   "allied": [
-    "Human",
-    "Elf"
-   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
    "number": 1003
@@ -78,7 +74,7 @@
    "quote": "“One does not converse with mayflies. One outlives them.”",
    "art": "portraits__vaelis_aloof",
    "stats": {
-    "P": 3,
+    "P": 2,
     "M": 5,
     "G": 6
    },
@@ -119,13 +115,10 @@
    "stats": {
     "P": 4,
     "M": 3,
-    "G": 4
+    "G": 3
    },
    "abilityName": "Master Golemsmith",
    "abilityText": "When an Ironbound card enters play, draw a resource.",
-   "allied": [
-    "Dwarf"
-   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 8/6/8); trigger and Kin bonus set aside.",
    "number": 1006
@@ -144,11 +137,8 @@
     "M": 3,
     "G": 3
    },
-   "abilityName": "The Forest Walks With Me",
+   "abilityName": "The World Walks With Me",
    "abilityText": "Your party may have four heroes instead of three.",
-   "allied": [
-    "Beast"
-   ],
    "nemesis": [
     "Skarra"
    ],
@@ -165,7 +155,7 @@
    "quote": "“I have a little plan. It involves a goose. No, a different goose.”",
    "art": "portraits__hobby_scheming",
    "stats": {
-    "P": 3,
+    "P": 2,
     "M": 4,
     "G": 5
    },
@@ -210,9 +200,9 @@
    "quote": "“Walls first. Then we talk. Then more walls.”",
    "art": "portraits__brunna_proud",
    "stats": {
-    "P": 4,
+    "P": 3,
     "M": 3,
-    "G": 4
+    "G": 3
    },
    "abilityName": "Walls First",
    "abilityText": "Once per turn, counter any ability that would affect your resources or the current location.",
@@ -303,9 +293,9 @@
    "quote": "“I fought the Mountain Wars so my grandchildren wouldn't have to. Then they went and had grandchildren.”",
    "art": "portraits__urzha_neutral",
    "stats": {
-    "P": 5,
-    "M": 3,
-    "G": 5
+    "P": 4,
+    "M": 2,
+    "G": 4
    },
    "abilityName": "Strategic Encounter",
    "abilityText": "Once per turn, before bidding, you may look at the next encounter in the encounter stack. You may replace the current encounter and its minions with it.",
@@ -326,7 +316,7 @@
    "quote": "“The Elves have 'looked at us funny.' I've underlined it.”",
    "art": "portraits__oskar_grudging",
    "stats": {
-    "P": 4,
+    "P": 3,
     "M": 4,
     "G": 5
    },
@@ -341,7 +331,7 @@
   },
   {
    "id": "goldie-trickgrin-keeper-of-the-goose-and-kettle",
-   "name": "Goldie Trickgrin, Proprieter of the Goose & Kettle",
+   "name": "Goldie Trickgrin, Proprietor of the Goose & Kettle",
    "groups": [
     "Halfellow"
    ],
@@ -367,9 +357,9 @@
    "quote": "“Someone has to mind the door. Sigrun certainly won't.”",
    "art": "portraits__tova-emberdeep-keeper-of-the-underway-door",
    "stats": {
-    "P": 3,
+    "P": 4,
     "M": 4,
-    "G": 5
+    "G": 2
    },
    "abilityName": "Waiting at the Door",
    "abilityText": "Before bidding on any turn you may turn this hero face down and gain no bonuses from it. On your next turn, draw two additional resource cards and then turn this card face up.",
@@ -390,8 +380,8 @@
    "quote": "“Moss knows the way. Moss always knows the way. That's the problem.”",
    "art": "portraits__varg_bashful",
    "stats": {
-    "P": 5,
-    "M": 3,
+    "P": 4,
+    "M": 2,
     "G": 3
    },
    "abilityName": "Pack Runner",
@@ -456,7 +446,7 @@
    "stats": {
     "P": 5,
     "M": 2,
-    "G": 5
+    "G": 4
    },
    "abilityName": "Skyship Manifest",
    "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand and draw a resource card.",
@@ -539,7 +529,7 @@
     "G": 3
    },
    "abilityName": "Adaptive Medicine",
-   "abilityText": "The first time each turn anyone is forced to use a different stat or the stat needed to beat a challege is changed, draw a resource.",
+   "abilityText": "The first time each turn anyone is forced to use a different stat or the stat needed to beat a challenge is changed, draw a resource.",
    "kind": "hero",
    "revision": "Revised in the card sheet (v0.5).",
    "number": 2010
@@ -668,7 +658,7 @@
    "stats": {
     "P": 4,
     "M": 3,
-    "G": 6
+    "G": 4
    },
    "abilityName": "Eternal Vigilance",
    "abilityText": "Once per turn, whenever abilities can be used on your turn, you may look at the next single card in any stack and, if you choose, put it on the bottom of the stack.",
@@ -919,7 +909,7 @@
    "art": "portraits__moss-dire-wolf",
    "stats": {
     "P": 4,
-    "M": 3,
+    "M": 1,
     "G": 3
    },
    "abilityName": "Hunt the Enemy",
@@ -940,9 +930,9 @@
    "quote": "“Measure twice. Light once.”",
    "art": "portraits__torvi-cinderkeg-master-gunner",
    "stats": {
-    "P": 4,
-    "M": 3,
-    "G": 4
+    "P": 3,
+    "M": 2,
+    "G": 3
    },
    "abilityName": "Uncontrolled Explosion",
    "abilityText": "At the end of bidding, before the winner is declared, you may discard a resource from your hand and this hero. If you do, every opponent has -6 to their total this encounter.",
@@ -995,17 +985,14 @@
    "art": null,
    "stats": {
     "P": 2,
-    "M": 4,
+    "M": 3,
     "G": 4
    },
    "abilityName": "Child of the March",
    "abilityText": "Once per turn, when a Warden or Marchguard card enters play, you may draw a resource.",
-   "allied": [
-    "Marchguard",
-    "Warden"
-   ],
    "kind": "hero",
-   "number": 2037
+   "number": 2037,
+   "revision": "Revised in the card sheet (v0.6)."
   },
   {
    "id": "brisa-blastcap-bombardier",
@@ -1055,9 +1042,9 @@
    "quote": null,
    "art": null,
    "stats": {
-    "P": 8,
-    "M": 2,
-    "G": 4
+    "P": 7,
+    "M": 1,
+    "G": 3
    },
    "abilityName": "Inexorable Roots",
    "abilityText": "Once per turn, at the end of bidding, discard a resource. Aelder Mossleaf gains +3 until the end of the current encounter.",
@@ -1065,7 +1052,8 @@
     "Aelthir Moonveil"
    ],
    "kind": "hero",
-   "number": 2038
+   "number": 2038,
+   "revision": "Revised in the card sheet (v0.6)."
   },
   {
    "id": "farmer-hobart-thimblewick",
@@ -1607,7 +1595,7 @@
    },
    "conditionText": "When this card comes into play draw an Ironbound minion.",
    "stat": "M",
-   "difficulty": 7,
+   "difficulty": 8,
    "number": 4004
   },
   {
@@ -1626,7 +1614,7 @@
    },
    "conditionText": "When this card comes into play draw an Undead minion.",
    "stat": "M",
-   "difficulty": 7,
+   "difficulty": 8,
    "number": 4005
   },
   {
@@ -1686,7 +1674,7 @@
    },
    "conditionText": null,
    "stat": "G",
-   "difficulty": 10,
+   "difficulty": 11,
    "number": 4008
   },
   {
@@ -1740,10 +1728,10 @@
    "art": null,
    "minionValue": 2,
    "minions": {
-    "count": 2,
+    "count": 3,
     "group": null
    },
-   "conditionText": "When this card comes into play draw two minions.",
+   "conditionText": "When this card comes into play draw three minions.",
    "stat": "G",
    "difficulty": 9,
    "number": 4013
@@ -1840,7 +1828,7 @@
    "art": "units__bog_witch_1",
    "minionValue": 2,
    "minions": {
-    "count": 1,
+    "count": 0,
     "group": null
    },
    "conditionText": null,
@@ -1903,7 +1891,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "G",
-   "difficulty": 9,
+   "difficulty": 10,
    "number": 4023
   },
   {
@@ -1922,7 +1910,7 @@
    },
    "conditionText": "When this card comes into play draw an Ironbound minion.",
    "stat": "M",
-   "difficulty": 7,
+   "difficulty": 10,
    "number": 4024
   },
   {
@@ -1943,7 +1931,7 @@
    },
    "conditionText": "When this card comes into play draw a minion. The minion cannot be Skarra.",
    "stat": "G",
-   "difficulty": 9,
+   "difficulty": 10,
    "number": 4025
   },
   {
@@ -1985,13 +1973,13 @@
    },
    "conditionText": "When this card comes into play draw two Undead minions.",
    "stat": "M",
-   "difficulty": 7,
+   "difficulty": 9,
    "number": 4027
   },
   {
    "kind": "encounter",
    "id": "the-whispering-deep",
-   "name": "The Whispering Deep",
+   "name": "The Whispering Unknown",
    "groups": [],
    "quote": "“Something under the Marches has been listening for a thousand years. Now it has started to answer.”",
    "art": null,
@@ -2002,7 +1990,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "M",
-   "difficulty": 8,
+   "difficulty": 11,
    "number": 4028
   },
   {
@@ -2052,7 +2040,7 @@
   {
    "kind": "encounter",
    "id": "vorhal-first-of-the-wardens",
-   "name": "Vorhal, First of the Wardens",
+   "name": "Vorhal the Cursed, First of the Wardens",
    "groups": [
     "Oathbreaker",
     "Undead",
@@ -2411,7 +2399,7 @@
    },
    "conditionText": "When this card comes into play draw a minion.",
    "stat": "G",
-   "difficulty": 8,
+   "difficulty": 10,
    "number": 4056
   },
   {
@@ -2489,19 +2477,6 @@
    "council": false,
    "conditionText": "When this card is revealed exchange it and another resource card currently in play.",
    "number": 5001
-  },
-  {
-   "kind": "resource",
-   "id": "call-the-five-crowns",
-   "name": "Call the Five Crowns",
-   "groups": [],
-   "quote": "“Five crowns in one room, and not one of them on fire. Write it down.” — Queen Maren",
-   "art": null,
-   "value": 0,
-   "wand": false,
-   "council": true,
-   "conditionText": "When this card is revealed or played face up, draw up to 5 heroes from the hero stack. Add their stat values to yours for the current encounter challenge. When the encounter is finished shuffle these cards back into the hero stack.",
-   "number": 5002
   },
   {
    "kind": "resource",
@@ -2603,7 +2578,7 @@
   {
    "kind": "resource",
    "id": "gold-filings",
-   "name": "Gold Filings",
+   "name": "Forgewrights Tools",
    "groups": [
     "Dwarf"
    ],
@@ -2612,7 +2587,7 @@
    "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": "5 against Ironbound.",
+   "conditionText": "+5 against Ironbound.",
    "number": 5011
   },
   {
@@ -2832,10 +2807,10 @@
    ],
    "quote": null,
    "art": null,
-   "value": 3,
+   "value": 2,
    "wand": false,
    "council": false,
-   "conditionText": "5 against Constructs and Ironbound.",
+   "conditionText": "+5 against Ironbound.",
    "number": 5029
   },
   {
@@ -3297,7 +3272,7 @@
    ],
    "quote": null,
    "art": null,
-   "value": 5,
+   "value": 4,
    "wand": true,
    "council": false,
    "conditionText": null,
@@ -3310,7 +3285,7 @@
    "groups": [],
    "quote": null,
    "art": null,
-   "value": 5,
+   "value": 4,
    "wand": true,
    "council": false,
    "conditionText": null,
@@ -3544,6 +3519,51 @@
    "council": false,
    "conditionText": "When this card is revealed or played face up, place it in front of an opposing player. It's value becomes part of their bid.",
    "number": 5080
+  },
+  {
+   "kind": "resource",
+   "id": "dwarven-warhammer",
+   "name": "Dwarven Warhammer",
+   "groups": [
+    "Dwarf"
+   ],
+   "quote": null,
+   "art": null,
+   "value": 1,
+   "wand": false,
+   "council": false,
+   "conditionText": null,
+   "number": 5083
+  },
+  {
+   "kind": "resource",
+   "id": "leyline-protractor",
+   "name": "Leyline Protractor",
+   "groups": [
+    "Collegium"
+   ],
+   "quote": null,
+   "art": null,
+   "value": 2,
+   "wand": false,
+   "council": false,
+   "conditionText": null,
+   "number": 5084
+  },
+  {
+   "kind": "resource",
+   "id": "mythral-armor",
+   "name": "Mythral Armor",
+   "groups": [
+    "Elf"
+   ],
+   "quote": null,
+   "art": null,
+   "value": 1,
+   "wand": false,
+   "council": false,
+   "conditionText": null,
+   "number": 5085
   }
  ]
 }

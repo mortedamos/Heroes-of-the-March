@@ -15,7 +15,6 @@ export const AVG_HERO_STAT = 3.5;
 export const SPECIAL_VALUE: Record<string, number> = {
   'shoulder-to-shoulder': AVG_HERO_STAT,
   'three-banners-raised': AVG_HERO_STAT * 3,
-  'call-the-five-crowns': AVG_HERO_STAT * 5,
   'the-gathering-of-heroes': AVG_HERO_STAT,
   'crossed-paths': AVG_HERO_STAT - 2,
   'an-apple-for-the-road': 3,

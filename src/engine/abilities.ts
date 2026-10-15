@@ -827,7 +827,6 @@ export const ABILITIES: Record<string, Ability> = {
       });
     },
   },
-  'call-the-five-crowns': council(5),
   'three-banners-raised': council(3),
   'shoulder-to-shoulder': council(1),
   'crossed-paths': {
@@ -846,7 +845,7 @@ export const ABILITIES: Record<string, Ability> = {
     },
   },
   'gold-filings': valueAgainst(['Ironbound'], 5),
-  'rune-of-unmaking': valueAgainst(['Construct', 'Ironbound'], 5),
+  'rune-of-unmaking': valueAgainst(['Ironbound'], 5),
   'warding-nail': valueAgainst(['Ironbound'], 5),
   'cold-iron-barrier': { status: 'full', onReveal: (ctx) => { ctx.s.turn.wandsDisabled = true; } },
   'null-rune-seal': { status: 'full', onReveal: (ctx) => { ctx.s.turn.wandsDisabled = true; } },
