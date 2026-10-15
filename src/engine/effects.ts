@@ -59,7 +59,7 @@ export function activeEffects(ctx: Ctx, kind?: EffectKind): TurnEffect[] {
 }
 
 /** Effects whose target is a player, not a card. */
-export const PLAYER_TARGET_KINDS: readonly EffectKind[] = ['statBonus', 'autoWin', 'grudge', 'grudgeWatch'];
+export const PLAYER_TARGET_KINDS: readonly EffectKind[] = ['statBonus', 'autoWin', 'grudge'];
 
 /**
  * An effect that lands on another player's hero (forcing a stat) first goes through that player's defences, one
@@ -85,7 +85,7 @@ export function defenderOf(ctx: Ctx, p: PlayerState, kind: 'redirect' | 'heroes'
 }
 
 /** Add a turn effect. Returns null if it was cancelled. */
-export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>, watch = true): TurnEffect | null {
+export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect | null {
   const t = ctx.s.turn;
   t.effectSeq += 1;
   const effect: TurnEffect = { ...e, id: t.effectSeq };
@@ -96,18 +96,27 @@ export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>, watch = true): Tu
     targetCard: cardTarget && ctx.s.cards[cardTarget] ? ctx.ref(cardTarget) : null,
     targetPlayer: cardTarget ? ownerOf(ctx, cardTarget) : e.target,
   });
-  // Oskar's "Entered in the Book of Grudges": the watched opponent used an ability against his player's heroes.
+  // Oskar's "Entered in the Book of Grudges": an opponent used an ability against his player's heroes.
   const hostile = e.kind === 'silenceHero' || e.kind === 'forceStat' || e.kind === 'negateBid' || e.kind === 'disableAbilities' || e.kind === 'facedown'
     || (e.kind === 'statBonus' && (e.amount ?? 0) < 0);
-  if (hostile && watch) {
+  if (hostile) {
     const hit = PLAYER_TARGET_KINDS.includes(e.kind) ? e.target : ownerOf(ctx, e.target);
-    for (const w of t.effects) {
-      if (w.kind === 'grudgeWatch' && w.target === e.owner && w.owner === hit && w.owner !== e.owner) {
-        drawResources(ctx, w.owner, 1, ctx.def(w.source).name);
-      }
-    }
+    if (hit) hostileTo(ctx, hit, e.owner);
   }
   return effect;
+}
+
+/**
+ * An opponent's ability has landed on `victim`'s heroes or resources (a forced stat, a curse placed in front of them,
+ * a card taken from their hand...). Oskar's player draws a resource, once per turn.
+ */
+export function hostileTo(ctx: Ctx, victim: PlayerId, by: PlayerId): void {
+  if (victim === by) return;
+  const oskar = playerHas(ctx, ctx.player(victim), (a) => a.drawWhenTargeted);
+  const key = `${oskar}:grudge`;
+  if (!oskar || ctx.s.turn.used[key]) return;
+  ctx.s.turn.used[key] = 1;
+  drawResources(ctx, victim, 1, ctx.def(oskar).name);
 }
 
 /** The turn has reached the end of bidding: resource cards are being (or have been) revealed. */

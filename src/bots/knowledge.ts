@@ -24,7 +24,7 @@ export const SPECIAL_VALUE: Record<string, number> = {
 const HERO_ABILITY: Record<string, number> = {
   'warchief-grukka-ironjaw': 1.5, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 1.5, 'lord-vaelis-nightbloom': 3,
   'pip-wanderfoot': 0.5, 'kazra-emberdeep': 1, 'ysolde-of-the-wellspring': 5, 'mayor-hobby-trickgrin': 2,
-  'lord-paladin-aldric-ashcroft': 2.5, 'high-thane-brunna-stonefast': 2.5, 'loremaster-oskar-grimgate': 3,
+  'lord-paladin-aldric-ashcroft': 2.5, 'high-thane-brunna-stonefast': 2.5, 'loremaster-oskar-grimgate': 2,
   'queen-maren-ashcroft': 3, 'archmage-corvin-varro': 4, 'professor-barnaby-pickwort': 3, 'urzha-half-tusk': 2,
   'liriel-nightbloom': 2, 'thessaly-of-the-grove': 2, 'kesh-the-bog-huntress': 0.5,
   'nettle-burrows-trouble-maker': 1.2, 'sister-aurelie-dane-physician': 1, 'gnash-the-butcher-of-bloodmire': 1.2, 'pell-quillon-collegium-prodigy': 1.2,

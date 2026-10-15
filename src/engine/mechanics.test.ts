@@ -436,17 +436,6 @@ describe('peeks stay private', () => {
     expect(g.s.turn.location).toBe(peeked);
   });
 
-  it('Barnaby looks at two locations and swaps one in', () => {
-    const g = newGame();
-    standard(g, { hero: 'professor-barnaby-pickwort' });
-    restart(g);
-    until(g, activateFor(g.A, 'afterLocation'));
-    use(g, 'professor-barnaby-pickwort', 'maps');
-    const second = g.s.decks.location[g.s.decks.location.length - 2]!;
-    pick(g, 'n1');
-    expect(g.s.turn.location).toBe(second);
-  });
-
   it('Barnaby can use his maps at any point of his own turn, not only right after the location', () => {
     const g = newGame();
     standard(g, { hero: 'professor-barnaby-pickwort' });
@@ -1076,7 +1065,7 @@ describe('former heroes', () => {
   });
   it('the former heroes carry their halved stats and say so; their triggers and Kin bonuses are set aside', () => {
     const barnaby = getDef('professor-barnaby-pickwort');
-    expect(barnaby.kind === 'hero' && barnaby.stats).toEqual({ P: 2, M: 5, G: 4 });
+    expect(barnaby.kind === 'hero' && barnaby.stats).toEqual({ P: 2, M: 6, G: 4 });
     expect(barnaby.revision).toMatch(/halved/);
     expect(getDef('kazra-emberdeep').revision).toMatch(/halved/);
   });
@@ -1261,7 +1250,7 @@ describe('bots and Tova', () => {
   }
 
   it('rests when her Guile (2) is not needed to survive', () => {
-    expect(tovaAnswer('lord-vaelis-nightbloom', ['nettle-burrows-trouble-maker'], ['honey-biscuit'])).toBe('rest');
+    expect(tovaAnswer('goldie-trickgrin-keeper-of-the-goose-and-kettle', ['nettle-burrows-trouble-maker'], ['honey-biscuit'])).toBe('rest');
   });
 
   it('rests when one card makes up for her; keeps her when only weak cards are held', () => {
@@ -1667,22 +1656,6 @@ describe('Activated abilities of the redesign', () => {
     expect(g.s.discards.hero).toContain(card(g, 'torvi-cinderkeg-master-gunner'));
     expect(g.s.discards.resource).toContain(spare);
     expect(total(g, g.A, g.B)).toBe(before - 6);
-  });
-
-  it('Oskar watches an opponent: when they use an ability against his heroes, he draws', () => {
-    const g = newGame();
-    standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: [] },
-      { hero: 'warchief-grukka-ironjaw', companions: ['liriel-nightbloom', 'gnash-the-butcher-of-bloodmire'] });
-    onTop(g.s, 'encounter', ['crawling-remnant']);
-    restart(g);
-    until(g, activateFor(g.A, 'beforeBidding'));
-    use(g, 'loremaster-oskar-grimgate', 'grudge'); // the only opponent is named without asking
-    const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Loremaster Oskar Grimgate').length;
-    expect(drawn()).toBe(0);
-    until(g, bidFor(g.B));
-    use(g, 'liriel-nightbloom', 'force'); // B forces one of A's heroes onto Guile
-    pick(g, card(g, 'pell-quillon-collegium-prodigy'));
-    expect(drawn()).toBe(1);
   });
 
   it('The Book of Grudges: +3 (+4 for Oskar), and if its owner falls the winner has -3 next encounter', () => {
@@ -2186,5 +2159,195 @@ describe('the third sheet pass (v0.7): Grukka, Pariapt of Peace, The Tome of Net
     const before = total(g, g.A, g.B);
     act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') });
     expect(total(g, g.A, g.B)).toBe(before - stat('varg-ironjaw', 'P') - 2); // his stats, his own Allied: Sigrun and hers: Varg
+  });
+});
+
+describe('the fourth sheet pass (v0.8): Barnaby, Vaelis, Oskar, Tansy and new Nemesis and Allied entries', () => {
+  const idle = ['sister-aurelie-dane-physician', 'grumma-ladlejaw-camp-cook', 'dagny-coldhearth-the-grudge-bearer']; // none of them is used below
+
+  it('Barnaby uses his maps during bidding on his own turn, and the swap changes the location', () => {
+    const g = newGame();
+    standard(g, { hero: 'professor-barnaby-pickwort' });
+    restart(g);
+    until(g, bidFor(g.A));
+    const second = g.s.decks.location[g.s.decks.location.length - 2]!;
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    pick(g, 'n1');
+    expect(g.s.turn.location).toBe(second);
+    expect(g.s.pending?.kind).toBe('bid'); // back to the bidding decision
+  });
+
+  it('Barnaby also works on another player\'s turn, and is no longer offered right after the location is revealed', () => {
+    const g = newGame();
+    standard(g, {}, { hero: 'professor-barnaby-pickwort' }); // B has Barnaby; it is A's turn
+    restart(g);
+    // He is not offered in an activation window before bidding, only at his bidding decision.
+    let early = false;
+    until(g, (_s, d) => { if (d.kind === 'activate' && d.player === g.B && d.abilities.some((x) => x.ability === 'maps')) early = true; return d.kind === 'bid' && d.player === g.B; });
+    expect(early).toBe(false);
+    const d = g.s.pending!;
+    expect(d.kind === 'bid' && d.abilities.some((x) => x.ability === 'maps')).toBe(true);
+    const first = g.s.decks.location[g.s.decks.location.length - 1]!;
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    pick(g, 'n0');
+    expect(g.s.turn.location).toBe(first);
+    checkInvariants(g.s);
+  });
+
+  it('a bot with Barnaby swaps away a location that gives its opponents Nemesis bonuses, even at the same Renown', () => {
+    const g = newGame();
+    // B's Tova and Thessaly both have Nemesis: Undead; The Umbral Deep is Undead (Renown 4), The Endless Stair is not (Renown 4).
+    standard(g, { hero: 'professor-barnaby-pickwort' }, { party: ['tova-emberdeep-keeper-of-the-underway-door', 'thessaly-of-the-grove', 'kesh-the-bog-huntress'] });
+    onTop(g.s, 'location', ['the-umbral-deep', 'the-endless-stair', 'the-skyship-valour']);
+    restart(g);
+    until(g, bidFor(g.A));
+    const cmd = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
+    expect(cmd?.type === 'ability.use' && cmd.ability).toBe('maps');
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    const pending = g.s.pending!;
+    expect(pending.kind === 'choose' && pending.purpose).toBe('pickLocation');
+    const answer = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
+    const chosen = answer?.type === 'choose' ? answer.picks[0] : undefined;
+    const label = pending.kind === 'choose' ? pending.options.find((o) => o.value === chosen)?.card : undefined;
+    expect(label && 'def' in label ? label.def : undefined).toBe('the-endless-stair');
+  });
+
+  it('a bot with Barnaby keeps the location when it is the better one for its own heroes', () => {
+    const g = newGame();
+    // A's Pell has Nemesis: Wardhouse; The Endless Stair (Dwarf, Wardhouse) is current, the two behind it are plain.
+    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['pell-quillon-collegium-prodigy', 'moss-dire-wolf'] }, { party: idle });
+    onTop(g.s, 'location', ['the-endless-stair', 'clover-hollow', 'the-skyship-valour']);
+    restart(g);
+    until(g, bidFor(g.A));
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    const answer = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
+    expect(answer?.type === 'choose' && answer.picks[0]).toBe('keep');
+  });
+
+  it('Vaelis: a bot uses Master Manipulator half the time when easy, three times in four when normal, always when hard', () => {
+    const g = newGame();
+    standard(g, { hero: 'lord-vaelis-nightbloom', companions: ['pell-quillon-collegium-prodigy', 'moss-dire-wolf'] }, { party: idle });
+    restart(g);
+    until(g, activateFor(g.A, 'beforeBidding'));
+    const uses = (level: 'easy' | 'normal' | 'hard', roll: number) => {
+      const cmd = botDecide(viewFor(g.s, g.A), level, () => roll);
+      return cmd?.type === 'ability.use' && cmd.ability === 'shadowsteeds';
+    };
+    expect(uses('easy', 0.49)).toBe(true);
+    expect(uses('easy', 0.51)).toBe(false);
+    expect(uses('normal', 0.74)).toBe(true);
+    expect(uses('normal', 0.76)).toBe(false);
+    expect(uses('hard', 0.99)).toBe(true);
+  });
+
+  it('Vaelis: a bot keeps a positive minion bonus and hands a negative one to its strongest rival', () => {
+    const g = newGame(3);
+    standard(g, { hero: 'lord-vaelis-nightbloom', companions: ['pell-quillon-collegium-prodigy', 'moss-dire-wolf'] }, { party: idle });
+    give(g.s, g.C!, { party: ['mogra-swiftfoot-goblin-runner', 'grumma-ladlejaw-camp-cook', 'urzha-half-tusk'] });
+    restart(g);
+    until(g, activateFor(g.A, 'beforeBidding'));
+    onTop(g.s, 'encounter', ['the-sundered-warden']); // minion bonus -3
+    use(g, 'lord-vaelis-nightbloom', 'shadowsteeds');
+    const give3 = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
+    expect(give3?.type === 'choose' && give3.picks[0]).not.toBe('self');
+    pick(g, give3?.type === 'choose' ? give3.picks[0]! : 'self');
+    expect(g.s.turn.effects.some((e) => e.kind === 'statBonus' && e.amount === -3 && e.target !== g.A)).toBe(true);
+  });
+
+  it('Oskar is passive: an opponent forcing a stat on his player\'s heroes draws him a resource', () => {
+    const g = newGame();
+    standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: [] },
+      { hero: 'warchief-grukka-ironjaw', companions: ['liriel-nightbloom', 'gnash-the-butcher-of-bloodmire'] });
+    onTop(g.s, 'encounter', ['crawling-remnant']);
+    restart(g);
+    const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Loremaster Oskar Grimgate').length;
+    until(g, bidFor(g.B)); // no activation to use first, and nobody is named
+    expect(drawn()).toBe(0);
+    use(g, 'liriel-nightbloom', 'force'); // B forces one of A's heroes onto Guile
+    pick(g, card(g, 'pell-quillon-collegium-prodigy'));
+    expect(drawn()).toBe(1);
+  });
+
+  it('Oskar also draws for a curse placed in front of his player, a card taken from his hand, and only once per turn', () => {
+    const g = newGame();
+    standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['pell-quillon-collegium-prodigy'], hand: ['honey-biscuit'] },
+      { hero: 'warchief-grukka-ironjaw', companions: ['kesh-the-bog-huntress', 'gnash-the-butcher-of-bloodmire'], hand: ['cursed-locket', 'rotten-apple', 'feathered-cap'] });
+    onTop(g.s, 'encounter', ['crawling-remnant']);
+    restart(g);
+    const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Loremaster Oskar Grimgate').length;
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'cursed-locket') }); // only A to place it on
+    expect(player(g, g.A).bids.map((b) => b.card)).toContain(card(g, 'cursed-locket'));
+    expect(drawn()).toBe(1);
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'rotten-apple') });
+    expect(drawn()).toBe(1); // the second one in the same turn does nothing
+  });
+
+  it('Oskar does not draw for his own player\'s abilities, nor when the ability was countered', () => {
+    const g = newGame();
+    standard(g, { hero: 'loremaster-oskar-grimgate', companions: ['liriel-nightbloom', 'pell-quillon-collegium-prodigy'], hand: [] },
+      { hero: 'lord-paladin-aldric-ashcroft', companions: ['gnash-the-butcher-of-bloodmire'] });
+    restart(g);
+    const drawn = () => g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Loremaster Oskar Grimgate').length;
+    until(g, bidFor(g.A));
+    use(g, 'liriel-nightbloom', 'force'); // A forces B's hero: Aldric counters it
+    pick(g, card(g, 'gnash-the-butcher-of-bloodmire'));
+    pick(g, 'counter');
+    expect(drawn()).toBe(0);
+  });
+
+  it('Tansy draws a resource when a Halfellow card is among the face-down cards she looks at', () => {
+    const g = newGame();
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'honey-biscuit'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.pass', decision: g.s.pending!.id });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') });
+    until(g, bidFor(g.A));
+    const before = player(g, g.A).hand.length;
+    use(g, 'tansy-brambleby-barmaid-and-volunteer', 'rumour');
+    expect(player(g, g.A).hand).toHaveLength(before + 1);
+    expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Rumour Mill')).toBe(true);
+  });
+
+  it('Tansy draws nothing when no Halfellow card is among them', () => {
+    const g = newGame();
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.pass', decision: g.s.pending!.id });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') });
+    until(g, bidFor(g.A));
+    const before = player(g, g.A).hand.length;
+    use(g, 'tansy-brambleby-barmaid-and-volunteer', 'rumour');
+    expect(player(g, g.A).hand).toHaveLength(before);
+  });
+
+  it('Gnash gets +1 to every stat in an Elf location (Nemesis: Elf)', () => {
+    const g = newGame();
+    standard(g, { hero: 'gnash-the-butcher-of-bloodmire', companions: ['honk-the-goose-rout-veteran', 'pell-quillon-collegium-prodigy'] }, { party: idle });
+    restart(g); // the rig's first location is The Silverwood Hunt (Elf): a Physical challenge
+    until(g, bidFor(g.A));
+    expect(viewFor(g.s, g.A).turn.challenge!.stat).toBe('P');
+    expect(total(g, g.A, g.A)).toBe(stat('gnash-the-butcher-of-bloodmire', 'P') + 1 + stat('honk-the-goose-rout-veteran', 'P') + stat('pell-quillon-collegium-prodigy', 'P'));
+  });
+
+  it('Pell gets +1 in a Wardhouse location, and Nettle +1 beside another Halfellow hero', () => {
+    const g = newGame();
+    standard(g, { hero: 'pell-quillon-collegium-prodigy', companions: ['nettle-burrows-trouble-maker', 'mayor-hobby-trickgrin'] }, { party: idle });
+    onTop(g.s, 'location', ['the-endless-stair']); // Dwarf, Wardhouse
+    onTop(g.s, 'encounter', ['the-prisoner-of-the-ninth-ward']); // Guile, so the location does not change the stat
+    restart(g);
+    until(g, bidFor(g.A));
+    const st = viewFor(g.s, g.A).turn.challenge!.stat;
+    // Pell +1 (Wardhouse); Nettle +1 (Allied: Halfellow, Hobby); Hobby +1 (Allied: Halfellow, Nettle).
+    expect(total(g, g.A, g.A)).toBe(stat('pell-quillon-collegium-prodigy', st) + 1 + stat('nettle-burrows-trouble-maker', st) + 1 + stat('mayor-hobby-trickgrin', st) + 1);
   });
 });

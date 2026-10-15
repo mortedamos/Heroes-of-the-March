@@ -1,5 +1,5 @@
 {
- "version": "v0.7",
+ "version": "v0.8",
  "heroes": [
   {
    "id": "warchief-grukka-ironjaw",
@@ -20,7 +20,7 @@
     "Orc"
    ],
    "kind": "hero",
-   "revision": "Revised in the card sheet (v0.7).",
+   "revision": "Stats halved, rounded up (was 11/6/7); trigger and Kin bonus set aside.",
    "number": 1001,
    "nemesis": [
     "Capital"
@@ -146,7 +146,7 @@
     "Skarra"
    ],
    "kind": "hero",
-   "revision": "Revised in the card sheet (v0.7).",
+   "revision": "Stats halved, rounded up (was 4/6/6); trigger and Kin bonus set aside.",
    "number": 1007
   },
   {
@@ -260,7 +260,7 @@
    "abilityName": "Resources of the Collegium",
    "abilityText": "Once per turn, when you draw resources, draw one additional resource.",
    "kind": "hero",
-   "revision": "Revised in the card sheet (v0.7).",
+   "revision": "Stats halved, rounded up (was 2/10/7); trigger and Kin bonus set aside.",
    "number": 1012
   },
   {
@@ -274,11 +274,11 @@
    "art": "portraits__barnaby_neutral",
    "stats": {
     "P": 2,
-    "M": 5,
+    "M": 6,
     "G": 4
    },
    "abilityName": "Archivist Society Maps",
-   "abilityText": "Once per turn, whenever abilities can be used on your turn, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
+   "abilityText": "Once per turn, during bidding, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/10/7); trigger and Kin bonus set aside.",
    "number": 1013
@@ -321,7 +321,7 @@
     "G": 5
    },
    "abilityName": "Entered in the Book of Grudges",
-   "abilityText": "Before bidding, once per turn, choose an opponent. If that opponent uses an ability against your heroes, you may draw a resource.",
+   "abilityText": "Once per turn, if an opponent uses an ability against your heroes or resources, you may draw a resource.",
    "nemesis": [
     "Oathbreaker"
    ],
@@ -410,7 +410,7 @@
     "G": 4
    },
    "abilityName": "Rumour Mill",
-   "abilityText": "During bidding, once per turn, look at all of the face-down resource cards that another player has bid.",
+   "abilityText": "During bidding, once per turn, look at all of the face-down resource cards that another player has bid. If any of those are Halfellow cards, draw a resource.",
    "kind": "hero",
    "revision": "Was a draw when a Goose entered play, which almost never happened; now counts every Goose in play at the start of your turn.",
    "number": 2004
@@ -452,7 +452,7 @@
    "abilityName": "Skyship Manifest",
    "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand and draw a resource card.",
    "kind": "hero",
-   "revision": "Revised in the card sheet (v0.7).",
+   "revision": "Was a draw for Collegium companions or locations, which almost never added up.",
    "number": 2006
   },
   {
@@ -493,7 +493,10 @@
    "abilityText": "When a Mental challenge is faced, draw a resource.",
    "kind": "hero",
    "revision": "Bonus 1 → 2, and the wording now says when it applies; Physical 2 → 1 to keep her from outperforming the rest.",
-   "number": 2008
+   "number": 2008,
+   "nemesis": [
+    "Wardhouse"
+   ]
   },
   {
    "id": "nettle-burrows-trouble-maker",
@@ -512,7 +515,10 @@
    "abilityText": "When a Guile challenge is faced, draw a resource.",
    "kind": "hero",
    "revision": "Guile 4 → 5: her stat swap always uses Guile, so her other stats hardly matter.",
-   "number": 2009
+   "number": 2009,
+   "allied": [
+    "Halfellow"
+   ]
   },
   {
    "id": "sister-aurelie-dane-physician",
@@ -552,7 +558,10 @@
    "abilityText": "When a Physical challenge is faced, draw a resource.",
    "kind": "hero",
    "revision": "Revised in the card sheet (v0.5).",
-   "number": 2011
+   "number": 2011,
+   "nemesis": [
+    "Elf"
+   ]
   },
   {
    "id": "sigrun-stonefast-metal-singer",
@@ -618,7 +627,7 @@
     "Undead"
    ],
    "kind": "hero",
-   "revision": "Revised in the card sheet (v0.7).",
+   "revision": "Revised in the card sheet (v0.5).",
    "number": 2014
   },
   {

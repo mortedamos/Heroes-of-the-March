@@ -106,7 +106,6 @@ function effectTag(e: EffectView): string {
     case 'facedown': return `${tgt} face down`;
     case 'bidValue': return `${tgt} = ${e.amount ?? 3}`;
     case 'autoWin': return 'Takes the location';
-    case 'grudgeWatch': return 'Watched';
     case 'grudge': return `Grudge -${e.amount ?? 3}`;
   }
 }

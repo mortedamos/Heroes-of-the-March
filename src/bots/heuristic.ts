@@ -11,7 +11,7 @@
 //   hard   - as normal, plus threat-weighted sabotage (who could win the GAME with
 //            this location), bluffing and tighter survival math.
 
-import { allDefs, companionsOf, getDef } from '../engine/cards';
+import { allDefs, companionsOf, getDef, nemesisTargets } from '../engine/cards';
 import type { Stat } from '../engine/cardTypes';
 import type { Command } from '../engine/types';
 import type { AbilityOptionView, GameView, PendingView, PlayerPublicView } from '../engine/view';
@@ -85,16 +85,18 @@ export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.ran
 
 // --- abilities -------------------------------------------------------------------
 
+/** How often a bot uses Vaelis's Master Manipulator when it can: the bonus is worth having (or handing out) nearly every turn. */
+const VAELIS_USE: Record<BotLevel, number> = { easy: 0.5, normal: 0.75, hard: 1 };
+
 function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Rand): boolean {
+  if (a.ability === 'shadowsteeds') return rand() < VAELIS_USE[level];
+  // Looking at the next locations costs nothing: Grukka and Barnaby do it every time (easy bots half the time).
+  if (a.ability === 'mineNow' || a.ability === 'maps') return level !== 'easy' || rand() < 0.5;
   if (level === 'easy' && rand() < 0.75) return false;
   const stat = t.stat;
   switch (a.ability) {
-    // Before bidding the bots hold back until the situation calls for it.
-    case 'mineNow': case 'maps': return locationWorthChecking(t, level);
     // Free, but only worth aiming at a real threat.
     case 'ruling': return level !== 'easy' && Boolean(t.biggestThreat());
-    // Oskar: always worth naming someone.
-    case 'grudge': return true;
     // Urzha: look for an easier fight when this one is a stretch.
     case 'pickFight': return level !== 'easy' && t.difficultyFor(t.me) - t.myEstimate() > 2;
     // Rook: swap the worst card in hand for a fresh one.
@@ -117,11 +119,6 @@ function wantsAbility(t: Table, a: AbilityOptionView, level: BotLevel, rand: Ran
     }
     // Pure information: worth a look now and then, always for a hard bot.
     case 'readAhead': return level === 'hard' || (level === 'normal' && rand() < 0.4);
-    case 'shadowsteeds': {
-      // The minion bonus is about +2 to every stat: only spend it when it could matter.
-      const handSum = t.view.hand.reduce((sum, h) => sum + t.handValue(h.card.id), 0);
-      return t.myEstimate() + handSum < Math.max(t.difficultyFor(t.me), t.bestRivalEstimate()) + 4;
-    }
     case 'requisition': {
       const worst = Math.min(...t.view.hand.map((h) => t.handValue(h.card.id)));
       return worst <= 2 && t.others.some((p) => p.handCount >= 2);
@@ -185,13 +182,6 @@ function brisaTarget(t: Table): string | null {
 /** How many wands the given players have revealed. */
 function wandsBid(t: Table, players: PlayerPublicView[]): number {
   return players.reduce((n, p) => n + p.bids.filter((b) => !b.hidden && b.faceUp && (getDef(b.card.def) as { wand?: boolean }).wand).length, 0);
-}
-
-/** Grukka and Barnaby look at upcoming locations: worth doing when this one is not much of a prize. */
-function locationWorthChecking(t: Table, level: BotLevel): boolean {
-  const loc = t.view.turn.location;
-  if (!loc) return false;
-  return locationRenown({ def: loc.def }) <= (level === 'hard' ? 3 : 2);
 }
 
 function standing(t: Table): { mine: number; best: number; diff: number; winning: boolean; safe: boolean } {
@@ -538,7 +528,11 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       return [keepOrSwapLocation(t, card?.def ?? null, 'warchief-grukka-ironjaw') ? 'replace' : 'keep'];
     }
     case 'pickLocation': {
-      const scored = c.options.map((o) => ({ v: o.value, s: o.value === 'keep' ? locationScore(t, t.view.turn.location?.def ?? null) : locationScore(t, o.card?.def ?? null) }));
+      // Renown if the location is likely ours (or the other way round when a threat is about to take it), and whose Nemesis bonuses it switches on.
+      const active = t.view.players.find((p) => p.id === t.view.turn.active);
+      const denying = !t.isMyTurn && Boolean(active) && t.threat(active!) > 8;
+      const score = (def: string | null) => (denying ? -0.5 : 1) * locationScore(t, def) + NEMESIS_WEIGHT * nemesisSwing(t, def);
+      const scored = c.options.map((o) => ({ v: o.value, s: score(o.value === 'keep' ? t.view.turn.location?.def ?? null : o.card?.def ?? null) }));
       return [scored.sort((a, b) => b.s - a.s)[0]!.v];
     }
     case 'wrenStack':
@@ -553,9 +547,6 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       if (mineNext) return [renown <= 3 ? 'bottom' : 'keep'];
       return [active && t.threat(active) > 8 && renown >= 4 ? 'bottom' : 'keep'];
     }
-    case 'oskarGrudge':
-      // Name whoever is most likely to win this encounter (and so carry the penalty into the next).
-      return [pickMax((v) => { const p = t.view.players.find((x) => x.id === v); return p ? t.estimate(p) + p.renown * 0.3 : -99; })];
     case 'rumourMill':
       return one(values[0]);
     case 'rumourTarget': {
@@ -566,7 +557,7 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
     }
     case 'vaelisGive': {
       // A positive minion bonus helps whoever holds it; a negative one hurts them. Keep the good, hand out the bad.
-      const mv = Number(/([+-]?d+) to all stats/.exec(c.options.find((o) => o.value === 'self')?.label ?? '')?.[1] ?? 0);
+      const mv = Number(/([+-]?\d+) to all stats/.exec(c.options.find((o) => o.value === 'self')?.label ?? '')?.[1] ?? 0);
       if (mv >= 0 || level === 'easy') return ['self'];
       return [pickMax((v) => { const p = t.view.players.find((x) => x.id === v); return p ? t.estimate(p) : -99; })];
     }
@@ -662,6 +653,22 @@ function locationScore(t: Table, def: string | null): number {
   const per = d.kind === 'location' ? /every (\w+) hero they have in play/.exec(d.conditionText ?? '')?.[1] : undefined;
   if (per) s += 0.7 * t.heroesOf(t.me).filter((c) => getDef(c.def).groups.includes(per)).length;
   return s;
+}
+
+/** One Nemesis bonus is +1 to every stat of a hero: worth a bit under a point of Renown in a close fight. */
+const NEMESIS_WEIGHT = 0.8;
+
+/** How many more of our heroes than of anyone else's get their Nemesis bonus from this location (a hero counts once per matching entry). */
+function nemesisSwing(t: Table, def: string | null): number {
+  if (!def) return 0;
+  const groups = getDef(def).groups as string[];
+  const matches = (heroDef: string) => nemesisTargets(heroDef).some((tg) => ('tag' in tg ? groups.includes(tg.tag) || groups.includes('All') : tg.def === def)) ? 1 : 0;
+  let swing = 0;
+  for (const p of t.view.players) {
+    const n = t.heroesOf(p).reduce((sum, h) => sum + matches(h.def), 0);
+    swing += p.id === t.me.id ? n : -n * 0.75; // a rival's bonus counts a little less: they may not be in the running
+  }
+  return swing;
 }
 
 /** Grukka: swap in the peeked location? High Renown if we expect to win it, low if a threat would. */

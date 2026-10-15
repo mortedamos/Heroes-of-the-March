@@ -73,7 +73,6 @@ export type EffectKind =
   | 'statBonus'          // target player gains `amount` to `stat` ('all' = every stat) (Vaelis, geese)
   | 'negateBid'          // target bid's value counts as zero (no card uses it now)
   | 'grudge'             // target player: if they win this encounter they have -`amount` in the next (Oskar)
-  | 'grudgeWatch'        // target player: when they use an ability against the owner's heroes, the owner draws a resource (Oskar)
   | 'disableAbilities'   // target hero's abilities are off this turn (no card creates it now)
   | 'bidValue'           // target bid contributes `amount` instead of its value (Brisa)
   | 'facedown'           // target hero is turned face down this turn: no stats, no abilities, no Allied for its friends (Immobilizing Word)
@@ -240,7 +239,7 @@ export type ChoosePurpose =
   | 'forceHero' | 'rulingHero'
   | 'marenTarget' | 'marenGive'
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
-  | 'counterAbility' | 'oskarGrudge' | 'rumourMill' | 'fetch' | 'pickFight' | 'appleSwap'
+  | 'counterAbility' | 'rumourMill' | 'fetch' | 'pickFight' | 'appleSwap'
   | 'curseTarget' | 'vaelisGive' | 'rumourTarget' | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'heroMinion'
   | 'partyDraft' | 'redirectHero' | 'goldiePick' | 'torviFire' | 'aelderRoots' | 'brisaFlip' | 'mograSteal' | 'immobilizeTarget';
 

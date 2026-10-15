@@ -115,6 +115,8 @@ export interface Ability {
   encountersCountAs?: string;
   /** Tova: when this resting hero returns, draw a resource. */
   restReturnDraw?: boolean;
+  /** Oskar: once per turn, when an opponent's ability lands on its player's heroes or resources, its player draws a resource. */
+  drawWhenTargeted?: boolean;
   // Location statics
   challengeStat?: Stat;
   groupBoost?: { group: string; amount: number };
@@ -406,7 +408,7 @@ export const ABILITIES: Record<string, Ability> = {
   'professor-barnaby-pickwort': {
     status: 'full',
     activations: [{
-      id: 'maps', label: 'Look at the next two locations; you may swap one in', windows: ['afterLocation', 'beforeBidding', 'bidding', 'endOfBidding'], turn: 'own', per: 'turn',
+      id: 'maps', label: 'Look at the next two locations; you may swap one in', windows: ['bidding'], per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.location) && hasLocationsToPeek(ctx),
       use: (ctx, self) => {
         const next = peekTop(ctx, 'location', 2);
@@ -450,18 +452,8 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   // Oskar: before bidding, name an opponent; whenever they use an ability against his player's heroes this turn, he draws a resource.
-  'loremaster-oskar-grimgate': {
-    status: 'full',
-    activations: [{
-      id: 'grudge', label: 'Name an opponent: when they use an ability against you, draw a resource', windows: ['beforeBidding'], per: 'turn',
-      canUse: (ctx, self) => others(ctx, self).length > 0,
-      use: (ctx, self) => ctx.queueFirst({
-        t: 'choose', purpose: 'oskarGrudge', player: self.owner, source: nameOf(ctx, self.card),
-        prompt: 'Entered in the Book of Grudges: choose an opponent. When they use an ability against your heroes this turn, you draw a resource.',
-        options: others(ctx, self).map((p) => ({ value: p.id, label: p.name })), min: 1, max: 1, data: { source: self.card },
-      }),
-    }],
-  },
+  // Oskar: once per turn, when an opponent's ability lands on his player's heroes or resources, a resource (effects.ts: hostileTo).
+  'loremaster-oskar-grimgate': { status: 'full', drawWhenTargeted: true },
 
   // Goldie: when you draw a new hero in the recruit phase you draw three and keep one (commands.ts).
   'goldie-trickgrin-keeper-of-the-goose-and-kettle': { status: 'full', tavern: true },

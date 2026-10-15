@@ -14,7 +14,7 @@ import type { EncounterDef, HeroDef, Stat } from './cardTypes';
 import {
   activeEffects, addEffect, cardOption, heroEnters, councilHeroes, defenderOf, defendHeroEffect, disabledCards, discardHero,
   drawRaw, drawResources, enforceAllLimits, enforcePartyLimit, fire, flushOpeningEntrants, hasGroup, leaveLocation, locationEnters, ownerOf, partyLoad, partySize, peekOption,
-  playerHas, replaceLocation, ridingHeroes, statName,
+  hostileTo, playerHas, replaceLocation, ridingHeroes, statName,
 } from './effects';
 import { nextFloat } from './rng';
 import { ALL_VISIBLE, challengeStat, difficultyFor, totalFor } from './totals';
@@ -661,13 +661,11 @@ const shortOf = (ctx: Ctx, card: CardId) => ctx.def(card).name.split(',')[0]!;
 
 /** Immobilizing Word: the victim's Companion heroes (those riding free beside a hero they are Companion To) are turned face down for this encounter. */
 function immobilize(ctx: Ctx, word: CardId, owner: PlayerId, victimId: PlayerId): void {
-  let first = true;
   const victim = ctx.player(victimId);
   const riding = ridingHeroes(ctx, victim);
   for (const c of victim.party) {
     if (!riding.has(c)) continue;
-    addEffect(ctx, { kind: 'facedown', source: word, owner, target: c }, first); // one ability use, one Book of Grudges draw
-    first = false;
+    addEffect(ctx, { kind: 'facedown', source: word, owner, target: c });
   }
 }
 
@@ -978,10 +976,6 @@ export function applyChoice(
         }
         break;
       }
-      case 'oskarGrudge':
-        // Entered in the Book of Grudges: whenever `pick` uses a hostile ability on this player this turn, the player draws a resource.
-        addEffect(ctx, { kind: 'grudgeWatch', source: String(data['source']), owner: p.id, target: pick });
-        break;
       case 'rumourMill':
         break; // the card was shown; nothing else happens
       case 'fetch': {
@@ -1004,7 +998,12 @@ export function applyChoice(
       }
       case 'rumourTarget': {
         const target = ctx.s.players.find((o) => o.id === pick && o !== p);
-        if (target) lookAtBids(ctx, p, target, String(data['source']));
+        if (target) {
+          const looked = target.bids.filter((b) => !b.visible).map((b) => b.card);
+          lookAtBids(ctx, p, target, String(data['source']));
+          // Rumour Mill: if any of the cards looked at is a Halfellow card, a resource.
+          if (looked.some((c) => hasGroup(ctx.def(c), 'Halfellow'))) drawResources(ctx, p.id, 1, 'Rumour Mill');
+        }
         break;
       }
       case 'vaelisGive': {
@@ -1048,6 +1047,7 @@ export function applyChoice(
         aOwner.bids[ai] = bBid;
         bOwner.bids[bi] = aBid;
         ctx.emit({ type: 'bidsSwapped', a: aOwner.id, aCard: ctx.ref(pick), b: bOwner.id, bCard: ctx.ref(apple) });
+        hostileTo(ctx, bOwner.id, aOwner.id);
         break;
       }
       case 'partyDraft': {
@@ -1132,6 +1132,7 @@ function placeCurse(ctx: Ctx, card: CardId, fromId: PlayerId, toId: PlayerId): v
   const [bid] = from.bids.splice(at, 1);
   to.bids.push({ ...bid!, placedBy: fromId });
   ctx.emit({ type: 'cursePlaced', from: fromId, to: toId, card: ctx.ref(card) });
+  hostileTo(ctx, toId, fromId);
 }
 
 /** Royal Requisition: `p` gives `give` and takes a random card from `target`'s hand. */
@@ -1142,6 +1143,7 @@ function swapCards(ctx: Ctx, p: PlayerState, target: PlayerState, give: CardId):
   target.hand.push(give);
   p.hand.push(taken);
   ctx.emit({ type: 'cardsTraded', from: p.id, to: target.id, gave: ctx.ref(give), got: ctx.ref(taken) });
+  hostileTo(ctx, target.id, p.id);
 }
 
 /** Smash and Grab: `thief` takes a random card from `victim`'s hand. */
@@ -1151,6 +1153,7 @@ function stealRandom(ctx: Ctx, thief: PlayerState, victim: PlayerState, source: 
   thief.hand.push(taken);
   ctx.emit({ type: 'drew', player: thief.id, deck: 'resource', cards: [ctx.ref(taken)], reason: source });
   ctx.log(thief.id, source, `takes a random card from ${victim.name}`);
+  hostileTo(ctx, victim.id, thief.id);
 }
 
 /** Uniform [0,1) from the game RNG (e.g. a random card from another hand). */

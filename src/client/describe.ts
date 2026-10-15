@@ -87,7 +87,6 @@ function describeEffect(e: Extract<ClientEvent, { type: 'effect' }>, view: GameV
     case 'facedown': return `${src}: ${target} is turned face down this encounter, with no stats and no ability.`;
     case 'bidValue': return `${src}: ${target} is turned face down and counts as ${ef.amount ?? 3}.`;
     case 'autoWin': return `${src}: ${who(e.targetPlayer)} will take the location, whatever the totals!`;
-    case 'grudgeWatch': return `${src}: ${who(e.targetPlayer)} ${e.targetPlayer === view.you ? 'are' : 'is'} watched. An ability used against the grudge-holder's heroes draws them a resource.`;
     case 'grudge': return `${src}: if ${who(e.targetPlayer)} win${e.targetPlayer === view.you ? '' : 's'} this encounter, ${e.targetPlayer === view.you ? 'you have' : 'they have'} -${ef.amount ?? 3} in the next.`;
   }
 }
