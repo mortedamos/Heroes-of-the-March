@@ -93,9 +93,10 @@ export interface TotalBreakdown {
  */
 export function alliedBonus(ctx: Ctx, p: PlayerState, hero: CardId, visible: Visible): number {
   const targets = alliedTargets(ctx.defId(hero));
-  if (!targets.length) return 0;
+  if (!targets.length || ctx.s.turn.namedDisabled) return 0;
+  const faceDown = new Set(activeEffects(ctx, 'facedown').map((e) => e.target));
   const cards = [
-    ...p.party.filter((c) => c !== hero).map((c) => ctx.def(c)),
+    ...p.party.filter((c) => c !== hero && !faceDown.has(c)).map((c) => ctx.def(c)),
     ...p.bids.filter((b) => visible(p, b) && !b.flipped).map((b) => ctx.def(b.card)),
   ];
   return cards.filter((d) => targets.some((t) => matchesTarget(d, t))).length;
@@ -107,14 +108,14 @@ export function alliedBonus(ctx: Ctx, p: PlayerState, hero: CardId, visible: Vis
  */
 export function nemesisBonus(ctx: Ctx, hero: CardId): number {
   const targets = nemesisTargets(ctx.defId(hero));
-  if (!targets.length) return 0;
+  if (!targets.length || ctx.s.turn.namedDisabled) return 0;
   const t = ctx.s.turn;
   const cards = [...(t.location ? [t.location] : []), ...(t.encounter ? [t.encounter] : []), ...t.minions, ...t.heroMinions];
   return cards.filter((c) => targets.some((tg) => ('tag' in tg ? isOfGroup(ctx, c, tg.tag) : ctx.defId(c) === tg.def))).length;
 }
 
 function heroValue(ctx: Ctx, p: PlayerState, card: CardId, stat: Stat, visible: Visible): number {
-  if (activeEffects(ctx, 'silenceHero').some((e) => e.target === card)) return 0;
+  if (activeEffects(ctx).some((e) => (e.kind === 'silenceHero' || e.kind === 'facedown') && e.target === card)) return 0;
   const d = getDef(ctx.defId(card)) as HeroDef;
   let v = d.stats[stat];
   const forced = activeEffects(ctx, 'forceStat').filter((e) => e.target === card).at(-1);

@@ -40,7 +40,7 @@ export function kingdomsOf(def: CardDef): string[] {
 /** Cards whose abilities are switched off this turn (Aldric's Shield of the Dawn). */
 export function disabledCards(ctx: Ctx): Set<CardId> {
   const out = new Set<CardId>();
-  for (const e of ctx.s.turn.effects) if (e.kind === 'disableAbilities') out.add(e.target);
+  for (const e of ctx.s.turn.effects) if (e.kind === 'disableAbilities' || e.kind === 'facedown') out.add(e.target);
   return out;
 }
 
@@ -85,7 +85,7 @@ export function defenderOf(ctx: Ctx, p: PlayerState, kind: 'redirect' | 'heroes'
 }
 
 /** Add a turn effect. Returns null if it was cancelled. */
-export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect | null {
+export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>, watch = true): TurnEffect | null {
   const t = ctx.s.turn;
   t.effectSeq += 1;
   const effect: TurnEffect = { ...e, id: t.effectSeq };
@@ -97,9 +97,9 @@ export function addEffect(ctx: Ctx, e: Omit<TurnEffect, 'id'>): TurnEffect | nul
     targetPlayer: cardTarget ? ownerOf(ctx, cardTarget) : e.target,
   });
   // Oskar's "Entered in the Book of Grudges": the watched opponent used an ability against his player's heroes.
-  const hostile = e.kind === 'silenceHero' || e.kind === 'forceStat' || e.kind === 'negateBid' || e.kind === 'disableAbilities'
+  const hostile = e.kind === 'silenceHero' || e.kind === 'forceStat' || e.kind === 'negateBid' || e.kind === 'disableAbilities' || e.kind === 'facedown'
     || (e.kind === 'statBonus' && (e.amount ?? 0) < 0);
-  if (hostile) {
+  if (hostile && watch) {
     const hit = PLAYER_TARGET_KINDS.includes(e.kind) ? e.target : ownerOf(ctx, e.target);
     for (const w of t.effects) {
       if (w.kind === 'grudgeWatch' && w.target === e.owner && w.owner === hit && w.owner !== e.owner) {
@@ -390,7 +390,7 @@ export function locationEnters(ctx: Ctx, card: CardId, reason: string): void {
  * Swap the current location (Wayfinder's Die, Portal Rune, The Umbral Ring, Grukka, Barnaby...). Brunna's player
  * may counter it first (the first such player clockwise is asked); `answered` is set once they have.
  */
-export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'discard', reason: string, answered = false): void {
+export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'discard', reason: string, answered = false, reward?: { player: PlayerId; n: number }): void {
   if (!answered && ctx.s.turn.location) {
     for (const p of ctx.clockwise()) {
       const shield = defenderOf(ctx, p, 'resources');
@@ -400,7 +400,7 @@ export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'd
         t: 'choose', purpose: 'counterAbility', player: p.id, source: ctx.def(shield).name,
         prompt: `${reason} would change the location. Counter it with ${ctx.def(shield).name.split(',')[0]}?`,
         options: [{ value: 'counter', label: 'Counter it' }, { value: 'allow', label: 'Let it happen' }], min: 1, max: 1,
-        data: { kind: 'location', next, mode, reason, shield },
+        data: { kind: 'location', next, mode, reason, shield, ...(reward ? { rewardPlayer: reward.player, rewardN: reward.n } : {}) },
       });
       return;
     }
@@ -415,6 +415,19 @@ export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'd
   locationEnters(ctx, next, reason);
   if (prev) fire(ctx, 'locationReplaced', { from: prev, to: next });
   enforceAllLimits(ctx);
+  // Grukka: the draw comes with the new location, so a countered swap gives nothing.
+  if (reward) drawResources(ctx, reward.player, reward.n, reason);
+}
+
+/** Draw a minion (of `group`, or any) from the encounter stack into the current encounter, as its own card entering play. */
+export function drawMinionNow(ctx: Ctx, group: string | null): CardId | null {
+  const m = group ? ctx.takeMatching('encounter', (c) => hasGroup(ctx.def(c), group)) : ctx.take('encounter');
+  if (!m) return null;
+  ctx.s.turn.minions.push(m);
+  ctx.emit({ type: 'minionDrawn', card: ctx.ref(m) });
+  fire(ctx, 'encounterEntered', { card: m, asMinion: true });
+  fire(ctx, 'minionDrawn', { card: m });
+  return m;
 }
 
 /** The party limit can fall when a location leaves (The Goose & Kettle's extra place): everyone is brought back within it. */

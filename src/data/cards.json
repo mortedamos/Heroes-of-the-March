@@ -1,5 +1,5 @@
 {
- "version": "v0.6",
+ "version": "v0.7",
  "heroes": [
   {
    "id": "warchief-grukka-ironjaw",
@@ -15,13 +15,16 @@
     "G": 5
    },
    "abilityName": "Strike the Heart",
-   "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. You may replace the current location with that one. Shuffle any unused locations back into the location stack.",
+   "abilityText": "Once per turn, after the location is revealed, you may look at the next location in the location stack. If it is a capital, you may put it into play and draw 2 resources. Shuffle any unused locations back into the location stack.",
    "allied": [
     "Orc"
    ],
    "kind": "hero",
-   "revision": "Stats halved, rounded up (was 11/6/7); trigger and Kin bonus set aside.",
-   "number": 1001
+   "revision": "Revised in the card sheet (v0.7).",
+   "number": 1001,
+   "nemesis": [
+    "Capital"
+   ]
   },
   {
    "id": "thorgar-twice-buried",
@@ -134,7 +137,7 @@
    "art": "portraits__ysolde_uncanny",
    "stats": {
     "P": 2,
-    "M": 3,
+    "M": 2,
     "G": 3
    },
    "abilityName": "The World Walks With Me",
@@ -143,7 +146,7 @@
     "Skarra"
    ],
    "kind": "hero",
-   "revision": "Stats halved, rounded up (was 4/6/6); trigger and Kin bonus set aside.",
+   "revision": "Revised in the card sheet (v0.7).",
    "number": 1007
   },
   {
@@ -256,11 +259,8 @@
    },
    "abilityName": "Resources of the Collegium",
    "abilityText": "Once per turn, when you draw resources, draw one additional resource.",
-   "allied": [
-    "Collegium"
-   ],
    "kind": "hero",
-   "revision": "Stats halved, rounded up (was 2/10/7); trigger and Kin bonus set aside.",
+   "revision": "Revised in the card sheet (v0.7).",
    "number": 1012
   },
   {
@@ -439,7 +439,8 @@
    "name": "Captain Rook Halloran, Skyship Captain",
    "groups": [
     "Human",
-    "Collegium"
+    "Collegium",
+    "Marchguard"
    ],
    "quote": "“The Archmage says skyships are applied theory. I say they're applied nerve.”",
    "art": "portraits__captain-rook-halloran-skyship-captain",
@@ -451,7 +452,7 @@
    "abilityName": "Skyship Manifest",
    "abilityText": "Once per turn, before bidding, you may discard a resource card from your hand and draw a resource card.",
    "kind": "hero",
-   "revision": "Was a draw for Collegium companions or locations, which almost never added up.",
+   "revision": "Revised in the card sheet (v0.7).",
    "number": 2006
   },
   {
@@ -602,8 +603,7 @@
    "id": "thessaly-of-the-grove",
    "name": "Thessaly of the Grove",
    "groups": [
-    "Elf",
-    "Collegium"
+    "Elf"
    ],
    "quote": null,
    "art": "portraits__thessaly-of-the-grove",
@@ -618,7 +618,7 @@
     "Undead"
    ],
    "kind": "hero",
-   "revision": "Revised in the card sheet (v0.5).",
+   "revision": "Revised in the card sheet (v0.7).",
    "number": 2014
   },
   {
@@ -1064,17 +1064,18 @@
    "quote": null,
    "art": null,
    "stats": {
-    "P": 4,
-    "M": 3,
+    "P": 3,
+    "M": 2,
     "G": 4
    },
    "abilityName": "Goose & Company",
-   "abilityText": "At the start of your turn, draw a resource card for every Goose in play anywhere.",
+   "abilityText": "At the start of your turn, draw a resource card if there is at least one Goose card in play anywhere.",
    "allied": [
     "Goose"
    ],
    "kind": "hero",
-   "number": 2039
+   "number": 2039,
+   "revision": "Revised in the card sheet (v0.7)."
   }
  ],
  "locations": [
@@ -2439,7 +2440,7 @@
    },
    "stat": "G",
    "difficulty": 6,
-   "conditionText": "When this card comes into play as an encounter, draw a Skarra enounter. That card becomes the encounter, and this card becomes the minion.",
+   "conditionText": "When this card comes into play as an encounter, draw a Skarra encounter. That card becomes the encounter, and this card becomes the minion.",
    "number": 4058
   },
   {
@@ -2863,7 +2864,7 @@
   {
    "kind": "resource",
    "id": "gauntlet-of-returning",
-   "name": "Pariapt of the Phoenix",
+   "name": "Amulet of the Phoenix",
    "groups": [],
    "quote": null,
    "art": null,
@@ -3564,6 +3565,52 @@
    "council": false,
    "conditionText": null,
    "number": 5085
+  },
+  {
+   "kind": "resource",
+   "id": "pariapt-of-peace",
+   "name": "Pariapt of Peace",
+   "groups": [
+    "Accord"
+   ],
+   "quote": null,
+   "art": null,
+   "value": 2,
+   "wand": false,
+   "council": false,
+   "conditionText": "Allied and Nemesis give no bonuses this turn.",
+   "number": 5086
+  },
+  {
+   "kind": "resource",
+   "id": "the-tome-of-nethrak",
+   "name": "The Tome of Nethrak",
+   "groups": [
+    "Undead",
+    "Collegium"
+   ],
+   "quote": null,
+   "art": null,
+   "value": 4,
+   "wand": false,
+   "council": false,
+   "conditionText": "When revealed or played face up, draw an Undead minion for this encounter.",
+   "number": 5087
+  },
+  {
+   "kind": "resource",
+   "id": "immobilizing-word",
+   "name": "Immobilizing Word",
+   "groups": [
+    "Marchguard"
+   ],
+   "quote": null,
+   "art": null,
+   "value": 1,
+   "wand": false,
+   "council": false,
+   "conditionText": "Choose an opponent. Their Companion heroes are turned face down, cannot use their abilities, and contribute nothing this encounter.",
+   "number": 5088
   }
  ]
 }

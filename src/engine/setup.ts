@@ -80,7 +80,7 @@ export function createGame(opts: NewGameOptions): { state: GameState; events: Ga
       number: 0, active: 0, step: 'turnStart', cursor: 0,
       location: null, extraLocations: [], encounter: null, minions: [], heroMinions: [], setAside: [], pendingLocation: null, chosenEncounter: null, openingEntrants: [],
       bidder: 0, passesInARow: 0, revealCursor: 0,
-      wandsDisabled: false, noFalls: false, failed: [], result: null, effects: [], effectSeq: 0, used: {},
+      wandsDisabled: false, namedDisabled: false, noFalls: false, failed: [], result: null, effects: [], effectSeq: 0, used: {},
     },
     tasks: [],
     pending: null,

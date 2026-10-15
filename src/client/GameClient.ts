@@ -68,6 +68,7 @@ function afflictionsOf(view: GameView): Map<string, string[]> {
       case 'forceStat': add(e.targetCard?.id, `Forced to use ${stat} ${by}`); break;
       case 'negateBid': add(e.targetCard?.id, `Counts as zero ${by}`); break;
       case 'disableAbilities': add(e.targetCard?.id, `Abilities disabled ${by}`); break;
+      case 'facedown': add(e.targetCard?.id, `Turned face down: no stats, no ability ${by}`); break;
       default: break;
     }
   }

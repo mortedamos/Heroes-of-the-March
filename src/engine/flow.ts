@@ -8,6 +8,7 @@
 //   -> [endOfBidding window] -> resolve -> turnEnd
 
 import { abilityOf, peekTop, type OwnedSource } from './abilities';
+import { companionsOf } from './cards';
 import type { Ctx } from './context';
 import { IllegalMove } from './context';
 import type { EncounterDef, HeroDef, Stat } from './cardTypes';
@@ -538,6 +539,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     for (const pid of t.failed) ctx.queue({ t: 'heroFalls', player: pid });
     t.failed = [];
     t.wandsDisabled = false;
+    t.namedDisabled = false;
     t.noFalls = false;
     t.effects = [];
     t.used = {};
@@ -640,6 +642,7 @@ function stillValid(ctx: Ctx, task: ChooseTask): ChooseTask['options'] {
     case 'marenTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o.hand.length > 0));
     case 'rumourTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p && o.bids.some((b) => !b.visible)));
     case 'curseTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p));
+    case 'immobilizeTarget': return keep((v) => ctx.s.players.some((o) => o.id === v && o !== p && o.party.some((c) => companionsOf(ctx.defId(c)).length > 0)));
     case 'appleSwap': return keep((v) => ctx.s.players.some((o) => o.bids.some((b) => b.card === v && b.visible)));
     case 'gauntlet': return keep((v) => ctx.s.discards.hero.includes(v));
     default: return task.options;
@@ -656,6 +659,16 @@ function counterPrompt(ctx: Ctx, victimId: PlayerId, shield: CardId, prompt: str
 }
 
 const shortOf = (ctx: Ctx, card: CardId) => ctx.def(card).name.split(',')[0]!;
+
+/** Immobilizing Word: the victim's Companion heroes (those that are Companion To another hero) are turned face down for this encounter. */
+function immobilize(ctx: Ctx, word: CardId, owner: PlayerId, victimId: PlayerId): void {
+  let first = true;
+  for (const c of ctx.player(victimId).party) {
+    if (!companionsOf(ctx.defId(c)).length) continue;
+    addEffect(ctx, { kind: 'facedown', source: word, owner, target: c }, first); // one ability use, one Book of Grudges draw
+    first = false;
+  }
+}
 
 const flatten = (e: DefendedEffect): Record<string, string | number> => ({
   ek: e.kind, es: e.source, eo: e.owner, et: e.target, estat: e.stat ?? '', eamt: e.amount ?? 0,
@@ -752,6 +765,8 @@ export function applyChoice(
   const p = ctx.player(d.player);
   const data = d.data ?? {};
   const t = ctx.s.turn;
+  // Strike the Heart on a card that is not a Capital: skipping is the same as shuffling it back.
+  if (d.purpose === 'peekReplace' && !picks.length) picks = ['keep'];
   for (const pick of picks) {
     switch (d.purpose) {
       case 'discardHero':
@@ -837,7 +852,8 @@ export function applyChoice(
           const next = String(data['next']);
           t.pendingLocation = null;
           if (countered) ctx.returnToDeck('location', [next]);
-          else replaceLocation(ctx, next, String(data['mode']) as 'shuffleBack' | 'discard', String(data['reason']), true);
+          else replaceLocation(ctx, next, String(data['mode']) as 'shuffleBack' | 'discard', String(data['reason']), true,
+            data['rewardPlayer'] ? { player: String(data['rewardPlayer']), n: Number(data['rewardN']) } : undefined);
         } else if (kind === 'curse') {
           if (countered) {
             const from = ctx.player(String(data['from']));
@@ -850,6 +866,8 @@ export function applyChoice(
           if (!countered) swapCards(ctx, ctx.player(String(data['from'])), ctx.player(String(data['to'])), String(data['give']));
         } else if (kind === 'steal') {
           if (!countered) stealRandom(ctx, ctx.player(String(data['to'])), ctx.player(String(data['from'])), String(data['source']));
+        } else if (kind === 'immobilize') {
+          if (!countered) immobilize(ctx, String(data['card']), String(data['from']), String(data['to']));
         }
         break;
       }
@@ -923,7 +941,7 @@ export function applyChoice(
         const pile = ctx.s.decks.location;
         if (pick === 'replace' && pile[pile.length - 1] === card) {
           pile.pop();
-          replaceLocation(ctx, card, 'shuffleBack', 'Mine Now');
+          replaceLocation(ctx, card, 'shuffleBack', 'Strike the Heart', false, { player: p.id, n: 2 });
         } else ctx.shuffle('location');
         break;
       }
@@ -1005,6 +1023,16 @@ export function applyChoice(
           ctx.queueFirst(counterPrompt(ctx, to.id, shield, `${ctx.def(card).name} would be placed in front of you. Counter it with ${shortOf(ctx, shield)}?`,
             { kind: 'curse', card, from: from.id, to: to.id, src: card }));
         } else placeCurse(ctx, card, from.id, to.id);
+        break;
+      }
+      case 'immobilizeTarget': {
+        const victim = ctx.player(pick);
+        const word = String(data['card']);
+        const shield = defenderOf(ctx, victim, 'heroes');
+        if (shield) {
+          ctx.queueFirst(counterPrompt(ctx, victim.id, shield, `${ctx.def(word).name} would turn your Companion heroes face down. Counter it with ${shortOf(ctx, shield)}?`,
+            { kind: 'immobilize', card: word, from: p.id, to: victim.id, src: word }));
+        } else immobilize(ctx, word, p.id, victim.id);
         break;
       }
       case 'appleSwap': {

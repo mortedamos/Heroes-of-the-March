@@ -972,7 +972,8 @@ describe('the recruit phase: one random hero, keep it or not', () => {
     until(g, (_s, d) => d.kind === 'recruit.offer');
     const offer = g.s.pending!;
     const p = player(g, offer.player);
-    while (p.party.length < 3) p.party.push(g.s.decks.hero.shift()!); // a fall on turn 1 left a gap: top the party back up
+    give(g.s, p.id, { party: ['thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot'] }); // three heroes that ride with nobody
+    onTop(g.s, 'hero', ['professor-barnaby-pickwort']);
     const top = g.s.decks.hero[g.s.decks.hero.length - 1]!;
     act(g, { type: 'recruit.draw', decision: offer.id });
     const place = g.s.pending!;
@@ -1100,11 +1101,11 @@ describe('former heroes', () => {
       expect(hasDef(c.id), c.name).toBe(back);
     }
     expect(CARDS.heroes).toHaveLength(49);
-    expect(CARDS.locations.length + CARDS.encounters.length + CARDS.resources.length + CARDS.heroes.length).toBe(204);
+    expect(CARDS.locations.length + CARDS.encounters.length + CARDS.resources.length + CARDS.heroes.length).toBe(207);
   });
 
   it('no rules text anywhere still talks about companions', () => {
-    const re = /companion/i;
+    const re = /companion/; // the named ability is written with a capital: Companion To, Companion heroes
     for (const kind of ['heroes', 'locations', 'encounters', 'resources'] as const) {
       for (const c of CARDS[kind]) {
         const text = 'abilityText' in c ? c.abilityText : 'conditionText' in c ? c.conditionText : '';
@@ -1203,13 +1204,24 @@ describe('geese, Tobin, Tansy, Sigrun and Mogra', () => {
     expect(g.s.discards.hero).toEqual(expect.arrayContaining([card(g, 'gnash-the-butcher-of-bloodmire'), card(g, 'varg-ironjaw'), card(g, 'kesh-the-bog-huntress')]));
   });
 
-  it("Farmer Hobart draws a resource at the start of his controller's turn for every Goose in play, anyone's", () => {
+  it("Farmer Hobart draws a resource at the start of his controller's turn if there is a Goose in play, anyone's (two geese still give one)", () => {
     const g = newGame();
     standard(g, { hero: 'professor-barnaby-pickwort', companions: ['farmer-hobart-thimblewick', 'honk-the-goose-rout-veteran'], hand: [] }, { companions: ['duchess-the-pub-goose', 'varg-ironjaw'] });
     restart(g);
     finishTurn(g); // A's turn 1 (triggers don't fire in the opening turn)
     finishTurn(g); // B's turn 2
-    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && /Hobart/.test(e.reason) && e.cards.length === 2)).toHaveLength(1);
+    const drawn = g.events.filter((e) => e.type === 'drew' && e.player === g.A && /Hobart/.test(e.reason));
+    expect(drawn).toHaveLength(1);
+    expect(drawn[0]!.type === 'drew' && drawn[0]!.cards.length).toBe(1);
+  });
+
+  it('Farmer Hobart draws nothing when no Goose is in play', () => {
+    const g = newGame();
+    standard(g, { hero: 'professor-barnaby-pickwort', companions: ['farmer-hobart-thimblewick', 'pell-quillon-collegium-prodigy'], hand: [] }, { companions: ['varg-ironjaw', 'kesh-the-bog-huntress'] });
+    restart(g);
+    finishTurn(g);
+    finishTurn(g);
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && /Hobart/.test(e.reason))).toHaveLength(0);
   });
 
   it('Sigrun: look at three discarded cards and take one, once per turn', () => {
@@ -2011,5 +2023,166 @@ describe('Goldie, Brisa, Aelder, Grumma and the new places', () => {
     pick(g, 'counter');
     expect(g.s.turn.effects.filter((e) => e.kind === 'forceStat')).toHaveLength(0);
     checkInvariants(g.s);
+  });
+});
+
+describe('the third sheet pass (v0.7): Grukka, Pariapt of Peace, The Tome of Nethrak, Immobilizing Word', () => {
+  const idle = ['gnash-the-butcher-of-bloodmire', 'nettle-burrows-trouble-maker', 'sister-aurelie-dane-physician']; // no Companion To among them
+
+  it('Grukka: a Capital may be put into play for two resources, and the peek stays private', () => {
+    const g = newGame();
+    standard(g, { hero: 'warchief-grukka-ironjaw' }); // the rig puts Kingsford (a Capital) next
+    restart(g);
+    until(g, activateFor(g.A, 'afterLocation'));
+    use(g, 'warchief-grukka-ironjaw', 'mineNow');
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'peekReplace' && d.options.map((o) => o.value)).toEqual(['replace', 'keep']);
+    const peeked = g.s.decks.location[g.s.decks.location.length - 1]!;
+    expect(g.s.cards[peeked]).toBe('kingsford');
+    pick(g, 'replace');
+    expect(g.s.turn.location).toBe(peeked);
+    const drew = g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Strike the Heart');
+    expect(drew.reduce((n, e) => n + (e.type === 'drew' ? e.cards.length : 0), 0)).toBe(2);
+    checkInvariants(g.s);
+  });
+
+  it('Grukka: anything but a Capital is only looked at and shuffled back (skipping is the same)', () => {
+    const g = newGame();
+    standard(g, { hero: 'warchief-grukka-ironjaw' });
+    restart(g);
+    until(g, activateFor(g.A, 'afterLocation'));
+    onTop(g.s, 'location', ['clover-hollow']);
+    const here = g.s.turn.location;
+    use(g, 'warchief-grukka-ironjaw', 'mineNow');
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'peekReplace' && d.options.map((o) => o.value)).toEqual(['keep']);
+    expect(d.kind === 'choose' && d.min).toBe(0);
+    pick(g); // skip
+    expect(g.s.turn.location).toBe(here);
+    expect(g.s.decks.location).toContain(card(g, 'clover-hollow'));
+    expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Strike the Heart')).toBe(false);
+    checkInvariants(g.s);
+  });
+
+  it('Grukka: if Brunna counters the swap, no resources are drawn', () => {
+    const g = newGame();
+    standard(g, { hero: 'warchief-grukka-ironjaw' }, { hero: 'high-thane-brunna-stonefast' });
+    restart(g);
+    until(g, activateFor(g.A, 'afterLocation'));
+    const here = g.s.turn.location;
+    use(g, 'warchief-grukka-ironjaw', 'mineNow');
+    pick(g, 'replace');
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'counterAbility' && d.player === g.B).toBe(true);
+    pick(g, 'counter');
+    expect(g.s.turn.location).toBe(here);
+    expect(g.events.some((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Strike the Heart')).toBe(false);
+    checkInvariants(g.s);
+  });
+
+  it('Grukka gets his Nemesis bonus in a Capital', () => {
+    const g = newGame();
+    standard(g, { hero: 'warchief-grukka-ironjaw', companions: ['pell-quillon-collegium-prodigy', 'moss-dire-wolf'] });
+    onTop(g.s, 'location', ['kingsford']);
+    restart(g);
+    until(g, bidFor(g.A));
+    // In a Capital Grukka has Nemesis +1, and Allied: Orc +1 for Moss.
+    const st = viewFor(g.s, g.A).turn.challenge!.stat;
+    expect(total(g, g.A, g.A)).toBe(stat('warchief-grukka-ironjaw', st) + 2 + stat('pell-quillon-collegium-prodigy', st) + stat('moss-dire-wolf', st));
+  });
+
+  it('Pariapt of Peace switches off Allied and Nemesis for everyone this turn, and only this turn', () => {
+    const g = newGame();
+    standard(g, { party: ['high-thane-brunna-stonefast', 'kazra-emberdeep', 'pell-quillon-collegium-prodigy'], hand: ['pariapt-of-peace'] }, { party: idle });
+    restart(g);
+    until(g, bidFor(g.A));
+    const before = total(g, g.A, g.A); // Brunna is Allied: Dwarf and Kazra is a Dwarf: +1
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'pariapt-of-peace') });
+    expect(g.s.turn.namedDisabled).toBe(true);
+    expect(total(g, g.A, g.A)).toBe(before + 2 - 1); // its +2, less Brunna's Allied bonus
+    finishTurn(g);
+    expect(g.s.turn.namedDisabled).toBe(false);
+  });
+
+  it('The Tome of Nethrak draws an Undead minion into this encounter, raising the difficulty for everyone', () => {
+    const g = newGame();
+    standard(g, { hand: ['the-tome-of-nethrak'] }, { party: idle });
+    restart(g);
+    until(g, bidFor(g.A));
+    onTop(g.s, 'encounter', ['barrow-thralls']); // Undead, minion bonus +4
+    const level = () => viewFor(g.s, g.B).turn.challenge!.difficulty.total;
+    const before = level();
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-tome-of-nethrak') });
+    expect(g.s.turn.minions).toContain(card(g, 'barrow-thralls'));
+    expect(level()).toBe(before + 4);
+    checkInvariants(g.s);
+  });
+
+  it('Immobilizing Word turns the Companion heroes of an opponent face down: no stats this encounter', () => {
+    const g = newGame(3);
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['queen-maren-ashcroft', 'varg-ironjaw', 'moss-dire-wolf'] });
+    give(g.s, g.C!, { party: idle });
+    restart(g);
+    until(g, bidFor(g.A));
+    const before = total(g, g.A, g.B);
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') }); // only B has Companions, so no question is asked
+    const down = g.s.turn.effects.filter((e) => e.kind === 'facedown');
+    expect(down.map((e) => e.target).sort()).toEqual([card(g, 'varg-ironjaw'), card(g, 'moss-dire-wolf')].sort());
+    // Physical challenge: Varg 4 and Moss 4 are gone.
+    expect(total(g, g.A, g.B)).toBe(before - stat('varg-ironjaw', 'P') - stat('moss-dire-wolf', 'P'));
+    expect(player(g, g.B).party).toHaveLength(3); // still in the party
+    finishTurn(g);
+    expect(g.s.turn.effects.filter((e) => e.kind === 'facedown')).toHaveLength(0);
+  });
+
+  it('Immobilizing Word asks which opponent when several have Companions, and an opponent without any cannot be picked', () => {
+    const g = newGame(3);
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['queen-maren-ashcroft', 'varg-ironjaw', 'moss-dire-wolf'] });
+    give(g.s, g.C!, { party: ['sergeant-waddle', 'honk-the-goose-rout-veteran', 'duchess-the-pub-goose'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') });
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'immobilizeTarget' && d.options.map((o) => o.value).sort()).toEqual([g.B, g.C!].sort());
+    pick(g, g.C!);
+    expect(g.s.turn.effects.filter((e) => e.kind === 'facedown')).toHaveLength(3);
+  });
+
+  it('Immobilizing Word does nothing when no opponent has a Companion hero', () => {
+    const g = newGame(3);
+    standard(g, { hand: ['immobilizing-word'] }, { party: idle });
+    give(g.s, g.C!, { party: idle });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') });
+    expect(g.s.turn.effects.filter((e) => e.kind === 'facedown')).toHaveLength(0);
+  });
+
+  it('Immobilizing Word can be countered by Aldric, once per turn', () => {
+    const g = newGame(3);
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['lord-paladin-aldric-ashcroft', 'varg-ironjaw', 'moss-dire-wolf'] });
+    give(g.s, g.C!, { party: idle });
+    restart(g);
+    until(g, bidFor(g.A));
+    const before = total(g, g.A, g.B);
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') });
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.purpose === 'counterAbility' && d.player === g.B).toBe(true);
+    pick(g, 'counter');
+    expect(g.s.turn.effects.filter((e) => e.kind === 'facedown')).toHaveLength(0);
+    expect(total(g, g.A, g.B)).toBe(before);
+    checkInvariants(g.s);
+  });
+
+  it('a face-down hero no longer counts for the Allied bonus of the hero beside it', () => {
+    const g = newGame(3);
+    // Sigrun and Varg are Allied to each other and Varg is a Companion To Sigrun: face down, he gives neither his stats nor an Allied bonus to either.
+    standard(g, { hand: ['immobilizing-word'] }, { party: ['sigrun-stonefast-metal-singer', 'varg-ironjaw', 'queen-maren-ashcroft'] });
+    give(g.s, g.C!, { party: idle });
+    restart(g);
+    until(g, bidFor(g.A));
+    const before = total(g, g.A, g.B);
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'immobilizing-word') });
+    expect(total(g, g.A, g.B)).toBe(before - stat('varg-ironjaw', 'P') - 2); // his stats, his own Allied: Sigrun and hers: Varg
   });
 });

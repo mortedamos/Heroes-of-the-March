@@ -109,6 +109,7 @@ export interface GameView {
     challenge: { stat: Stat; difficulty: DifficultyBreakdown } | null;
     bidder: PlayerId | null;
     wandsDisabled: boolean;
+    namedDisabled: boolean;
     effects: EffectView[];
     result: TurnResult | null;
   };
@@ -234,6 +235,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       challenge: ch ? { stat: challengeStat(ctx, null) ?? ch.stat, difficulty: difficultyFor(ctx, null)! } : null,
       bidder: t.step === 'bidding' ? state.players[t.bidder]?.id ?? null : null,
       wandsDisabled: t.wandsDisabled,
+      namedDisabled: t.namedDisabled,
       effects,
       result: t.result ? structuredClone(t.result) : null,
     },

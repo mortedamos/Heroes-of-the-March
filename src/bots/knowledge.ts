@@ -22,7 +22,7 @@ export const SPECIAL_VALUE: Record<string, number> = {
 
 /** How much a hero's ability is worth on top of its stats (rough, in stat points). Allied, Nemesis and Companion To are priced separately (synergy). */
 const HERO_ABILITY: Record<string, number> = {
-  'warchief-grukka-ironjaw': 3, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 1.5, 'lord-vaelis-nightbloom': 3,
+  'warchief-grukka-ironjaw': 1.5, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 1.5, 'lord-vaelis-nightbloom': 3,
   'pip-wanderfoot': 0.5, 'kazra-emberdeep': 1, 'ysolde-of-the-wellspring': 5, 'mayor-hobby-trickgrin': 2,
   'lord-paladin-aldric-ashcroft': 2.5, 'high-thane-brunna-stonefast': 2.5, 'loremaster-oskar-grimgate': 3,
   'queen-maren-ashcroft': 3, 'archmage-corvin-varro': 4, 'professor-barnaby-pickwort': 3, 'urzha-half-tusk': 2,
@@ -37,7 +37,7 @@ const HERO_ABILITY: Record<string, number> = {
   'sigrun-stonefast-metal-singer': 1.5, 'tobin-quill-goose-keeper': 1.5,
   'honk-the-goose-rout-veteran': 1, 'duchess-the-pub-goose': 1.2, 'sergeant-waddle': 1.2, 'cobra-chicken': 0.5,
   'caelan-halfelven': 1, 'brisa-blastcap-bombardier': 2, 'grumma-ladlejaw-camp-cook': 1, 'aelder-mossleaf-awakened-oak': 2.5,
-  'farmer-hobart-thimblewick': 2,
+  'farmer-hobart-thimblewick': 1.5,
 };
 
 export function heroDef(ref: { def: string }): HeroDef { return getDef(ref.def) as HeroDef; }

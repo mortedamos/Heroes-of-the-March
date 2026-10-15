@@ -11,7 +11,7 @@
 //   hard   - as normal, plus threat-weighted sabotage (who could win the GAME with
 //            this location), bluffing and tighter survival math.
 
-import { allDefs, getDef } from '../engine/cards';
+import { allDefs, companionsOf, getDef } from '../engine/cards';
 import type { Stat } from '../engine/cardTypes';
 import type { Command } from '../engine/types';
 import type { AbilityOptionView, GameView, PendingView, PlayerPublicView } from '../engine/view';
@@ -615,6 +615,15 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       return ['draw'];
     case 'curseTarget':
       return [pickMax((v) => { const o = t.view.players.find((x) => x.id === v); return o ? t.estimate(o) + t.threat(o) * 0.1 : 0; })];
+    case 'immobilizeTarget':
+      // Immobilizing Word: the opponent whose Companion heroes give the most in this challenge, then the bigger threat.
+      return [pickMax((v) => {
+        const o = t.view.players.find((x) => x.id === v);
+        if (!o) return -99;
+        const stat = t.stat;
+        const lost = stat ? o.party.filter((h) => companionsOf(h.def).length > 0).reduce((a, h) => a + t.heroIn(h, stat), 0) : 0;
+        return lost + t.threat(o) * 0.1;
+      })];
   }
   return one(values[0]);
 }
@@ -659,7 +668,8 @@ function keepOrSwapLocation(t: Table, peekedDef: string | null, _hero: string): 
   const next = locationScore(t, peekedDef);
   const active = t.view.players.find((p) => p.id === t.view.turn.active);
   const denying = !t.isMyTurn && active && t.threat(active) > 8;
-  return denying ? next < cur : next > cur;
+  // Strike the Heart also draws two resources with the new Capital.
+  return denying ? next < cur : next + 1.5 > cur;
 }
 
 export type { PlayerPublicView };

@@ -103,6 +103,7 @@ function effectTag(e: EffectView): string {
     case 'statBonus': return `${(e.amount ?? 0) >= 0 ? '+' : ''}${e.amount} ${stat}`;
     case 'negateBid': return `${tgt} zero`;
     case 'disableAbilities': return `${tgt} disabled`;
+    case 'facedown': return `${tgt} face down`;
     case 'bidValue': return `${tgt} = ${e.amount ?? 3}`;
     case 'autoWin': return 'Takes the location';
     case 'grudgeWatch': return 'Watched';
@@ -553,7 +554,7 @@ export class Hud {
     if (d.minions) parts.push(`minions ${d.minions >= 0 ? '+' : ''}${d.minions}`);
     replace(this.challenge,
       h('div', { class: 'ch-stat', style: { '--accent': STAT_COLORS[ch.stat] } }, `${STAT_NAMES[ch.stat]} ${d.total}`),
-      h('div', { class: 'ch-detail' }, `${parts.join(' · ')}${v.turn.wandsDisabled ? ' · Wands disabled' : ''}`),
+      h('div', { class: 'ch-detail' }, `${parts.join(' · ')}${v.turn.wandsDisabled ? ' · Wands disabled' : ''}${v.turn.namedDisabled ? ' · Allied and Nemesis off' : ''}`),
     );
   }
 

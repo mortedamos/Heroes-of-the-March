@@ -76,6 +76,7 @@ export type EffectKind =
   | 'grudgeWatch'        // target player: when they use an ability against the owner's heroes, the owner draws a resource (Oskar)
   | 'disableAbilities'   // target hero's abilities are off this turn (no card creates it now)
   | 'bidValue'           // target bid contributes `amount` instead of its value (Brisa)
+  | 'facedown'           // target hero is turned face down this turn: no stats, no abilities, no Allied for its friends (Immobilizing Word)
   | 'autoWin';           // target player wins this encounter (Dagny)
 
 export interface TurnEffect {
@@ -164,6 +165,8 @@ export interface TurnState {
   /** Seat index where the reveal round-robin continues. */
   revealCursor: number;
   wandsDisabled: boolean;
+  /** Pariapt of Peace: Allied and Nemesis give no bonuses this turn. */
+  namedDisabled: boolean;
   noFalls: boolean;
   /** Players who must lose a hero at the end of this turn (whoever's turn it is). */
   failed: PlayerId[];
@@ -239,7 +242,7 @@ export type ChoosePurpose =
   | 'peekReplace' | 'pickLocation' | 'wrenStack' | 'wrenBottom'
   | 'counterAbility' | 'oskarGrudge' | 'rumourMill' | 'fetch' | 'pickFight' | 'appleSwap'
   | 'curseTarget' | 'vaelisGive' | 'rumourTarget' | 'hallOfRest' | 'gauntlet' | 'sigrunPick' | 'tobinPick' | 'waystoneDraw' | 'heroMinion'
-  | 'partyDraft' | 'redirectHero' | 'goldiePick' | 'torviFire' | 'aelderRoots' | 'brisaFlip' | 'mograSteal';
+  | 'partyDraft' | 'redirectHero' | 'goldiePick' | 'torviFire' | 'aelderRoots' | 'brisaFlip' | 'mograSteal' | 'immobilizeTarget';
 
 export type Decision = RecruitOfferDecision | RecruitPlaceDecision | BidDecision | ActivateDecision | ChooseDecision;
 

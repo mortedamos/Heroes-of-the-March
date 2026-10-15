@@ -10,11 +10,11 @@
 // Hooks run inside the authoritative engine only. They must use ctx helpers
 // and never read from anything but the GameState, so they stay deterministic.
 
-import { CARDS, getDef } from './cards';
+import { CARDS, companionsOf, getDef } from './cards';
 import type { CardKind, EncounterDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import {
-  addEffect, cardOption, councilHeroes, drawResources, fire, hasGroup, heroesInPlay, isOfGroup, kingdomsOf,
+  addEffect, cardOption, councilHeroes, drawMinionNow, drawResources, fire, hasGroup, heroesInPlay, isOfGroup, kingdomsOf,
   peekOption, revealTop, statName,
 } from './effects';
 import { baseStrength, challengeStat } from './totals';
@@ -332,21 +332,27 @@ export const ABILITIES: Record<string, Ability> = {
   'warchief-grukka-ironjaw': {
     status: 'full',
     activations: [{
-      id: 'mineNow', label: 'Look at the next location; you may swap it in', windows: ['afterLocation'], per: 'turn',
+      id: 'mineNow', label: 'Look at the next location; a Capital you may put into play', windows: ['afterLocation'], per: 'turn',
       canUse: (ctx) => Boolean(ctx.s.turn.location) && hasLocationsToPeek(ctx),
       use: (ctx, self) => {
         const [next] = peekTop(ctx, 'location', 1);
         if (!next) return;
         ctx.emit({ type: 'peeked', player: self.owner, deck: 'location', count: 1 });
         const d = ctx.def(next);
+        // Only a Capital may be put into play (and draws two resources); anything else is looked at and shuffled back.
+        const capital = hasGroup(d, 'Capital');
         ctx.queueFirst({
           t: 'choose', purpose: 'peekReplace', player: self.owner, source: nameOf(ctx, self.card),
-          prompt: `Mine Now: the next location is ${d.name}. Swap it for ${ctx.location?.name ?? 'the current one'}?`,
-          options: [
-            { value: 'replace', label: `Swap in ${d.name} (Renown ${d.kind === 'location' ? d.renown : '?'})`, card: { def: d.id } },
-            { value: 'keep', label: 'Keep the current location' },
-          ],
-          min: 1, max: 1, data: { card: next },
+          prompt: capital
+            ? `Strike the Heart: the next location is ${d.name}, a Capital. Put it into play instead of ${ctx.location?.name ?? 'the current one'}, and draw 2 resources?`
+            : `Strike the Heart: the next location is ${d.name}. It is not a Capital, so it is shuffled back.`,
+          options: capital
+            ? [
+              { value: 'replace', label: `Put ${d.name} into play and draw 2 resources (Renown ${d.kind === 'location' ? d.renown : '?'})`, card: { def: d.id } },
+              { value: 'keep', label: 'Keep the current location' },
+            ]
+            : [{ value: 'keep', label: `Shuffle ${d.name} back`, card: { def: d.id } }],
+          min: capital ? 1 : 0, max: 1, data: { card: next, player: self.owner },
         });
       },
     }],
@@ -525,7 +531,7 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   'varg-ironjaw': { status: 'full', on: entersPlay(['Orc'], true) },
-  // Farmer Hobart: at the start of his controller's turn, a resource for every Goose in play anywhere.
+  // Farmer Hobart: at the start of his controller's turn, a resource if there is a Goose in play anywhere.
   'farmer-hobart-thimblewick': {
     status: 'full',
     on: {
@@ -533,8 +539,7 @@ export const ABILITIES: Record<string, Ability> = {
         if (e.player !== self.owner) return;
         const t = ctx.s.turn;
         const cards = [...heroesInPlay(ctx).map((c) => c.card), ...(t.encounter ? [t.encounter] : []), ...t.minions];
-        const geese = cards.filter((c) => isOfGroup(ctx, c, 'Goose')).length;
-        if (geese > 0) drawFor(ctx, self, geese);
+        if (cards.some((c) => isOfGroup(ctx, c, 'Goose'))) drawFor(ctx, self);
       },
     },
   },
@@ -850,6 +855,23 @@ export const ABILITIES: Record<string, Ability> = {
   'cold-iron-barrier': { status: 'full', onReveal: (ctx) => { ctx.s.turn.wandsDisabled = true; } },
   'null-rune-seal': { status: 'full', onReveal: (ctx) => { ctx.s.turn.wandsDisabled = true; } },
   'the-amulet-of-aesia': { status: 'full' }, // handled in flow.ts at resolution
+  // Pariapt of Peace: nobody's Allied or Nemesis bonus counts this turn (totals.ts reads the flag).
+  'pariapt-of-peace': { status: 'full', onReveal: (ctx) => { ctx.s.turn.namedDisabled = true; } },
+  // The Tome of Nethrak: an Undead minion joins this encounter, for everyone.
+  'the-tome-of-nethrak': { status: 'full', onReveal: (ctx) => { drawMinionNow(ctx, 'Undead'); } },
+  // Immobilizing Word: its player picks an opponent whose Companion heroes (heroes that are Companion To others) are turned face down for this encounter.
+  'immobilizing-word': {
+    status: 'full',
+    onReveal: (ctx, self) => {
+      const targets = ctx.s.players.filter((p) => p.id !== self.owner && p.party.some((c) => companionsOf(ctx.defId(c)).length > 0));
+      if (!targets.length) return;
+      ctx.queue({
+        t: 'choose', purpose: 'immobilizeTarget', player: self.owner!, source: nameOf(ctx, self.card),
+        prompt: `${nameOf(ctx, self.card)}: choose an opponent. Their Companion heroes are turned face down this encounter.`,
+        options: targets.map((p) => ({ value: p.id, label: p.name })), min: 1, max: 1, data: { card: self.card },
+      });
+    },
+  },
   'shield-of-xorthalos': { status: 'full', onReveal: (ctx) => { ctx.s.turn.noFalls = true; } },
   'wayfinders-die': swapLocation('shuffleBack'),
   'portal-rune': swapLocation('shuffleBack'),
