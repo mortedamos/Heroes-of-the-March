@@ -119,3 +119,19 @@ Spread: 0.68 to 1.46, standard deviation 0.16 (v0.6: 0.70 to 1.61, 0.17).
 | Grukka + Hesk + Kesh (Orc) | 1.39 | **1.52** | +0.13 | 50.9% | 37.5% |
 | Thorgar + Tova + Thessaly (Undead) | 0.53 | **0.50** | -0.03 | 18.8% | 10.5% |
 
+
+## Afterwards: Immobilizing Word narrowed
+
+The designer confirmed that "Companion heroes" means heroes riding free beside the hero they are Companion To (not every hero with a Companion To entry). The card was changed and game health rerun (6000 games each, `docs/balance-data/v07b/nat.json`). The hero and stacking tables above were run before the change; the Word is one card in 78, so they are not expected to move by more than the noise.
+
+| Players | Falls v0.6 | Falls v0.7 (before) | Falls v0.7 (riders only) | Survival (riders only) | Turns (riders only) |
+|---|---|---|---|---|---|
+| 2 | 0.56 | 0.63 | 0.63 | 95.3% | 7.29 |
+| 3 | 1.01 | 1.24 | 1.22 | 94.7% | 9.10 |
+| 4 | 1.12 | 1.86 | 1.81 | 94.7% | 10.48 |
+| 5 | 1.57 | 2.99 | 2.91 | 93.6% | 11.92 |
+| 6 | 2.24 | 4.19 | 4.00 | 92.8% | 12.51 |
+
+## Afterwards: the weakest heroes
+
+Extra runs on the lowest heroes (3000 games each at 3 and 4 players, about 0.06 either way) are in `docs/balance-data/v07-weak/`: stat what-ifs, and a variant of the bots that uses Barnaby, Grukka and Vaelis whenever it can.
