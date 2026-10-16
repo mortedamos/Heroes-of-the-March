@@ -1,5 +1,5 @@
 {
- "version": "v0.9.2",
+ "version": "v0.9.3",
  "heroes": [
   {
    "id": "warchief-grukka-ironjaw",
@@ -68,7 +68,7 @@
    "revision": "Stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
    "number": 1003,
    "allied": [
-    "Elf"
+    "Accord"
    ]
   },
   {
