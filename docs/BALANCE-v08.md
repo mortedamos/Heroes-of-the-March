@@ -137,3 +137,17 @@ The sheet now has Allied: Accord on Barnaby, and his maps may swap a location in
 | the same plus Nemesis: Wardhouse on Barnaby (what the designer first described) | 0.75 | | |
 | now: Barnaby Allied: Accord, ignoring, and bots that use it | **0.89** | **0.93** | **0.87** |
 | Barnaby as now, without Allied (the ignoring alone) | 0.82 | | |
+
+## Afterwards: the five strongest heroes, adjusted (sheet of 16 October)
+
+Ysolde loses Nemesis: Skarra, Tobin is 3/3/2 (was 3/4/2), Aelder is 6/1/3 (was 7/1/3), Aelthir draws only for Human cards and is Allied: Elf, Varg unchanged (a control). 3000 games per hero at 3 and 4 players (margin 0.06), `docs/balance-data/v09-top/` (before) and `v09-top2/` (after):
+
+| Hero | Before | After |
+|---|---|---|
+| Aelthir | 1.19 | **1.43** |
+| Ysolde | 1.38 | 1.32 |
+| Tobin | 1.30 | 1.22 |
+| Varg (unchanged) | 1.23 | 1.22 |
+| Aelder | 1.19 | 1.16 |
+
+Aelthir rose because Allied: Elf is worth about +0.28 (Elf is the commonest hero tag and many resources are Elf): the same Aelthir without Allied is 1.15, with Allied: Accord 1.17. Stacks: Goose (Tobin + Hobart + Honk) 2.52 to 2.28; Aelder + Aelthir + Vaelis 2.72 to 3.00. Game health: falls per game 1.11 / 1.69 / 2.75 / 4.16 at 3 / 4 / 5 / 6 players (were 1.18 / 1.83 / 3.01 / 4.53), survival 95.2% / 95.0% / 93.8% / 92.7% (94.8% / 94.5% / 93.4% / 92.0%).
