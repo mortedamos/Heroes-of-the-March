@@ -842,7 +842,7 @@ describe('the opening party draft', () => {
       const d = g.s.pending!;
       if (d.kind !== 'choose' || d.purpose !== 'partyDraft') throw new Error('expected a party draft');
       expect(d.options).toHaveLength(6);
-      expect([d.min, d.max]).toEqual([3, 3]);
+      expect([d.min, d.max]).toEqual([3, 6]); // at least the party size; riders and Ysolde add places
       expect(d.options.every((o) => o.card && !o.card.id)).toBe(true); // by card, never by instance id
       for (const other of g.s.players.filter((p) => p.id !== d.player)) {
         expect(viewFor(g.s, other.id).pending!.detail).toBeUndefined();
@@ -2522,5 +2522,124 @@ describe('Barnaby: swapping a location in with its effect ignored', () => {
     use(g, 'professor-barnaby-pickwort', 'maps');
     const answer = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
     expect(answer?.type === 'choose' && answer.picks[0]).toBe('n0');
+  });
+});
+
+describe('a drawn hero that rides free joins a full party', () => {
+  function drawTo(party: string[], drawn: string) {
+    const g = newGame();
+    until(g, (_s, d) => d.kind === 'recruit.offer');
+    const offer = g.s.pending!;
+    give(g.s, offer.player, { party });
+    onTop(g.s, 'hero', [drawn]);
+    act(g, { type: 'recruit.draw', decision: offer.id });
+    // With Goldie in the party the Tavern Keeper draws three and asks which one to consider.
+    if (g.s.pending?.kind === 'choose' && g.s.pending.purpose === 'goldiePick') pick(g, drawn);
+    const place = g.s.pending!;
+    if (place.kind !== 'recruit.place') throw new Error('expected placement');
+    return { g, place, pid: offer.player };
+  }
+
+  it('Gimlet beside Goldie in a full party: no replacement is needed, and the view says so', () => {
+    const { g, place, pid } = drawTo(['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'thorgar-twice-buried', 'lord-vaelis-nightbloom'], 'gimlet-a-very-good-dog');
+    expect(place.mustReplace).toBe(false);
+    expect(viewFor(g.s, pid).pending?.detail).toMatchObject({ kind: 'recruit.place', mustReplace: false });
+    act(g, { type: 'recruit.keep', decision: place.id, replace: null });
+    expect(player(g, pid).party).toHaveLength(4);
+    expect(player(g, pid).party).toContain(card(g, 'gimlet-a-very-good-dog'));
+  });
+
+  it('a hero with no one to ride with still has to replace someone in a full party', () => {
+    const { g, place, pid } = drawTo(['goldie-trickgrin-keeper-of-the-goose-and-kettle', 'thorgar-twice-buried', 'lord-vaelis-nightbloom'], 'pip-wanderfoot');
+    expect(place.mustReplace).toBe(true);
+    expect(applyCommand(g.s, pid, { type: 'recruit.keep', decision: place.id, replace: null })).toEqual({ ok: false, error: 'must_replace' });
+  });
+
+  it('Gimlet without Goldie in the party has to replace someone too', () => {
+    const { place } = drawTo(['thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot'], 'gimlet-a-very-good-dog');
+    expect(place.mustReplace).toBe(true);
+  });
+});
+
+describe('the opening draft: heroes that ride free', () => {
+  const GOLDIE = 'goldie-trickgrin-keeper-of-the-goose-and-kettle';
+  const GIMLET = 'gimlet-a-very-good-dog';
+
+  /** A draft in which the first player's pool of six is replaced by the given heroes (by definition), then returns the game. */
+  function draftWith(pool: string[]) {
+    const { state } = createGame({ players: seats(2), seed: seed(1) });
+    const g: Game = { s: state, events: [], A: '', B: '' };
+    onTop(g.s, 'hero', pool);
+    g.s.pending = null; g.s.tasks = [];
+    for (const p of g.s.players) { delete p.used['partyDraft']; p.party = []; }
+    g.s.turn.step = 'partyDraft';
+    g.s.hold = 'encounter';
+    const r = resume(g.s);
+    if (!r.ok) throw new Error(r.error);
+    g.s = r.state;
+    const d = g.s.pending!;
+    if (d.kind !== 'choose') throw new Error('expected a party draft');
+    return { g, d };
+  }
+  const POOL = [GOLDIE, GIMLET, 'thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot', 'kazra-emberdeep'];
+  const answer = (g: Game, d: { id: number; player: string }, picks: string[]) => applyCommand(g.s, d.player, { type: 'choose', decision: d.id, picks });
+
+  it('asks for at least the party size and lets the whole pool be named; the rule checks the number', () => {
+    const { d } = draftWith(POOL);
+    expect([d.options.length, d.min, d.max]).toEqual([6, 3, 6]);
+  });
+
+  it('a hero and the companion it rides beside may be taken with two others: four heroes', () => {
+    const { g, d } = draftWith(POOL);
+    const r = answer(g, d, [GOLDIE, GIMLET, 'thorgar-twice-buried', 'lord-vaelis-nightbloom']);
+    expect(r.ok).toBe(true);
+  });
+
+  it('without the pair, a fourth hero is too many', () => {
+    const { g, d } = draftWith(POOL);
+    expect(answer(g, d, [GOLDIE, 'thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot'])).toEqual({ ok: false, error: 'party_too_big' });
+    expect(answer(g, d, [GIMLET, 'thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot'])).toEqual({ ok: false, error: 'party_too_big' });
+  });
+
+  it('even with the pair, a fifth hero is too many, and fewer than three is too few', () => {
+    const { g, d } = draftWith(POOL);
+    expect(answer(g, d, [GOLDIE, GIMLET, 'thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot'])).toEqual({ ok: false, error: 'party_too_big' });
+    expect(answer(g, d, [GOLDIE, GIMLET])).toEqual({ ok: false, error: 'bad_pick_count' });
+  });
+
+  it('three heroes are still fine, pair or not', () => {
+    const { g, d } = draftWith(POOL);
+    expect(answer(g, d, [GOLDIE, GIMLET, 'thorgar-twice-buried']).ok).toBe(true);
+  });
+
+  it('the four heroes join the party and their enter-play effects wait for the end of the opening', () => {
+    const { g, d } = draftWith(POOL);
+    act(g, { type: 'choose', decision: d.id, picks: [GOLDIE, GIMLET, 'thorgar-twice-buried', 'lord-vaelis-nightbloom'] });
+    expect(player(g, d.player).party.map((c) => g.s.cards[c]).sort()).toEqual([GOLDIE, GIMLET, 'thorgar-twice-buried', 'lord-vaelis-nightbloom'].sort());
+    checkInvariants(g.s);
+  });
+
+  it('a bot takes the free place when the pair is on offer, and only three when it is not', () => {
+    const { g, d } = draftWith(POOL);
+    const cmd = botDecide(viewFor(g.s, d.player), 'normal', () => 0.5);
+    const picks = cmd?.type === 'choose' ? cmd.picks : [];
+    expect(picks).toContain(GOLDIE);
+    expect(picks).toContain(GIMLET);
+    expect(picks).toHaveLength(4);
+    const plain = draftWith(['thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot', 'kazra-emberdeep', 'urzha-half-tusk', 'loremaster-oskar-grimgate']);
+    const cmd2 = botDecide(viewFor(plain.g.s, plain.d.player), 'normal', () => 0.5);
+    expect(cmd2?.type === 'choose' && cmd2.picks).toHaveLength(3);
+  });
+
+  it('an easy bot takes just the party size', () => {
+    const { g, d } = draftWith(POOL);
+    const cmd = botDecide(viewFor(g.s, d.player), 'easy', () => 0.3);
+    expect(cmd?.type === 'choose' && cmd.picks).toHaveLength(3);
+  });
+
+  it('Ysolde adds a place at the opening too', () => {
+    const { g, d } = draftWith(['ysolde-of-the-wellspring', 'thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot', 'kazra-emberdeep', 'urzha-half-tusk']);
+    expect(answer(g, d, ['ysolde-of-the-wellspring', 'thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot']).ok).toBe(true);
+    expect(answer(g, d, ['thorgar-twice-buried', 'lord-vaelis-nightbloom', 'pip-wanderfoot', 'kazra-emberdeep'])).toEqual({ ok: false, error: 'party_too_big' });
   });
 });

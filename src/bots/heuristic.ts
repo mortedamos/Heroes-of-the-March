@@ -12,6 +12,7 @@
 //            this location), bluffing and tighter survival math.
 
 import { allDefs, companionsOf, getDef, nemesisTargets } from '../engine/cards';
+import { draftPlaces } from '../engine/draft';
 import type { Stat } from '../engine/cardTypes';
 import type { Command } from '../engine/types';
 import type { AbilityOptionView, GameView, PendingView, PlayerPublicView } from '../engine/view';
@@ -476,8 +477,8 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
     }
     case 'partyDraft': {
       // Pick the best party of the pool (easy bots pick at random).
-      if (level === 'easy') return [...values].sort(() => rand() - 0.5).slice(0, c.max);
-      return bestParty(values.map((v) => ({ value: v, def: optionCard(v)?.def ?? v })), c.max, t);
+      if (level === 'easy') return [...values].sort(() => rand() - 0.5).slice(0, c.min);
+      return bestParty(values.map((v) => ({ value: v, def: optionCard(v)?.def ?? v })), c.min, t);
     }
     case 'discardHero': case 'faceDownHero': case 'heroMinion': case 'fallHero': {
       // Give up the hero whose absence leaves the best party.
@@ -629,18 +630,24 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
   return one(values[0]);
 }
 
-/** The best `n` of the offered heroes as a party (scored together, so the stats cover each other). */
+/**
+ * The best party of the offered heroes (scored together, so the stats cover each other): at least `n`, and as many more as the places
+ * allow (a hero that is a Companion To one of the others rides free, so a pair like Goldie and Gimlet lets a party take a fourth).
+ */
 function bestParty(options: { value: string; def: string }[], n: number, t: Table): string[] {
   const have = partyDefs(t);
   let best: { picks: string[]; score: number } = { picks: options.slice(0, n).map((o) => o.value), score: -Infinity };
   const walk = (from: number, chosen: { value: string; def: string }[]): void => {
-    if (chosen.length === n || from === options.length) {
+    if (from === options.length) {
       if (chosen.length < n) return;
-      const score = partyScore([...have, ...chosen.map((o) => o.def)]);
+      const defs = [...have, ...chosen.map((o) => o.def)];
+      if (defs.length > draftPlaces(defs, t.view.rules.partySize)) return;
+      const score = partyScore(defs);
       if (score > best.score) best = { picks: chosen.map((o) => o.value), score };
       return;
     }
-    for (let i = from; i < options.length; i++) walk(i + 1, [...chosen, options[i]!]);
+    walk(from + 1, [...chosen, options[from]!]);
+    walk(from + 1, chosen);
   };
   walk(0, []);
   return best.picks;

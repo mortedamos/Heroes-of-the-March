@@ -2,7 +2,7 @@
 // inspector, log and modals. All text goes through dom.ts (textContent only).
 
 import {
-  getDef, RULE_NOTES, STAT_NAMES,
+  companionsOf, draftPlaces, getDef, RULE_NOTES, STAT_NAMES,
   type CardRef, type Command, type GameView, type PendingView, type PlayerPublicView, type TurnResult,
 } from '../../engine';
 import type { AbilityOptionView, EffectView } from '../../engine/view';
@@ -14,7 +14,8 @@ import { append, clear, h, replace } from './dom';
 import { closeGameMenu, toggleGameMenu, type MenuApi } from './GameMenu';
 import type { DebugApi } from './DebugMenu';
 import { MomentStrip } from './Moments';
-import { newPickerState, renderSlotPicker, type PickerCard, type PickerState } from './SlotPicker';
+import { fitSlots, newPickerState, renderSlotPicker, type PickerCard, type PickerState } from './SlotPicker';
+import { partyLabel, placeSlotCount } from './partySlots';
 import { attentionOf } from '../attention';
 import { sfx } from '../audio/Sfx';
 import { tiltOnPointer } from './tilt';
@@ -680,18 +681,30 @@ export class Hud {
    */
   private renderPartyDraft(v: GameView, decision: number, c: Extract<NonNullable<PendingView['detail']>, { kind: 'choose' }>): void {
     const cards: PickerCard[] = c.options.map((o) => ({ id: o.value, def: o.card?.def ?? o.value }));
-    if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, Array.from({ length: c.max }, () => null));
+    if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, Array.from({ length: c.min }, () => null));
     const state = this.picker;
+    // A hero that is a Companion To another hero you have chosen rides free: the party gets an extra place for it (and loses it
+    // again when the companion is taken out).
+    const defOf = (id: string) => cards.find((x) => x.id === id)?.def ?? id;
+    const placesFor = (ids: string[]) => Math.max(c.min, Math.min(c.max, draftPlaces(ids.map(defOf), v.rules.partySize)));
+    fitSlots(state, placesFor(state.slots.filter((x): x is string => x !== null)));
     const picks = state.slots.filter((x): x is string => x !== null);
-    const w = this.pickerWidth(c.max, cards.length);
+    const places = state.slots.length;
+    const w = this.pickerWidth(places, cards.length);
+    // Which of the offered heroes ride free beside another offered hero ("Gimlet rides free beside Goldie").
+    const short = (def: string) => getDef(def).name.split(',')[0]!;
+    const offered = new Set(cards.map((x) => x.def));
+    const pairs = cards.flatMap((x) => companionsOf(x.def).filter((d) => offered.has(d)).map((d) => `${short(x.def)} rides free beside ${short(d)}`));
     const box = h('div', { class: 'picker-box' });
     renderSlotPicker(box, {
       state, cards, width: w,
       title: 'Choose your party',
-      slotsLabel: `Your party (${picks.length}/${c.max})`, poolLabel: 'Heroes on offer',
-      hint: 'Drag heroes into the open slots, or tap one to send it there. Drag one out (or tap it) to change your mind. The others go back in the stack, unseen. Press the button when you are happy.',
+      slotsLabel: places > c.min ? `Your party (${picks.length}/${places}: ${c.min} places and ${places - c.min} free)` : `Your party (${picks.length}/${places})`,
+      poolLabel: 'Heroes on offer',
+      hint: 'Drag heroes into the open slots, or tap one to send it there. Drag one out (or tap it) to change your mind. The others go back in the stack, unseen. A hero that is a Companion To another hero you choose rides free, and opens an extra place.'
+        + (pairs.length ? ` On offer: ${pairs.join('; ')}.` : '') + ' Press the button when you are happy.',
       makeCard: this.pickerCard, ghost: this.pickerGhost,
-      confirm: { label: 'Confirm party', enabled: picks.length >= c.min && picks.length <= c.max, run: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks }); } },
+      confirm: { label: 'Confirm party', enabled: picks.length >= c.min && picks.length <= places, run: () => { this.picker = null; this.deps.send({ type: 'choose', decision, picks }); } },
       onChange: () => { this.inspect(null); this.renderDock(v); }, onDragStart: () => this.inspect(null),
     });
     replace(this.stage, h('div', { class: 'stage-panel' }, h('div', { class: 'stage-main' }, h('h2', {}, 'Choose your party'), box)));
@@ -727,7 +740,9 @@ export class Hud {
     const party = [...me.party, ...me.inactive];
     const fixedCards = me.resting;
     const all = [...party, ...fixedCards];
-    const slotCount = Math.max(me.partySize, all.length);
+    // A hero that rides free (Companion To a hero of yours) joins even a full party, so give them a place of their own.
+    const slotCount = placeSlotCount(me.partySize, all.length, mine.mustReplace);
+    const freeRider = slotCount > Math.max(me.partySize, all.length);
     const drawn: PickerCard = { id: mine.drawn.id, def: mine.drawn.def };
     if (!this.picker || this.picker.decision !== decision) this.picker = newPickerState(decision, Array.from({ length: slotCount }, (_, i) => all[i]?.id ?? null));
     const state = this.picker;
@@ -741,10 +756,12 @@ export class Hud {
     renderSlotPicker(box, {
       state, cards, locked, fixed: new Set(fixedCards.map((c) => c.id)), width: w,
       title: 'Build your party',
-      slotsLabel: `Your party (${slotCount - state.slots.filter((x) => x === null).length}/${me.partySize})`, poolLabel: `You drew ${getDef(mine.drawn.def).name}`,
+      slotsLabel: partyLabel(slotCount - state.slots.filter((x) => x === null).length, me.partySize), poolLabel: `You drew ${getDef(mine.drawn.def).name}`,
       hint: mine.mustReplace
         ? 'Your party is full. Drag the new hero onto one of yours to replace them, or tap one of yours; leave them out to let them go.'
-        : 'Drag the new hero into an open slot to recruit them, or onto one of yours to replace them. Leave them out to let them go.',
+        : freeRider
+          ? 'This hero rides free beside one of yours (they are a Companion To them), so your full party has an extra place. Drag them into it to recruit them, or onto one of yours to replace them; leave them out to let them go.'
+          : 'Drag the new hero into an open slot to recruit them, or onto one of yours to replace them. Leave them out to let them go.',
       makeCard: this.pickerCard, ghost: this.pickerGhost,
       confirm: {
         label, enabled: true,
@@ -786,7 +803,7 @@ export class Hud {
         h('button', { class: 'btn primary', on: { click: () => this.deps.send({ type: 'recruit.draw', decision }) } }, 'Draw a hero'),
         h('button', { class: 'btn', on: { click: () => this.deps.send({ type: 'recruit.skip', decision }) } }, 'Skip'));
       children.push(
-        section('Your party ' + size, 'Draw one hero at random, then decide whether to keep them. If your party is full, you will need to replace one.',
+        section('Your party ' + size, 'Draw one hero at random, then decide whether to keep them. If your party is full, you will need to replace one, unless they are a Companion To one of yours and ride free.',
           row(mineCards, (c) => this.thumbButton(c, w), 'No heroes yet.')),
         buttons);
     }

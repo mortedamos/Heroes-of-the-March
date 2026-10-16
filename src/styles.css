@@ -653,6 +653,18 @@ body.shape-short .notices { left: calc((100vw - var(--dock-w)) / 2); width: min(
   font: inherit; font-size: 14px; color: var(--ink); background: #120c06; border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px;
 }
 .setup-card .fine { margin: 0; font-size: 11px; color: #8f7f5e; text-align: center; }
+/* Game length: three connected buttons; the note under them repeats the tooltip for touch screens. */
+.setup-card .seg-field { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--ink-dim); }
+.setup-card .segmented { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; background: #120c06; }
+.setup-card .segmented .seg {
+  flex: 1; font: inherit; font-size: 14px; color: var(--ink-dim); background: transparent; border: 0; border-right: 1px solid var(--line);
+  padding: 9px 10px; cursor: pointer;
+}
+.setup-card .segmented .seg:last-child { border-right: 0; }
+.setup-card .segmented .seg:hover { color: var(--ink); background: rgba(184, 134, 43, 0.12); }
+.setup-card .segmented .seg.on { color: #1d150d; background: var(--gold); font-weight: 600; }
+.setup-card .segmented .seg:focus-visible { outline: 2px solid var(--gold); outline-offset: -2px; }
+.setup-card .seg-note { font-size: 11px; color: #8f7f5e; text-align: center; }
 /* House rules: folded under a toggle. min-width keeps the long <option> text from widening the card. */
 .setup-card .house-rules { border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; margin: 0; min-width: 0; }
 .setup-card .house-rules summary { cursor: pointer; font-size: 13px; color: var(--ink-dim); }

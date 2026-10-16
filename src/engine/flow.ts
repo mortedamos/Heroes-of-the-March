@@ -241,9 +241,9 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     const n = Math.min(ctx.s.rules.partySize, offered.length);
     ctx.queueFirst({
       t: 'choose', purpose: 'partyDraft', player: p.id, source: 'Party draft',
-      prompt: `Choose ${n} hero${n === 1 ? '' : 'es'} for your party from these ${offered.length}.`,
+      prompt: `Choose ${n} hero${n === 1 ? '' : 'es'} for your party from these ${offered.length}. A hero that is a Companion To another hero you choose rides free and does not use one of the places, so you may take more.`,
       options: offered.map((c) => peekOption(ctx, ctx.defId(c), c, ctx.def(c).name)),
-      min: n, max: n,
+      min: n, max: offered.length,
     });
   },
 

@@ -10,6 +10,7 @@
 
 import { Ctx, IllegalMove } from './context';
 import { abilityOf } from './abilities';
+import { draftPlaces } from './draft';
 import { heroEnters, partyLoad, partySize, peekOption, playerHas } from './effects';
 import { advance, applyChoice, resolveBid, useActivation } from './flow';
 import type { CardId, Command, GameEvent, GameState, PlayerId } from './types';
@@ -224,6 +225,8 @@ function handle(ctx: Ctx, seat: PlayerId, cmd: Command): void {
       const picks = cmd.picks;
       if (picks.length < d.min || picks.length > d.max) throw new IllegalMove('bad_pick_count');
       if (!picks.every((x) => d.options.some((o) => o.value === x))) throw new IllegalMove('bad_pick');
+      // The opening party: as many heroes as it has places, which riders that are Companion To a chosen hero add to (value = the hero's definition).
+      if (d.purpose === 'partyDraft' && picks.length > draftPlaces(picks, s.rules.partySize, s.rules.companionCap)) throw new IllegalMove('party_too_big');
       applyChoice(ctx, d, picks);
       return;
     }

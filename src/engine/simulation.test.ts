@@ -59,7 +59,7 @@ describe('setup', () => {
     for (const p of state.players) expect(p.hand).toHaveLength(4);
     const d = state.pending;
     expect(d?.kind === 'choose' && d.purpose).toBe('partyDraft');
-    expect(d?.kind === 'choose' && [d.options.length, d.min, d.max]).toEqual([6, 3, 3]);
+    expect(d?.kind === 'choose' && [d.options.length, d.min, d.max]).toEqual([6, 3, 6]); // six on offer, at least three to pick (more with riders or Ysolde)
   });
 
   it('rejects bad player counts and seat ids', () => {

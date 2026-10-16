@@ -68,6 +68,19 @@ export function placeCard(s: PickerState, id: string, to: number, locked: Readon
   restoreHomes(s);
 }
 
+/**
+ * Make the slots exactly `count` long (the opening draft: a hero that rides free adds a place, and loses it again when its
+ * companion is taken out). Open slots are added or the last open ones dropped; if filled slots are still too many, the cards
+ * in the last ones go back to the pool.
+ */
+export function fitSlots(s: PickerState, count: number): void {
+  while (s.slots.length < count) s.slots.push(null);
+  while (s.slots.length > count) {
+    const open = s.slots.lastIndexOf(null);
+    s.slots.splice(open >= 0 ? open : s.slots.length - 1, 1);
+  }
+}
+
 /** Take a card out of its slot (back to the pool). */
 export function removeCard(s: PickerState, id: string, locked: ReadonlySet<string>): void {
   const from = s.slots.indexOf(id);

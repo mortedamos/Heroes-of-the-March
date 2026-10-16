@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { newPickerState, placeCard, removeCard } from './ui/SlotPicker';
+import { fitSlots, newPickerState, placeCard, removeCard } from './ui/SlotPicker';
 
 const none = new Set<string>();
 
@@ -43,5 +43,31 @@ describe('slot picker', () => {
     placeCard(s, 'x', 1, locked);
     placeCard(s, 'new', 1, locked, fixed);
     expect(s.slots).toEqual(['x', 'rest']);
+  });
+});
+
+describe('fitting the slots to the places (the opening draft)', () => {
+  it('grows with open slots', () => {
+    const s = newPickerState(1, ['a', 'b', 'c']);
+    fitSlots(s, 4);
+    expect(s.slots).toEqual(['a', 'b', 'c', null]);
+  });
+
+  it('shrinks by dropping an open slot first, and keeps the cards', () => {
+    const s = newPickerState(1, ['a', null, 'b', 'c']);
+    fitSlots(s, 3);
+    expect(s.slots).toEqual(['a', 'b', 'c']);
+  });
+
+  it('when every slot is filled the last card goes back to the pool', () => {
+    const s = newPickerState(1, ['a', 'b', 'c', 'd']);
+    fitSlots(s, 3);
+    expect(s.slots).toEqual(['a', 'b', 'c']);
+  });
+
+  it('does nothing when the size already fits', () => {
+    const s = newPickerState(1, ['a', null, 'b']);
+    fitSlots(s, 3);
+    expect(s.slots).toEqual(['a', null, 'b']);
   });
 });

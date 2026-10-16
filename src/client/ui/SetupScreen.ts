@@ -7,6 +7,9 @@ import titleArt from '@art/ui__title_ridge.webp?url';
 import titleArtTall from '@art/ui__title_ridge_tall.webp?url';
 import { BUILD } from '../../build-info';
 import { h } from './dom';
+import { DEFAULT_LENGTH, GAME_LENGTHS, lengthRules, lengthTip, parseLength, renownFor, type GameLength } from './gameLength';
+import { BOT_SKILLS, DEFAULT_SKILL, parseSkill } from './botSkill';
+import { segmentedField } from './segmented';
 import { startTitleEffects } from './titleFx';
 import { TITLE_FRAME_URL } from './titleFrame';
 
@@ -14,13 +17,15 @@ export interface SetupChoice {
   name: string;
   bots: number;
   level: BotLevel;
+  /** Short, normal or long: the Renown needed to win (10, 20, 30). */
+  length: GameLength;
 }
 
 /** The house rules a setup choice turns into (the engine validates them again). */
 export function rulesFor(c: SetupChoice): Partial<HouseRules> {
-  void c;
   return {
     handModel: 'steady', // every player draws 2 at the start of a turn, hand limit 6: no longer a choice
+    ...lengthRules(c.length),
   };
 }
 
@@ -41,7 +46,8 @@ function loadPrefs(): Partial<SetupChoice> {
     const out: Partial<SetupChoice> = {};
     if (typeof v['name'] === 'string') out.name = v['name'].slice(0, 24);
     if (Number.isInteger(v['bots'])) out.bots = Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, v['bots'] as number));
-    if (v['level'] === 'easy' || v['level'] === 'normal' || v['level'] === 'hard') out.level = v['level'];
+    out.level = parseSkill(v['level']);
+    out.length = parseLength(v['length']);
     return out;
   } catch {
     return {};
@@ -68,21 +74,21 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
     }
     bots.value = String(prefs.bots ?? 2);
 
-    const level = h('select', { id: 'setup-level' });
-    for (const [v, label] of [['easy', 'Easy: cautious and a little random'], ['normal', 'Normal'], ['hard', 'Hard: reads the table']] as const) {
-      const o = h('option', {}, label);
-      o.value = v;
-      level.appendChild(o);
-    }
-    level.value = prefs.level ?? 'normal';
+    // Bot skill and game length: three buttons each, with a tooltip on every button and the chosen one's tip written under the row.
+    const skill = segmentedField('Bot skill', BOT_SKILLS, prefs.level ?? DEFAULT_SKILL);
+    const lede = h('p', { class: 'lede' });
+    const length = segmentedField('Game length', GAME_LENGTHS.map((l) => ({ id: l.id, label: l.label, tip: lengthTip(l.id) })), prefs.length ?? DEFAULT_LENGTH, (id) => {
+      lede.textContent = `The Marchstone has split. Hold the most of the Marches: first to ${renownFor(id)} Renown wins.`;
+    });
 
     const start = h('button', { class: 'btn primary big', type: 'submit' }, 'Ride out');
     const form = h('form', { class: 'setup-card' },
       h('h1', {}, 'Heroes of the March'),
-      h('p', { class: 'lede' }, 'The Marchstone has split. Hold the most of the Marches: first to 20 Renown wins.'),
+      lede,
       h('label', {}, h('span', {}, 'Your name'), name),
       h('label', {}, h('span', {}, 'Opponents'), bots),
-      h('label', {}, h('span', {}, 'Bot skill'), level),
+      skill.el,
+      length.el,
       start,
       h('p', { class: 'fine' }, 'Local game against bots. Online multiplayer is coming.'),
     );
@@ -91,7 +97,8 @@ export function showSetup(root: HTMLElement): Promise<SetupChoice> {
       const choice: SetupChoice = {
         name: name.value,
         bots: Math.min(MAX_PLAYERS - 1, Math.max(MIN_PLAYERS - 1, Number.parseInt(bots.value, 10) || 2)),
-        level: (['easy', 'normal', 'hard'] as const).find((x) => x === level.value) ?? 'normal',
+        level: skill.get(),
+        length: length.get(),
       };
       savePrefs(choice);
       stopFx();

@@ -5,7 +5,8 @@ export { createGame, sanitizeName, type NewGameOptions, type SeatSpec } from './
 export { applyCommand, resume, parseCommand, MAX_COMMAND_BYTES, type ApplyResult } from './commands';
 export { viewFor, redactEvents, type GameView, type ClientEvent, type PlayerPublicView, type PendingView, type BidView } from './view';
 export { cardStatus, statusReport, type CardStatus } from './abilities';
-export { getDef, hasDef, CARDS } from './cards';
+export { getDef, hasDef, CARDS, companionsOf } from './cards';
+export { draftPlaces, ridersAmong } from './draft';
 export { RULE_NOTES, DEFAULT_RULES, MIN_PLAYERS, MAX_PLAYERS, type HouseRules } from './rules';
 export type * from './types';
 export type * from './cardTypes';

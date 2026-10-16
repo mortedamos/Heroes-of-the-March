@@ -249,7 +249,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       const forced = spec.force && d.player === `p${spec.force.seat}` ? forcedDefs.filter((def) => pool.includes(def)) : [];
       if (spec.force) pool = pool.filter((v) => !forcedDefs.includes(v));
       for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(pickRand() * (i + 1)); [pool[i], pool[j]] = [pool[j]!, pool[i]!]; }
-      const picks = [...forced, ...pool.slice(0, d.max - forced.length)];
+      const picks = [...forced, ...pool.slice(0, d.min - forced.length)]; // the party size, not the extra places riders could add
       cmd = { type: 'choose', decision: d.id, picks };
     } else {
       cmd = botDecide(viewFor(state, d.player), spec.levels?.[Number(d.player.slice(1))] ?? level, rand);
