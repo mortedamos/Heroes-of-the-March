@@ -215,11 +215,12 @@ export class Hud {
   private readonly placeInfo = h('div', { class: 'place-info', aria: { hidden: 'true' } });
 
   constructor(private readonly root: HTMLElement, private readonly deps: HudDeps) {
-    append(root, this.placeInfo);
+    // The stat chips go first: everything after them (plates, prompts, the dock) paints over them, so they never sit on top of text.
+    append(root, this.chips, this.placeInfo);
     append(this.logPanel, h('h2', {}, 'Chronicle'), this.logList);
     this.setLogOpen(false); // the log starts hidden; the Log item in the menu opens it
     append(this.dock, this.prompt, this.hand);
-    append(root, this.menuBtn, this.moments.el, this.plates, this.chips, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
+    append(root, this.menuBtn, this.moments.el, this.plates, this.challenge, this.banners, this.notices, this.resultPanel, this.stage, this.deckTipEl, this.inspector, this.logPanel, this.dock, this.modal, this.detailEl);
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') { this.unpin(); this.closeModal(); this.closeDetail(); this.hideResult(); }
     });

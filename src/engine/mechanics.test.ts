@@ -2468,7 +2468,10 @@ describe('Barnaby: swapping a location in with its effect ignored', () => {
     until(g, bidFor(g.A));
     use(g, 'professor-barnaby-pickwort', 'maps');
     const d = g.s.pending!;
-    expect(d.kind === 'choose' && d.options.map((o) => o.value)).toEqual(['n0', 'n0x', 'n1', 'keep']);
+    expect(d.kind === 'choose' && d.options.map((o) => o.value)).toEqual(['n0', 'n1', 'n0x', 'keep']);
+    // Each location is a card once; swapping it in with its text ignored is a plain button, not a second copy of the card.
+    expect(d.kind === 'choose' && d.options.filter((o) => o.card).map((o) => o.card!.def)).toEqual(['kingsford', 'the-umbral-deep']);
+    expect(d.kind === 'choose' && d.options.find((o) => o.value === 'n0x')?.card).toBeUndefined();
   });
 
   it('the location comes in without its effect: Kingsford draws nothing when ignored, and the Renown still counts', () => {

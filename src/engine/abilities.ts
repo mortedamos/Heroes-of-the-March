@@ -417,16 +417,16 @@ export const ABILITIES: Record<string, Ability> = {
         ctx.queueFirst({
           t: 'choose', purpose: 'pickLocation', player: self.owner, source: nameOf(ctx, self.card),
           prompt: "The Society's Maps: swap the current location for one of these?",
-          // A location with rules text can also be swapped in with its text ignored (the value ends in "x").
+          // Each location is shown once, as a card. One with rules text can also be swapped in with its text ignored: a plain button
+          // (its value is the card's with an "x" on the end), so the same card is never on offer twice.
           options: [
+            ...next.map((c, i) => {
+              const d = ctx.def(c);
+              return { value: `n${i}`, label: `Swap in ${d.name} (Renown ${d.kind === 'location' ? d.renown : '?'})`, card: { def: d.id } };
+            }),
             ...next.flatMap((c, i) => {
               const d = ctx.def(c);
-              const renown = d.kind === 'location' ? d.renown : '?';
-              const hasEffect = d.kind === 'location' && Boolean(d.conditionText);
-              return [
-                { value: `n${i}`, label: `Swap in ${d.name} (Renown ${renown})`, card: { def: d.id } },
-                ...(hasEffect ? [{ value: `n${i}x`, label: `Swap in ${d.name} and ignore its effect (Renown ${renown})`, card: { def: d.id } }] : []),
-              ];
+              return d.kind === 'location' && d.conditionText ? [{ value: `n${i}x`, label: `Swap in ${d.name} and ignore its effect` }] : [];
             }),
             { value: 'keep', label: `Keep ${ctx.location?.name ?? 'the current location'}` },
           ],

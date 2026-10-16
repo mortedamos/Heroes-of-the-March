@@ -536,8 +536,9 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       const keepDef = t.view.turn.location?.def ?? null;
       const scored = c.options.map((o) => {
         const keep = o.value === 'keep';
-        const def = keep ? keepDef : o.card?.def ?? null;
         const ignore = !keep && o.value.endsWith('x');
+        // "n0x" (swap in and ignore the text) is the card of "n0".
+        const def = keep ? keepDef : (ignore ? c.options.find((x) => x.value === o.value.slice(0, -1)) : o)?.card?.def ?? null;
         const effect = ignore ? 0 : locationEffectValue(t, def, keep, w);
         return { v: o.value, s: w * locationRenown(def ? { def } : null) * (!ignore && def === 'the-crack-in-the-marchstone' ? 3.9 / 6 : 1) + NEMESIS_WEIGHT * nemesisSwing(t, def) + effect };
       });
