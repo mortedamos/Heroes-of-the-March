@@ -120,6 +120,8 @@ export interface GameSpec {
   n: number;
   seed: number;
   level?: BotLevel;
+  /** Bot level by seat (overrides `level` for those seats): to pit one level against another. */
+  levels?: BotLevel[];
   rules?: Record<string, unknown>;
   /** Hero (or several) to force into this seat's opening party (others never take them in the opening draft). */
   force?: { seat: number; def: string | string[] };
@@ -250,7 +252,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
       const picks = [...forced, ...pool.slice(0, d.max - forced.length)];
       cmd = { type: 'choose', decision: d.id, picks };
     } else {
-      cmd = botDecide(viewFor(state, d.player), level, rand);
+      cmd = botDecide(viewFor(state, d.player), spec.levels?.[Number(d.player.slice(1))] ?? level, rand);
     }
     if (!cmd) throw new Error(`bot had no answer for ${d.kind}`);
     if (cmd.type === 'ability.use') bump(used, `${d.player}|${state.cards[cmd.source]}`);

@@ -1,5 +1,5 @@
 {
- "version": "v0.8",
+ "version": "v0.9.1",
  "heroes": [
   {
    "id": "warchief-grukka-ironjaw",
@@ -278,10 +278,13 @@
     "G": 4
    },
    "abilityName": "Archivist Society Maps",
-   "abilityText": "Once per turn, during bidding, you may look at the next two locations. You may replace the current location with one of them. Shuffle the other two back into the location stack.",
+   "abilityText": "Once per turn, during bidding, you may look at the next two locations. You may replace the current location with one of them. If the new location has an effect, you may choose to ignore it. Shuffle the other two back into the location stack.",
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/10/7); trigger and Kin bonus set aside.",
-   "number": 1013
+   "number": 1013,
+   "allied": [
+    "Accord"
+   ]
   },
   {
    "id": "urzha-half-tusk",
@@ -304,7 +307,10 @@
    ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 9/6/9); trigger and Kin bonus set aside.",
-   "number": 1014
+   "number": 1014,
+   "nemesis": [
+    "Wardhouse"
+   ]
   },
   {
    "id": "loremaster-oskar-grimgate",
@@ -413,7 +419,10 @@
    "abilityText": "During bidding, once per turn, look at all of the face-down resource cards that another player has bid. If any of those are Halfellow cards, draw a resource.",
    "kind": "hero",
    "revision": "Was a draw when a Goose entered play, which almost never happened; now counts every Goose in play at the start of your turn.",
-   "number": 2004
+   "number": 2004,
+   "allied": [
+    "Halfellow"
+   ]
   },
   {
    "id": "fennick-puffcap-mycomancer",

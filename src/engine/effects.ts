@@ -15,6 +15,12 @@ export function hasGroup(def: CardDef, group: string): boolean {
   return def.groups.includes(group) || def.groups.includes('All');
 }
 
+/** The current location's ability, or nothing while its rules text is being ignored (Barnaby's maps). */
+export function locationAbility(ctx: Ctx): Ability | undefined {
+  const loc = ctx.location;
+  return loc && !ctx.s.turn.locationIgnored ? abilityOf(loc.id) : undefined;
+}
+
 /**
  * Group check for a card in play. Barrowdeep makes every encounter and minion count as Undead, and a hero
  * turned into a zombie by the Infectious Zombie gains the Undead tag.
@@ -24,8 +30,7 @@ export function isOfGroup(ctx: Ctx, card: CardId, group: string): boolean {
   if (hasGroup(d, group)) return true;
   const t = ctx.s.turn;
   if (d.kind === 'encounter' && (card === t.encounter || t.minions.includes(card))) {
-    const loc = ctx.location;
-    if (loc && abilityOf(loc.id)?.encountersCountAs === group) return true;
+    if (locationAbility(ctx)?.encountersCountAs === group) return true;
   }
   return group === 'Undead' && t.heroMinions.includes(card);
 }
@@ -143,7 +148,7 @@ export function sourcesInPlay(ctx: Ctx): Source[] {
     for (const c of p.party) if (!off?.has(c)) out.push({ card: c, owner: p.id, kind: 'hero' });
   }
   const t = ctx.s.turn;
-  if (t.location) out.push({ card: t.location, owner: null, kind: 'location' });
+  if (t.location && !t.locationIgnored) out.push({ card: t.location, owner: null, kind: 'location' });
   if (t.encounter) out.push({ card: t.encounter, owner: null, kind: 'encounter' });
   for (const m of t.minions) out.push({ card: m, owner: null, kind: 'encounter' });
   return out;
@@ -271,8 +276,7 @@ export function partySize(ctx: Ctx, p: PlayerState, incoming?: CardId): number {
   const defs = new Set(heroesOfParty(p).map((c) => ctx.defId(c)));
   if (incoming) defs.add(ctx.defId(incoming));
   for (const id of defs) size += abilityOf(id)?.partyBonus ?? 0;
-  const loc = ctx.location;
-  if (loc) size += abilityOf(loc.id)?.partyBonus ?? 0;
+  size += locationAbility(ctx)?.partyBonus ?? 0;
   return size;
 }
 
@@ -379,13 +383,14 @@ export function enforcePartyLimit(ctx: Ctx, p: PlayerState, reason: string): voi
 
 // --- locations --------------------------------------------------------------
 
-export function locationEnters(ctx: Ctx, card: CardId, reason: string): void {
+export function locationEnters(ctx: Ctx, card: CardId, reason: string, ignore = false): void {
   const t = ctx.s.turn;
   // A location that arrives after the challenge was announced may change its type: "when a X challenge is faced" fires again.
   const before = t.encounter ? challengeStat(ctx, null) : null;
   t.location = card;
+  t.locationIgnored = ignore;
   ctx.emit({ type: 'locationRevealed', card: ctx.ref(card), reason });
-  abilityOf(ctx.defId(card))?.onEnter?.(ctx, { card, owner: null, kind: 'location' });
+  if (!ignore) abilityOf(ctx.defId(card))?.onEnter?.(ctx, { card, owner: null, kind: 'location' });
   fire(ctx, 'locationEntered', { card });
   const after = t.encounter ? challengeStat(ctx, null) : null;
   if (before && after && before !== after) {
@@ -399,7 +404,7 @@ export function locationEnters(ctx: Ctx, card: CardId, reason: string): void {
  * Swap the current location (Wayfinder's Die, Portal Rune, The Umbral Ring, Grukka, Barnaby...). Brunna's player
  * may counter it first (the first such player clockwise is asked); `answered` is set once they have.
  */
-export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'discard', reason: string, answered = false, reward?: { player: PlayerId; n: number }): void {
+export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'discard', reason: string, answered = false, reward?: { player: PlayerId; n: number }, ignore = false): void {
   if (!answered && ctx.s.turn.location) {
     for (const p of ctx.clockwise()) {
       const shield = defenderOf(ctx, p, 'resources');
@@ -409,7 +414,7 @@ export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'd
         t: 'choose', purpose: 'counterAbility', player: p.id, source: ctx.def(shield).name,
         prompt: `${reason} would change the location. Counter it with ${ctx.def(shield).name.split(',')[0]}?`,
         options: [{ value: 'counter', label: 'Counter it' }, { value: 'allow', label: 'Let it happen' }], min: 1, max: 1,
-        data: { kind: 'location', next, mode, reason, shield, ...(reward ? { rewardPlayer: reward.player, rewardN: reward.n } : {}) },
+        data: { kind: 'location', next, mode, reason, shield, ...(reward ? { rewardPlayer: reward.player, rewardN: reward.n } : {}), ...(ignore ? { ignore: 1 } : {}) },
       });
       return;
     }
@@ -421,7 +426,7 @@ export function replaceLocation(ctx: Ctx, next: CardId, mode: 'shuffleBack' | 'd
     else ctx.discard('location', prev);
     ctx.emit({ type: 'locationReplaced', from: ctx.ref(prev), to: ctx.ref(next), reason });
   }
-  locationEnters(ctx, next, reason);
+  locationEnters(ctx, next, reason, ignore);
   if (prev) fire(ctx, 'locationReplaced', { from: prev, to: next });
   enforceAllLimits(ctx);
   // Grukka: the draw comes with the new location, so a countered swap gives nothing.

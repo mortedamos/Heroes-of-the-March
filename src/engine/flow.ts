@@ -14,7 +14,7 @@ import type { EncounterDef, HeroDef, Stat } from './cardTypes';
 import {
   activeEffects, addEffect, cardOption, heroEnters, councilHeroes, defenderOf, defendHeroEffect, disabledCards, discardHero,
   drawRaw, drawResources, enforceAllLimits, enforcePartyLimit, fire, flushOpeningEntrants, hasGroup, leaveLocation, locationEnters, ownerOf, partyLoad, partySize, peekOption,
-  hostileTo, playerHas, replaceLocation, ridingHeroes, statName,
+  hostileTo, locationAbility, playerHas, replaceLocation, ridingHeroes, statName,
 } from './effects';
 import { nextFloat } from './rng';
 import { ALL_VISIBLE, challengeStat, difficultyFor, totalFor } from './totals';
@@ -191,7 +191,7 @@ export function revealEncounter(ctx: Ctx): boolean {
     addMinion(m);
   }
   // Barrowdeep: the encounter draws one extra minion.
-  if (ctx.location && abilityOf(ctx.location.id)?.extraMinion) {
+  if (locationAbility(ctx)?.extraMinion) {
     const m = drawMinion();
     if (m) addMinion(m);
   }
@@ -336,7 +336,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       t.bidder = (t.bidder + 1) % n;
       return;
     }
-    const mirror = Boolean(ctx.location && abilityOf(ctx.location.id)?.facesUp);
+    const mirror = Boolean(locationAbility(ctx)?.facesUp);
     const faceUp = p.bids.length === 0 || mirror;
     const canFaceDown = faceUp && !mirror && Boolean(playerHas(ctx, p, (a) => a.mayBidFaceDown));
     ctx.decide({ kind: 'bid', player: p.id, faceUp, canFaceDown, abilities });
@@ -539,6 +539,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     t.failed = [];
     t.wandsDisabled = false;
     t.namedDisabled = false;
+    t.locationIgnored = false;
     t.noFalls = false;
     t.effects = [];
     t.used = {};
@@ -852,7 +853,7 @@ export function applyChoice(
           t.pendingLocation = null;
           if (countered) ctx.returnToDeck('location', [next]);
           else replaceLocation(ctx, next, String(data['mode']) as 'shuffleBack' | 'discard', String(data['reason']), true,
-            data['rewardPlayer'] ? { player: String(data['rewardPlayer']), n: Number(data['rewardN']) } : undefined);
+            data['rewardPlayer'] ? { player: String(data['rewardPlayer']), n: Number(data['rewardN']) } : undefined, Boolean(data['ignore']));
         } else if (kind === 'curse') {
           if (countered) {
             const from = ctx.player(String(data['from']));
@@ -945,11 +946,13 @@ export function applyChoice(
         break;
       }
       case 'pickLocation': {
-        const card = pick === 'keep' ? null : String(data[pick]);
+        // "n0" / "n1": swap that location in; with a trailing "x": and ignore its rules text.
+        const ignore = pick !== 'keep' && pick.endsWith('x');
+        const card = pick === 'keep' ? null : String(data[ignore ? pick.slice(0, -1) : pick]);
         const pile = ctx.s.decks.location;
         if (card && pile.includes(card)) {
           pile.splice(pile.indexOf(card), 1);
-          replaceLocation(ctx, card, 'shuffleBack', "The Society's Maps");
+          replaceLocation(ctx, card, 'shuffleBack', "The Society's Maps", false, undefined, ignore);
         }
         ctx.shuffle('location');
         break;

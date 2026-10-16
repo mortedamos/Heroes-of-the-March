@@ -14,7 +14,7 @@ import { CARDS, getDef } from './cards';
 import type { CardKind, EncounterDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
 import {
-  addEffect, cardOption, councilHeroes, drawMinionNow, drawResources, fire, hasGroup, heroesInPlay, isOfGroup, kingdomsOf,
+  addEffect, cardOption, councilHeroes, drawMinionNow, drawResources, fire, hasGroup, heroesInPlay, isOfGroup, kingdomsOf, locationAbility,
   peekOption, revealTop, ridingHeroes, statName,
 } from './effects';
 import { baseStrength, challengeStat } from './totals';
@@ -417,10 +417,16 @@ export const ABILITIES: Record<string, Ability> = {
         ctx.queueFirst({
           t: 'choose', purpose: 'pickLocation', player: self.owner, source: nameOf(ctx, self.card),
           prompt: "The Society's Maps: swap the current location for one of these?",
+          // A location with rules text can also be swapped in with its text ignored (the value ends in "x").
           options: [
-            ...next.map((c, i) => {
+            ...next.flatMap((c, i) => {
               const d = ctx.def(c);
-              return { value: `n${i}`, label: `Swap in ${d.name} (Renown ${d.kind === 'location' ? d.renown : '?'})`, card: { def: d.id } };
+              const renown = d.kind === 'location' ? d.renown : '?';
+              const hasEffect = d.kind === 'location' && Boolean(d.conditionText);
+              return [
+                { value: `n${i}`, label: `Swap in ${d.name} (Renown ${renown})`, card: { def: d.id } },
+                ...(hasEffect ? [{ value: `n${i}x`, label: `Swap in ${d.name} and ignore its effect (Renown ${renown})`, card: { def: d.id } }] : []),
+              ];
             }),
             { value: 'keep', label: `Keep ${ctx.location?.name ?? 'the current location'}` },
           ],
@@ -462,7 +468,7 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full',
     activations: [{
       id: 'rumour', label: "Look at all the face-down cards another player has bid", windows: ['bidding'], per: 'turn',
-      canUse: (ctx, self) => !(ctx.location && abilityOf(ctx.location.id)?.hidesFaceDown) && others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
+      canUse: (ctx, self) => !locationAbility(ctx)?.hidesFaceDown && others(ctx, self).some((p) => p.bids.some((b) => !b.visible)),
       use: (ctx, self) => {
         const targets = others(ctx, self).filter((p) => p.bids.some((b) => !b.visible));
         if (!targets.length) return;
@@ -660,7 +666,7 @@ export const ABILITIES: Record<string, Ability> = {
     status: 'full',
     activations: [{
       id: 'flip', label: 'Turn one of your revealed resources face down: it contributes 3', windows: ['endOfBidding'], per: 'turn',
-      canUse: (ctx, self) => !(ctx.location && abilityOf(ctx.location.id)?.facesUp) && brisaTargets(ctx, ctx.player(self.owner)).length > 0,
+      canUse: (ctx, self) => !locationAbility(ctx)?.facesUp && brisaTargets(ctx, ctx.player(self.owner)).length > 0,
       use: (ctx, self) => ctx.queueFirst({
         t: 'choose', purpose: 'brisaFlip', player: self.owner, source: nameOf(ctx, self.card),
         prompt: 'Improvised Explosives: turn one of your revealed resources face down. It contributes 3 instead of its value.',

@@ -11,6 +11,8 @@ const renown = (def: string) => { const d = getDef(def); return d.kind === 'loca
 
 const drawn = new Map<string, number>();
 const bidSum = { up: 0, down: 0 }, bidCount = { up: 0, down: 0 };
+const byOrder: { sum: number; sq: number; n: number }[] = Array.from({ length: 8 }, () => ({ sum: 0, sq: 0, n: 0 }));
+let inTurn = new Map<string, number>();
 let swaps = 0, swapGain = 0, swapGames = 0, turnsHeld = 0, wonByHolder = 0, wonByOthers = 0, renownWonHolder = 0, renownWonOthers = 0, wins = 0, total = 0;
 const cards: AggMap = {};
 for (let i = 0; i < games; i++) {
@@ -20,8 +22,8 @@ for (let i = 0; i < games; i++) {
   let swappedThisGame = 0;
   const holderId = `p${seat}`;
   const onEvent = (e: GameEvent) => {
-    if (e.type === 'turnStarted') turnsHeld++;
-    if (e.type === 'bid') { const d = getDef(e.card.def); const v = d.kind === 'resource' ? d.value : 0; const k = e.faceUp ? 'up' : 'down'; bidSum[k] += v; bidCount[k]++; }
+    if (e.type === 'turnStarted') { turnsHeld++; inTurn = new Map(); }
+    if (e.type === 'bid') { const d = getDef(e.card.def); const v = d.kind === 'resource' ? d.value : 0; const k = e.faceUp ? 'up' : 'down'; bidSum[k] += v; bidCount[k]++; const o = Math.min(7, inTurn.get(e.player) ?? 0); inTurn.set(e.player, o + 1); byOrder[o]!.sum += v; byOrder[o]!.sq += v * v; byOrder[o]!.n++; }
     if (e.type === 'drew' && e.player === holderId) drawn.set(e.reason, (drawn.get(e.reason) ?? 0) + e.cards.length);
     if (e.type === 'locationReplaced' && /Maps/.test(e.reason ?? '')) { swaps++; swappedThisGame++; swapGain += renown(e.to.def) - renown(e.from.def); }
     if (e.type === 'outcome' && e.result.winner) {
@@ -43,6 +45,7 @@ console.log(JSON.stringify({
   holderWins: wonByHolder, holderRenownPerWin: wonByHolder ? (renownWonHolder / wonByHolder).toFixed(2) : null,
   othersWins: wonByOthers, othersRenownPerWin: wonByOthers ? (renownWonOthers / wonByOthers).toFixed(2) : null,
   turnsPerGame: (turnsHeld / total).toFixed(1),
+  byOrder: byOrder.map((b, i) => ({ order: i + 1, n: b.n, mean: b.n ? (b.sum / b.n).toFixed(2) : null, sd: b.n ? Math.sqrt(b.sq / b.n - (b.sum / b.n) ** 2).toFixed(2) : null })),
   meanFaceUpBid: (bidSum.up / bidCount.up).toFixed(2), faceUpBids: bidCount.up,
   meanFaceDownBid: (bidSum.down / bidCount.down).toFixed(2), faceDownBids: bidCount.down,
   rumourMillDrawsPerGame: ((drawn.get('Rumour Mill') ?? 0) / total).toFixed(2),

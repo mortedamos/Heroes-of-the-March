@@ -2,6 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { botDecide } from '../bots/heuristic';
+import { EASY_GUESS_SPREAD, HIDDEN_BID_BY_ORDER, HIDDEN_BID_ESTIMATE, Table } from '../bots/knowledge';
 import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
 import { discardHero, drawResources, fire, heroEnters, partyLoad, partySize, replaceLocation } from './effects';
@@ -2349,5 +2350,166 @@ describe('the fourth sheet pass (v0.8): Barnaby, Vaelis, Oskar, Tansy and new Ne
     const st = viewFor(g.s, g.A).turn.challenge!.stat;
     // Pell +1 (Wardhouse); Nettle +1 (Allied: Halfellow, Hobby); Hobby +1 (Allied: Halfellow, Nettle).
     expect(total(g, g.A, g.A)).toBe(stat('pell-quillon-collegium-prodigy', st) + 1 + stat('nettle-burrows-trouble-maker', st) + 1 + stat('mayor-hobby-trickgrin', st) + 1);
+  });
+});
+
+describe('what bots assume about face-down bids, by level', () => {
+  /** A's view of a table where B has one card face up and two face down (value 4 and 5 are never shown). */
+  function tableWithHiddenBids() {
+    const g = newGame();
+    standard(g, {}, { hand: ['the-axe-of-doom', 'feathered-cap', 'honey-biscuit'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.pass', decision: g.s.pending!.id });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'honey-biscuit') }); // the first bid is face up
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') }); // face down
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') }); // face down
+    until(g, bidFor(g.A));
+    return { g, view: viewFor(g.s, g.A) };
+  }
+  const rivalOf = (t: Table, g: Game) => t.others.find((p) => p.id === g.B)!;
+
+  it('the bot sees how many face-down cards a rival has, not what they are', () => {
+    const { g, view } = tableWithHiddenBids();
+    const b = view.players.find((p) => p.id === g.B)!;
+    expect(b.projection!.hiddenBids).toBe(2);
+    expect(b.bids.filter((x) => x.hidden)).toHaveLength(2);
+    expect(JSON.stringify(b.bids)).not.toContain('the-axe-of-doom');
+  });
+
+  it('a normal bot adds the same 3.1 for every face-down card', () => {
+    const { g, view } = tableWithHiddenBids();
+    const t = new Table(view, 'normal', () => 0.5);
+    const b = rivalOf(t, g);
+    expect(t.estimate(b)).toBeCloseTo(b.projection!.total + 2 * HIDDEN_BID_ESTIMATE, 5);
+  });
+
+  it('a hard bot guesses by the order the cards were played in', () => {
+    const { g, view } = tableWithHiddenBids();
+    const t = new Table(view, 'hard', () => 0.5);
+    const b = rivalOf(t, g);
+    // Bids 2 and 3 of the turn are face down: 3.0 and 2.9.
+    expect(t.estimate(b)).toBeCloseTo(b.projection!.total + HIDDEN_BID_BY_ORDER[1]! + HIDDEN_BID_BY_ORDER[2]!, 5);
+    expect(t.estimate(b)).not.toBeCloseTo(new Table(view, 'normal', () => 0.5).estimate(b), 3);
+  });
+
+  it('an easy bot guesses each face-down card anywhere from 0 to 6, and is consistent within a decision', () => {
+    const { g, view } = tableWithHiddenBids();
+    const low = new Table(view, 'easy', () => 0);
+    const high = new Table(view, 'easy', () => 1);
+    const mid = new Table(view, 'easy', () => 0.5);
+    const total = rivalOf(mid, g).projection!.total;
+    expect(low.estimate(rivalOf(low, g))).toBeCloseTo(total + 2 * (HIDDEN_BID_ESTIMATE - EASY_GUESS_SPREAD), 5);
+    expect(high.estimate(rivalOf(high, g))).toBeCloseTo(total + 2 * 6, 5);
+    expect(mid.estimate(rivalOf(mid, g))).toBeCloseTo(total + 2 * HIDDEN_BID_ESTIMATE, 5);
+    // Asked twice, the same table gives the same answer.
+    let n = 0;
+    const jumpy = new Table(view, 'easy', () => (n++ % 2 ? 0.9 : 0.1));
+    expect(jumpy.estimate(rivalOf(jumpy, g))).toBe(jumpy.estimate(rivalOf(jumpy, g)));
+  });
+
+  it('after Rumour Mill a bot of any level adds the real values, not a guess', () => {
+    const g = newGame();
+    standard(g, { companions: ['tansy-brambleby-barmaid-and-volunteer', 'pell-quillon-collegium-prodigy'], hand: [] }, { hand: ['the-axe-of-doom', 'feathered-cap'] });
+    restart(g);
+    until(g, bidFor(g.A));
+    act(g, { type: 'bid.pass', decision: g.s.pending!.id });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'the-axe-of-doom') });
+    until(g, bidFor(g.B));
+    act(g, { type: 'bid.play', decision: g.s.pending!.id, card: card(g, 'feathered-cap') });
+    until(g, bidFor(g.A));
+    use(g, 'tansy-brambleby-barmaid-and-volunteer', 'rumour');
+    pick(g, 'done');
+    for (const level of ['easy', 'normal', 'hard'] as const) {
+      const t = new Table(viewFor(g.s, g.A), level, () => 0.9);
+      const b = t.others.find((p) => p.id === g.B)!;
+      expect(b.projection!.hiddenBids).toBe(0);
+      expect(t.estimate(b)).toBe(b.projection!.total);
+    }
+  });
+});
+
+describe('Barnaby: swapping a location in with its effect ignored', () => {
+  /** A's Barnaby looks at the two locations behind the current one (given in order) and swaps with `pickValue`. */
+  function swap(pickValue: string, locations: string[], encounter?: string, aParty = ['professor-barnaby-pickwort', 'queen-maren-ashcroft', 'captain-rook-halloran-skyship-captain']) {
+    const g = newGame();
+    standard(g, { party: aParty }, { party: ['grumma-ladlejaw-camp-cook', 'dagny-coldhearth-the-grudge-bearer', 'kesh-the-bog-huntress'], hand: [] });
+    onTop(g.s, 'location', locations);
+    if (encounter) onTop(g.s, 'encounter', [encounter]);
+    restart(g);
+    until(g, bidFor(g.A));
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    pick(g, pickValue);
+    return g;
+  }
+  const difficulty = (g: Game) => viewFor(g.s, g.A).turn.challenge!.difficulty.total;
+  const stat = (g: Game) => viewFor(g.s, g.A).turn.challenge!.stat;
+
+  it('is offered only for a location that has an effect', () => {
+    const g = newGame();
+    standard(g, { hero: 'professor-barnaby-pickwort' });
+    onTop(g.s, 'location', ['clover-hollow', 'kingsford', 'the-umbral-deep']); // current, then Kingsford (text), then The Umbral Deep (none)
+    restart(g);
+    until(g, bidFor(g.A));
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    const d = g.s.pending!;
+    expect(d.kind === 'choose' && d.options.map((o) => o.value)).toEqual(['n0', 'n0x', 'n1', 'keep']);
+  });
+
+  it('the location comes in without its effect: Kingsford draws nothing when ignored, and the Renown still counts', () => {
+    const used = swap('n0', ['clover-hollow', 'kingsford', 'the-umbral-deep']);
+    expect(used.events.some((e) => e.type === 'drew' && e.reason === 'Kingsford')).toBe(true);
+    const ignored = swap('n0x', ['clover-hollow', 'kingsford', 'the-umbral-deep']);
+    expect(ignored.s.turn.location).toBe(card(ignored, 'kingsford'));
+    expect(ignored.s.turn.locationIgnored).toBe(true);
+    expect(ignored.events.some((e) => e.type === 'drew' && e.reason === 'Kingsford')).toBe(false);
+    expect(viewFor(ignored.s, ignored.A).turn.locationIgnored).toBe(true);
+  });
+
+  it('a location that changes the challenge stat does not when ignored', () => {
+    const used = swap('n0', ['clover-hollow', 'the-silverwood-hunt', 'kingsford'], 'the-prisoner-of-the-ninth-ward'); // a Guile encounter
+    expect(stat(used)).toBe('P');
+    const ignored = swap('n0x', ['clover-hollow', 'the-silverwood-hunt', 'kingsford'], 'the-prisoner-of-the-ninth-ward');
+    expect(stat(ignored)).toBe('G');
+  });
+
+  it('a location that makes the encounter harder does not when ignored', () => {
+    const used = swap('n0', ['clover-hollow', 'the-barrowlands', 'kingsford'], 'skeleton-host'); // Undead, Physical 10
+    const ignored = swap('n0x', ['clover-hollow', 'the-barrowlands', 'kingsford'], 'skeleton-host');
+    expect(difficulty(used)).toBe(difficulty(ignored) + 3);
+  });
+
+  it('the next location is back to normal: the flag is cleared when the turn ends', () => {
+    const g = swap('n0x', ['clover-hollow', 'kingsford', 'the-umbral-deep']);
+    finishTurn(g);
+    expect(g.s.turn.locationIgnored).toBe(false);
+  });
+
+  it('a bot swaps in a high-Renown location whose text would hurt everyone, with the text ignored', () => {
+    const g = newGame();
+    standard(g, { party: ['professor-barnaby-pickwort', 'lord-paladin-aldric-ashcroft', 'captain-rook-halloran-skyship-captain'], hand: ['kurganos-crown-of-elements', 'the-axe-of-doom', 'the-riddle-of-steel'] },
+      { party: ['grumma-ladlejaw-camp-cook', 'dagny-coldhearth-the-grudge-bearer', 'kesh-the-bog-huntress'], hand: [] });
+    onTop(g.s, 'location', ['clover-hollow', 'the-crack-in-the-marchstone', 'the-skyship-valour']); // The Crack: Renown 6, but everyone discards a hero and it is swapped away
+    restart(g);
+    until(g, bidFor(g.A));
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    const answer = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
+    expect(answer?.type === 'choose' && answer.picks[0]).toBe('n0x');
+  });
+
+  it('a bot keeps the text of a location that gives its heroes more than its rivals', () => {
+    const g = newGame();
+    standard(g, { party: ['professor-barnaby-pickwort', 'queen-maren-ashcroft', 'captain-rook-halloran-skyship-captain'], hand: ['kurganos-crown-of-elements', 'the-axe-of-doom', 'the-riddle-of-steel'] },
+      { party: ['grumma-ladlejaw-camp-cook', 'dagny-coldhearth-the-grudge-bearer', 'kesh-the-bog-huntress'], hand: [] });
+    onTop(g.s, 'location', ['clover-hollow', 'kingsford', 'the-skyship-valour']); // Kingsford: a resource for every Human hero: two of ours, none of theirs
+    restart(g);
+    until(g, bidFor(g.A));
+    use(g, 'professor-barnaby-pickwort', 'maps');
+    const answer = botDecide(viewFor(g.s, g.A), 'normal', () => 0.5);
+    expect(answer?.type === 'choose' && answer.picks[0]).toBe('n0');
   });
 });

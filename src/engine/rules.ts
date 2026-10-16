@@ -148,6 +148,8 @@ export const RULE_NOTES: RuleNote[] = [
     ruling: "Hesk counts as both an Orc and a Human. Once per turn he gives one extra use of another hero's once-per-turn ability." },
   { id: 'grukka', topic: 'Grukka (Strike the Heart)',
     ruling: 'Once per turn, after the location is revealed, the player with Grukka looks at the next location. Only a Capital may be put into play (it replaces the current location, which is shuffled back, and they draw 2 resources); anything else is shuffled back with the rest. If the swap is countered (Brunna) no resources are drawn. The Old Quarry counts as a Capital.' },
+  { id: 'barnaby', topic: 'Professor Barnaby (Archivist Society Maps)',
+    ruling: 'Once per turn, on your bidding decision of any turn, look at the next two locations and swap one in for the current location (the old one is shuffled back). When the new location has rules text you may swap it in with that text ignored: it keeps its Renown and its tags (so Nemesis bonuses still follow them) but its text does nothing this turn. That also holds for text that works while it is in play, such as a changed challenge type or a bigger party, and for what happens when it is won. Ignoring is chosen with the swap and cannot be changed later. A Brunna counter stops the whole swap.' },
   { id: 'farmer-hobart', topic: 'Farmer Hobart (Goose & Company)',
     ruling: 'At the start of the turn of the player who controls him they draw one resource if any Goose card is in play anywhere (a hero in any party, the encounter or a minion). Several geese still give one.' },
   { id: 'pariapt', topic: 'Pariapt of Peace',

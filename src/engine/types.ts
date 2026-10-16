@@ -154,6 +154,8 @@ export interface TurnState {
   setAside: CardId[];
   /** A location waiting for a player to answer a counter (Walls First): it replaces the current one unless it is countered. */
   pendingLocation: CardId | null;
+  /** The location's own rules text is being ignored this turn (Barnaby's maps): its Renown and tags still count. */
+  locationIgnored: boolean;
   /** An encounter found by a location's search (The Frostfells, Wreck of the Skyship Gallant): it is this turn's encounter. */
   chosenEncounter: CardId | null;
   /** Heroes chosen in the opening party draft; their enter-play effects wait for the end of the opening phase. */

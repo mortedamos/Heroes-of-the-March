@@ -10,7 +10,7 @@ import { abilityOf } from './abilities';
 import { alliedTargets, getDef, matchesTarget, nemesisTargets } from './cards';
 import type { Challenge, HeroDef, ResourceDef, Stat } from './cardTypes';
 import type { Ctx } from './context';
-import { activeEffects, hasGroup, isOfGroup } from './effects';
+import { activeEffects, hasGroup, isOfGroup, locationAbility } from './effects';
 import type { Bid, CardId, PlayerId, PlayerState } from './types';
 
 export type Visible = (owner: PlayerState, bid: Bid) => boolean;
@@ -28,15 +28,13 @@ export function currentChallenge(ctx: Ctx): Challenge | null {
 /** The stat a player must use: their own override, else the location's, else the challenge's. */
 export function challengeStat(ctx: Ctx, p: PlayerState | null): Stat | null {
   if (p?.statOverride) return p.statOverride;
-  const loc = ctx.location;
-  const locStat = loc ? abilityOf(loc.id)?.challengeStat : undefined;
+  const locStat = locationAbility(ctx)?.challengeStat;
   if (locStat) return locStat;
   return currentChallenge(ctx)?.stat ?? null;
 }
 
 function locationBoost(ctx: Ctx, card: CardId): number {
-  const loc = ctx.location;
-  const boost = loc ? abilityOf(loc.id)?.groupBoost : undefined;
+  const boost = locationAbility(ctx)?.groupBoost;
   return boost && hasGroup(ctx.def(card), boost.group) ? boost.amount : 0;
 }
 
@@ -48,7 +46,7 @@ export function difficultyFor(ctx: Ctx, _p: PlayerState | null): DifficultyBreak
   const t = ctx.s.turn;
   if (!ch || !t.encounter) return null;
   const boost = locationBoost(ctx, t.encounter);
-  const perMinion = (ctx.location ? abilityOf(ctx.location.id)?.minionBonus : 0) ?? 0;
+  const perMinion = locationAbility(ctx)?.minionBonus ?? 0;
   const main = ctx.def(t.encounter);
   let minions = 0;
   for (const m of t.minions) {

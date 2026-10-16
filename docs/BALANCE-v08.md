@@ -111,3 +111,29 @@ Spread: 0.73 to 1.55, standard deviation 0.15 (v0.7: 0.68 to 1.46, 0.16).
 ## Extra runs on Barnaby
 
 3000 games each at 3 and 4 players (`docs/balance-data/v08-barnaby/`, probe in `scripts/balance/probe-maps.ts`): the bot that raises Renown only when it is the favourite 0.73 (before that change 0.67); the same bot and a draw whenever he swaps 1.25; the same bot with Physical 4 (4/6/4) 0.77.
+
+## Afterwards: what bots of each level assume about face-down bids
+
+An easy bot guesses each face-down card of a rival anywhere from 0 to 6 (a new guess every decision), a normal bot uses 3.1 for all of them (unchanged), a hard bot uses the average for the position the card was played in (2nd bid 3.0, 3rd 2.9, later 2.7 to 2.8; measured over bot games, where face-down bids average 2.9 in all). Win share of one seat at one level against two seats of another, 3 players, 1500 games each (fair 33.3%, margin 2.4 points), `scripts/balance/probe-levels.ts`:
+
+| Seat | Others | Wins (new guesses) | Wins (flat 3.1 for everyone) |
+|---|---|---|---|
+| hard | normal | 35.6% | 34.5% |
+| easy | normal | 6.0% | 6.2% |
+| normal | normal | 33.2% | |
+| normal | easy | 80.3% | |
+| hard | easy | 81.2% | |
+
+Easy bots were already far weaker than normal ones for other reasons (they play cards at random and often sit still), so the noisier guess hardly changes them.
+
+## Afterwards: Barnaby, Tansy and Urzha (sheet of 16 October)
+
+The sheet now has Allied: Accord on Barnaby, and his maps may swap a location in with its effect ignored (an ignored location keeps its Renown and tags; its text does nothing this turn, including text that works while in play and what happens when it is won). Urzha has Nemesis: Wardhouse and Tansy Allied: Halfellow. Bots choose a location by Renown (when they are the favourite), by whose Nemesis it switches on, and by what its text does to them against their rivals: they swap it in with its text when that hurts the others more than them, ignored when it hurts them or helps the others. 3000 games per hero at 3 and 4 players (margin 0.06), `docs/balance-data/v09-retest/`:
+
+| Version | Barnaby | Tansy | Urzha |
+|---|---|---|---|
+| before (v0.8 data) | 0.73 | 0.87 | 0.83 |
+| Urzha Nemesis Wardhouse, Tansy Allied Halfellow (Barnaby without either) | 0.72 | 0.93 | 0.85 |
+| the same plus Nemesis: Wardhouse on Barnaby (what the designer first described) | 0.75 | | |
+| now: Barnaby Allied: Accord, ignoring, and bots that use it | **0.89** | **0.93** | **0.87** |
+| Barnaby as now, without Allied (the ignoring alone) | 0.82 | | |

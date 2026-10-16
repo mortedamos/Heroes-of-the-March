@@ -50,7 +50,7 @@ type Rand = () => number;
 export function botDecide(view: GameView, level: BotLevel, rand: Rand = Math.random): Command | null {
   const d = view.pending;
   if (!d || d.player !== view.you || !d.detail) return null;
-  const t = new Table(view);
+  const t = new Table(view, level, rand);
   const decision = d.id;
   const detail = d.detail;
 
@@ -366,7 +366,7 @@ function holdChance(t: Table, total: number, level: BotLevel): number {
     if (!r.projection || r.handCount === 0) continue;
     const now = t.estimate(r);
     if (now + (level === 'hard' ? 4 : 6) < t.difficultyFor(r)) continue; // they can't realistically make it
-    const reach = now + Math.min(r.handCount, 3) * HIDDEN_BID_ESTIMATE;
+    const reach = now + t.handReach(r);
     if (reach >= total) p *= reach >= total + 3 ? 0.6 : 0.8;
   }
   return p;
@@ -528,10 +528,18 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       return [keepOrSwapLocation(t, card?.def ?? null, 'warchief-grukka-ironjaw') ? 'replace' : 'keep'];
     }
     case 'pickLocation': {
-      // Renown if the location is likely ours (the other way round when someone else is the favourite), and whose Nemesis bonuses it switches on.
+      // Barnaby's maps. Each option is worth the Renown if the location is likely ours (the other way round when someone else is the
+      // favourite), whose Nemesis bonuses it switches on, and what its own text does to us against the others. A location that hurts
+      // the others more than us is swapped in with its text; one that hurts us (or helps them) is swapped in with its text ignored.
       const w = renownWeight(t);
-      const score = (def: string | null) => w * locationScore(t, def) + NEMESIS_WEIGHT * nemesisSwing(t, def);
-      const scored = c.options.map((o) => ({ v: o.value, s: score(o.value === 'keep' ? t.view.turn.location?.def ?? null : o.card?.def ?? null) }));
+      const keepDef = t.view.turn.location?.def ?? null;
+      const scored = c.options.map((o) => {
+        const keep = o.value === 'keep';
+        const def = keep ? keepDef : o.card?.def ?? null;
+        const ignore = !keep && o.value.endsWith('x');
+        const effect = ignore ? 0 : locationEffectValue(t, def, keep, w);
+        return { v: o.value, s: w * locationRenown(def ? { def } : null) * (!ignore && def === 'the-crack-in-the-marchstone' ? 3.9 / 6 : 1) + NEMESIS_WEIGHT * nemesisSwing(t, def) + effect };
+      });
       return [scored.sort((a, b) => b.s - a.s)[0]!.v];
     }
     case 'wrenStack':
@@ -665,6 +673,83 @@ function renownWeight(t: Table): number {
   if (!Number.isFinite(rival)) return 1;
   const lead = mine - rival;
   return lead > 1.5 ? 1 : lead < -1.5 ? -0.7 : 0.1;
+}
+
+/**
+ * What a location's own text is worth to us from here on, in Renown, against the others (harm to them counts for us; what it
+ * gives them counts against us). `current` is the location already in play: what it did on entering is over. Rough, on purpose.
+ */
+function locationEffectValue(t: Table, def: string | null, current: boolean, w: number): number {
+  if (!def) return 0;
+  const d = getDef(def);
+  if (d.kind !== 'location' || !d.conditionText) return 0;
+  const text = d.conditionText;
+  const enc = t.view.turn.encounter ? getDef(t.view.turn.encounter.def) : null;
+  const stat: Stat | null = t.stat ?? (enc?.kind === 'encounter' ? enc.stat : null);
+  const others = t.others;
+  const avgOthers = (f: (p: PlayerPublicView) => number) => (others.length ? others.reduce((s, p) => s + f(p), 0) / others.length : 0);
+  let v = 0;
+
+  // Cards for every hero of one kind in play: ours against the average rival's.
+  const per = /every (\w+)(?: hero)? they have in play/.exec(text)?.[1];
+  if (per && !current) {
+    const count = (p: PlayerPublicView) => t.heroesOf(p).filter((h) => (getDef(h.def).groups as string[]).includes(per)).length;
+    v += 0.7 * (count(t.me) - avgOthers(count));
+  }
+
+  // The challenge moves to another stat: who is stronger in it?
+  const changed = /changed to (guile|mental|physical)/i.exec(text)?.[1];
+  if (changed && enc?.kind === 'encounter') {
+    const to = ({ physical: 'P', mental: 'M', guile: 'G' } as const)[changed.toLowerCase() as 'physical' | 'mental' | 'guile'];
+    const lead = (s: Stat) => t.base(t.me, s) - Math.max(-Infinity, ...others.map((p) => t.base(p, s)));
+    v += 0.35 * (lead(to) - lead(enc.stat));
+  }
+
+  // The encounter gets harder for everyone: bad for whoever is close to the line, harmless to those far above or below it.
+  const closeness = (p: PlayerPublicView, hand: number) => {
+    if (!p.projection) return 0.5;
+    const margin = t.estimate(p) + hand - t.difficultyFor(p);
+    return Math.abs(margin) < 4 ? 1 : Math.abs(margin) < 8 ? 0.5 : 0.1;
+  };
+  const myHand = t.view.hand.map((h) => t.handValue(h.card.id)).sort((a, b) => b - a).slice(0, 3).reduce((a, b) => a + b, 0);
+  const harder = (amount: number) => { v -= 0.25 * amount * (closeness(t.me, myHand) - avgOthers((p) => closeness(p, Math.min(p.handCount, 3) * HIDDEN_BID_ESTIMATE))); };
+  const boost = /of (\w+) encounters are increased by (\d+)/.exec(text);
+  if (boost) {
+    const hit = [t.view.turn.encounter, ...t.view.turn.minions].some((c) => c && (getDef(c.def).groups as string[]).includes(boost[1]!));
+    if (hit) harder(Number(boost[2]));
+  }
+  const minions = /minions are in play at this location, their bonus is increased by (\d+)/.exec(text);
+  if (minions && t.view.turn.minions.length) harder(Number(minions[1]) * t.view.turn.minions.length);
+  if (def === 'barrowdeep') harder(2.4);
+
+  switch (def) {
+    case 'the-storybook-glade': { // everyone turns their least useful hero face down
+      if (stat) { const loss = (p: PlayerPublicView) => Math.min(...t.heroesOf(p).map((h) => t.heroIn(h, stat))); v += 0.35 * (avgOthers(loss) - loss(t.me)); }
+      break;
+    }
+    case 'the-hollow-between': { // everyone discards a resource
+      const loss = (hand: number) => (hand > 0 ? 0.6 : 0);
+      v += avgOthers((p) => loss(p.handCount)) - loss(t.view.hand.length);
+      break;
+    }
+    case 'the-crack-in-the-marchstone': { // everyone discards a hero (their worst), and the location is swapped away
+      const worst = (p: PlayerPublicView) => Math.min(...t.heroesOf(p).map((h) => heroValue(h.def)));
+      v += 0.2 * (avgOthers(worst) - worst(t.me));
+      break;
+    }
+    case 'parting-strand': // whoever wins it discards a hero
+      v += w > 0.5 ? -2 : w < -0.3 ? 1 : 0;
+      break;
+    case 'the-endless-road': // the winner claims a second location as well
+      v += 1.5 * w;
+      break;
+    case 'the-goose-and-kettle': // everyone may draw a hero; one more place in every party
+      v += 0.5;
+      break;
+    default:
+      break;
+  }
+  return v;
 }
 
 /** One Nemesis bonus is +1 to every stat of a hero: worth a bit under a point of Renown in a close fight. */

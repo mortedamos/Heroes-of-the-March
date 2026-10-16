@@ -5,9 +5,17 @@ import { alliedTargets, CARDS, companionsOf, getDef, matchesTarget, nemesisTarge
 import type { HeroDef, LocationDef, Stat } from '../engine/cardTypes';
 import type { CardRef } from '../engine/types';
 import type { GameView, PlayerPublicView } from '../engine/view';
+import type { BotLevel } from './heuristic';
 
-/** Average value of an unseen face-down bid (from the card data: ~3.1). */
+/** What a normal bot assumes every unseen card of an opponent's is worth (measured in bot games: face-down bids average 2.9). */
 export const HIDDEN_BID_ESTIMATE = 3.1;
+/**
+ * What a hard bot assumes for a face-down bid by the order it was played in that turn (the first bid is face up, so index 0 is only
+ * for a player who hides it; measured over bot games: the second bid averages 3.0, later ones 2.7 to 2.9).
+ */
+export const HIDDEN_BID_BY_ORDER = [2.2, 3.0, 2.9, 2.75, 2.7, 2.8];
+/** An easy bot's guess at one unseen card is off by up to this much either way (so it can be anything from 0 to 6). */
+export const EASY_GUESS_SPREAD = 3;
 /** Average hero stat, used to value Council cards. */
 export const AVG_HERO_STAT = 3.5;
 
@@ -107,9 +115,22 @@ export class Table {
   readonly me: PlayerPublicView;
   readonly others: PlayerPublicView[];
 
-  constructor(readonly view: GameView) {
+  /** Easy bots' guesses are noisy; each is drawn once per decision so the bot is consistent with itself within it. */
+  private readonly noisy = new Map<string, number>();
+
+  constructor(readonly view: GameView, readonly level: BotLevel = 'normal', private readonly rand: () => number = Math.random) {
     this.me = view.players.find((p) => p.id === view.you)!;
     this.others = view.players.filter((p) => p.id !== view.you);
+  }
+
+  /** One easy-bot guess at an unseen card, remembered under `key`. */
+  private noisyGuess(key: string): number {
+    let v = this.noisy.get(key);
+    if (v === undefined) {
+      v = Math.min(6, Math.max(0, HIDDEN_BID_ESTIMATE + (this.rand() - 0.5) * 2 * EASY_GUESS_SPREAD));
+      this.noisy.set(key, v);
+    }
+    return v;
   }
 
   get stat(): Stat | null { return this.view.turn.challenge?.stat ?? null; }
@@ -125,10 +146,33 @@ export class Table {
   /** Renown at stake this turn (hidden bonus locations counted at the average). */
   get prize(): number { return locationRenown(this.view.turn.location) + this.view.turn.extraLocations * 3.8; }
 
-  /** Best guess at a player's final total: visible total + hidden bids at the average. */
+  /**
+   * What a player's face-down bids are guessed to add. The values are never in the view, only how many there are:
+   * an easy bot guesses each wildly, a normal bot uses one average for all, a hard bot knows later bids run a little cheaper.
+   */
+  hiddenValue(p: PlayerPublicView): number {
+    const n = p.projection?.hiddenBids ?? 0;
+    if (!n) return 0;
+    if (this.level === 'easy') { let sum = 0; for (let i = 0; i < n; i++) sum += this.noisyGuess(`${p.id}:bid${i}`); return sum; }
+    if (this.level === 'hard') {
+      let sum = 0, found = 0;
+      p.bids.forEach((b, i) => { if (b.hidden) { sum += HIDDEN_BID_BY_ORDER[Math.min(i, HIDDEN_BID_BY_ORDER.length - 1)]!; found++; } });
+      return sum + (n - found) * HIDDEN_BID_ESTIMATE;
+    }
+    return n * HIDDEN_BID_ESTIMATE;
+  }
+
+  /** What up to three cards an opponent still holds could add if they played them (an easy bot's guess is noisy too). */
+  handReach(p: PlayerPublicView): number {
+    const n = Math.min(p.handCount, 3);
+    if (this.level !== 'easy') return n * HIDDEN_BID_ESTIMATE;
+    let sum = 0; for (let i = 0; i < n; i++) sum += this.noisyGuess(`${p.id}:hand${i}`); return sum;
+  }
+
+  /** Best guess at a player's final total: visible total + hidden bids at the level's guess. */
   estimate(p: PlayerPublicView): number {
     if (!p.projection) return 0;
-    return p.projection.total + p.projection.hiddenBids * HIDDEN_BID_ESTIMATE;
+    return p.projection.total + this.hiddenValue(p);
   }
 
   difficultyFor(p: PlayerPublicView): number { return p.projection?.difficulty ?? this.view.turn.challenge?.difficulty.total ?? 0; }

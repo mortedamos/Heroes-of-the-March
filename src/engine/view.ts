@@ -110,6 +110,8 @@ export interface GameView {
     bidder: PlayerId | null;
     wandsDisabled: boolean;
     namedDisabled: boolean;
+    /** The location's rules text is ignored this turn (Barnaby's maps). */
+    locationIgnored: boolean;
     effects: EffectView[];
     result: TurnResult | null;
   };
@@ -236,6 +238,7 @@ export function viewFor(state: GameState, viewer: PlayerId | null): GameView {
       bidder: t.step === 'bidding' ? state.players[t.bidder]?.id ?? null : null,
       wandsDisabled: t.wandsDisabled,
       namedDisabled: t.namedDisabled,
+      locationIgnored: t.locationIgnored,
       effects,
       result: t.result ? structuredClone(t.result) : null,
     },

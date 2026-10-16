@@ -553,7 +553,7 @@ export class Hud {
     if (d.minions) parts.push(`minions ${d.minions >= 0 ? '+' : ''}${d.minions}`);
     replace(this.challenge,
       h('div', { class: 'ch-stat', style: { '--accent': STAT_COLORS[ch.stat] } }, `${STAT_NAMES[ch.stat]} ${d.total}`),
-      h('div', { class: 'ch-detail' }, `${parts.join(' · ')}${v.turn.wandsDisabled ? ' · Wands disabled' : ''}${v.turn.namedDisabled ? ' · Allied and Nemesis off' : ''}`),
+      h('div', { class: 'ch-detail' }, `${parts.join(' · ')}${v.turn.wandsDisabled ? ' · Wands disabled' : ''}${v.turn.namedDisabled ? ' · Allied and Nemesis off' : ''}${v.turn.locationIgnored ? ' · Location effect ignored' : ''}`),
     );
   }
 
