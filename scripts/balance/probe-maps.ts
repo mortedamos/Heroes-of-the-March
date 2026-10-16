@@ -9,6 +9,7 @@ const frag = process.argv[3] ?? 'barnaby';
 const hero = allDefs().find((d) => d.kind === 'hero' && d.id.includes(frag))!.id;
 const renown = (def: string) => { const d = getDef(def); return d.kind === 'location' ? d.renown : 0; };
 
+const drawn = new Map<string, number>();
 let swaps = 0, swapGain = 0, swapGames = 0, turnsHeld = 0, wonByHolder = 0, wonByOthers = 0, renownWonHolder = 0, renownWonOthers = 0, wins = 0, total = 0;
 const cards: AggMap = {};
 for (let i = 0; i < games; i++) {
@@ -19,6 +20,7 @@ for (let i = 0; i < games; i++) {
   const holderId = `p${seat}`;
   const onEvent = (e: GameEvent) => {
     if (e.type === 'turnStarted') turnsHeld++;
+    if (e.type === 'drew' && e.player === holderId) drawn.set(e.reason, (drawn.get(e.reason) ?? 0) + e.cards.length);
     if (e.type === 'locationReplaced' && /Maps/.test(e.reason ?? '')) { swaps++; swappedThisGame++; swapGain += renown(e.to.def) - renown(e.from.def); }
     if (e.type === 'outcome' && e.result.winner) {
       const r = e.result.locations.reduce((sum, _c) => sum + 0, 0);
@@ -39,4 +41,6 @@ console.log(JSON.stringify({
   holderWins: wonByHolder, holderRenownPerWin: wonByHolder ? (renownWonHolder / wonByHolder).toFixed(2) : null,
   othersWins: wonByOthers, othersRenownPerWin: wonByOthers ? (renownWonOthers / wonByOthers).toFixed(2) : null,
   turnsPerGame: (turnsHeld / total).toFixed(1),
+  rumourMillDrawsPerGame: ((drawn.get('Rumour Mill') ?? 0) / total).toFixed(2),
+  drawsByReasonPerGame: Object.fromEntries([...drawn.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([k, v]) => [k, (v / total).toFixed(2)])),
 }, null, 1));
