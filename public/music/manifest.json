@@ -1,9 +1,13 @@
 {
   "locations": {
     "grimgate": "locations/grimgate.mp3",
+    "kingsford": "locations/kingsford.mp3",
     "marchguard-keep": "locations/marchguard-keep.mp3",
     "the-barrowlands": "locations/the-barrowlands.mp3",
+    "the-collegium-observatory": "locations/the-collegium-observatory.mp3",
     "the-crack-in-the-marchstone": "locations/the-crack-in-the-marchstone.mp3",
-    "the-goose-and-kettle": "locations/the-goose-and-kettle.mp3"
+    "the-goose-and-kettle": "locations/the-goose-and-kettle.mp3",
+    "the-hollow-hills": "locations/the-hollow-hills.mp3",
+    "the-storybook-glade": "locations/the-storybook-glade.mp3"
   }
 }
