@@ -1,16 +1,19 @@
 // A ground that is not a flat, still plane. It patches the floor's standard material, so light, shadow and fog
-// still apply. Three kinds:
+// still apply. The kinds:
 //   waves  - the harbor: the vertices swell, the normals follow (so the light rolls over the swell), crests brighten
 //            and the texture slides past itself in two layers so it never settles.
 //   clouds - the same, slower and softer, for the skyship.
+//   lake   - the same again, but only a gentle moving of the surface: a lake on a still evening.
 //   rock   - the forge: uneven, jagged stone. Jittered, ridged heights, shaded in flat facets; calmer round the table
 //            so the foot of the anvil sits in it.
 //   mirror - still water that reflects the sky dome.
+//   bog    - a swamp: black water that reflects the sky, and hammocks (low islands) raised from the map of them in marsh.ts.
 
 import * as THREE from 'three';
 import { SKY_PAINT_GLSL } from './skyPaint';
+import { BANK, HILL_RISE, MARSH_SPAN, WATER_Y, marshMap } from './marsh';
 
-export type GroundKind = 'waves' | 'clouds' | 'rock' | 'mirror';
+export type GroundKind = 'waves' | 'clouds' | 'lake' | 'rock' | 'mirror' | 'bog';
 
 /** The sky dome's own uniforms (Environment.domeUniforms), so water can reflect what the dome shows. */
 export interface SkyUniforms {
@@ -30,6 +33,11 @@ export interface SkyUniforms {
 /** What every moving ground shares: the clock, the table's footprint (half width, half depth, centre z), the sky, and the dome's size (semi-axes) and the height of its centre. */
 export interface GroundUniforms {
   time: { value: number };
+  /**
+   * How far a mirror lifts what it shows, in radians: twice the height of the waterline painted on the sky (a pool mirrors the
+   * sky about that line, and not about the horizon the painting sits above). Zero mirrors about the horizon.
+   */
+  lift: { value: number };
   table: { value: THREE.Vector4 };
   sky: SkyUniforms;
   dome: { value: THREE.Vector4 };
@@ -55,7 +63,17 @@ interface Swell {
   foam: number;
 }
 
-const SWELLS: Record<'waves' | 'clouds', Swell> = {
+const SWELLS: Record<'waves' | 'clouds' | 'lake', Swell> = {
+  lake: {
+    waves: [
+      { dir: [1, 0.25], len: 11, speed: 0.5, amp: 0.07 },
+      { dir: [0.35, 1], len: 6.5, speed: 0.65, amp: 0.04 },
+      { dir: [-0.7, 0.6], len: 4.2, speed: 0.8, amp: 0.02 },
+    ],
+    slide: [[0.006, 0.002], [-0.004, 0.005]],
+    shade: 0.16,
+    foam: 0,
+  },
   waves: {
     waves: [
       { dir: [1, 0.3], len: 14, speed: 1.0, amp: 0.2 },
@@ -80,15 +98,16 @@ const SWELLS: Record<'waves' | 'clouds', Swell> = {
 
 const f = (n: number): string => n.toFixed(4);
 
-/** Make `mat` (a ground material) move or break up as `kind` says. */
-export function groundMaterial(mat: THREE.MeshStandardMaterial, kind: GroundKind, u: GroundUniforms): void {
+/** Make `mat` (a ground material) move or break up as `kind` says. `colors` are the two colours of the surface it covers (a bog's water, then its land). */
+export function groundMaterial(mat: THREE.MeshStandardMaterial, kind: GroundKind, u: GroundUniforms, colors: { a: string; b: string } = { a: '#000000', b: '#ffffff' }): void {
   if (kind === 'rock') rock(mat, u);
   else if (kind === 'mirror') mirror(mat, u);
+  else if (kind === 'bog') bog(mat, u, colors);
   else swell(mat, kind, u);
   mat.customProgramCacheKey = () => `ground:${kind}`;
 }
 
-function swell(mat: THREE.MeshStandardMaterial, kind: 'waves' | 'clouds', u: GroundUniforms): void {
+function swell(mat: THREE.MeshStandardMaterial, kind: 'waves' | 'clouds' | 'lake', u: GroundUniforms): void {
   const s = SWELLS[kind];
   const total = s.waves.reduce((a, w) => a + w.amp, 0);
 
@@ -162,18 +181,18 @@ function rock(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
  * Environment) and the dome's colour there is mixed in, more strongly the lower the camera looks (Fresnel). So a painted
  * sky, trees and all, doubles itself in the water, and the sky crossfades with the one above.
  */
-function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
-  mat.onBeforeCompile = (shader) => {
-    const s = u.sky;
-    Object.assign(shader.uniforms, {
-      uTop: s.top, uBottom: s.bottom, uSkyFrom: s.skyFrom, uSkyTo: s.skyTo, uWFrom: s.wFrom, uWTo: s.wTo,
-      uOffFrom: s.offFrom, uOffTo: s.offTo, uWinFrom: s.winFrom, uWinTo: s.winTo, uHaze: s.haze, uDome: u.dome,
-    });
-    shader.vertexShader = shader.vertexShader
-      .replace('#include <common>', '#include <common>\nvarying vec3 vMirrorPos;')
-      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvMirrorPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    shader.fragmentShader = shader.fragmentShader
-      .replace('#include <common>', `#include <common>
+/**
+ * The parts a ground needs to reflect the sky dome: the dome's uniforms, `mirrorSky(P, R)` in the fragment shader, and the
+ * varying `vMirrorPos`, the world position of the ground, which the vertex shader sets once the vertex is where it belongs.
+ */
+function reflectSky(shader: { uniforms: Record<string, { value: unknown }>; vertexShader: string; fragmentShader: string }, u: GroundUniforms): void {
+  const s = u.sky;
+  Object.assign(shader.uniforms, {
+    uTop: s.top, uBottom: s.bottom, uSkyFrom: s.skyFrom, uSkyTo: s.skyTo, uWFrom: s.wFrom, uWTo: s.wTo,
+    uOffFrom: s.offFrom, uOffTo: s.offTo, uWinFrom: s.winFrom, uWinTo: s.winTo, uHaze: s.haze, uDome: u.dome,
+  });
+  shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vMirrorPos;');
+  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', `#include <common>
         varying vec3 vMirrorPos;
         uniform vec3 uTop; uniform vec3 uBottom; uniform sampler2D uSkyFrom; uniform sampler2D uSkyTo;
         uniform float uWFrom; uniform float uWTo; uniform float uOffFrom; uniform float uOffTo; uniform float uHaze; uniform vec4 uDome; uniform vec4 uWinFrom; uniform vec4 uWinTo;
@@ -191,12 +210,103 @@ function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
           float h = pow(clamp(n.y, 0.0, 1.0), mix(0.55, 1.4, max(uWFrom, uWTo)));
           vec3 sky = mix(uBottom, uTop, h);
           return skyPaint(sky, uv, n.y, uSkyFrom, uSkyTo, uWFrom, uWTo, uOffFrom, uOffTo, uWinFrom, uWinTo, skyHaze(uHaze, uWinFrom, uWinTo, uWFrom, uWTo));
-        }`)
+        }`);
+}
+
+function mirror(mat: THREE.MeshStandardMaterial, u: GroundUniforms): void {
+  mat.onBeforeCompile = (shader) => {
+    reflectSky(shader, u);
+    shader.uniforms.uLift = u.lift;
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <begin_vertex>', '#include <begin_vertex>\nvMirrorPos = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform float uLift;`)
       .replace('#include <opaque_fragment>', `
         {
           vec3 mV = normalize(vMirrorPos - cameraPosition);
           vec3 mR = vec3(mV.x, -mV.y, mV.z);
+          // Mirrored about the painted waterline: the reflected ray is turned up by uLift, which shows the trees (not the reflection
+          // already painted below them) upside down.
+          float mEl = asin(clamp(mR.y, -1.0, 1.0)) + uLift;
+          vec2 mH = length(mR.xz) > 1e-4 ? normalize(mR.xz) : vec2(1.0, 0.0);
+          mR = vec3(mH.x * cos(mEl), sin(mEl), mH.y * cos(mEl));
           float mF = mix(0.3, 1.0, pow(1.0 - clamp(-mV.y, 0.0, 1.0), 4.0));
+          outgoingLight = mix(outgoingLight, mirrorSky(vMirrorPos, mR), mF);
+        }
+        #include <opaque_fragment>`);
+  };
+}
+
+/**
+ * A swamp. The map of hammocks (marsh.ts) lifts the islands out of the black water and decides the colour: open water that
+ * mirrors the sky and is skinned with duckweed here and there, a wet bank where it meets the land, and dry peat and sedge on top.
+ * The table's own hammock is flat under and beside it, so the table stands level.
+ */
+function bog(mat: THREE.MeshStandardMaterial, u: GroundUniforms, colors: { a: string; b: string }): void {
+  const map = marshMap().texture;
+  const water = new THREE.Color(colors.a);
+  const land = new THREE.Color(colors.b);
+  const n = (x: number): string => x.toFixed(4);
+  const lookup = `
+        uniform sampler2D uMarsh;
+        // The hammock map at a point in world units from the table's middle: 0 open water, 1 the middle of an island.
+        float bogMap(vec2 p) { return texture2D(uMarsh, p / ${n(MARSH_SPAN)} + 0.5).r; }`;
+  mat.onBeforeCompile = (shader) => {
+    reflectSky(shader, u);
+    Object.assign(shader.uniforms, { uMarsh: { value: map }, uTable: u.table, uWater: { value: water }, uLand: { value: land } });
+    shader.vertexShader = shader.vertexShader
+      .replace('#include <common>', `#include <common>
+        uniform vec4 uTable;
+        varying vec2 vBog;
+        ${lookup}
+        // How high the ground stands there, flat (at the table's level) under and beside the table, then easing out to the full relief.
+        float bogY(vec2 p) {
+          float h = bogMap(p);
+          float y = ${n(WATER_Y)} + ${n(HILL_RISE)} * smoothstep(${n(BANK[0])}, ${n(BANK[1])}, h);
+          vec2 gd = max(abs(p) - uTable.xy, 0.0);
+          return mix(0.0, y, smoothstep(0.0, 6.0, length(gd)));
+        }`)
+      .replace('#include <beginnormal_vertex>', `
+        // The plane lies in local x/y with z up (its mesh turns it flat): local y is the world's -z.
+        vec2 bp = vec2(position.x, -position.y - uTable.z);
+        float bH = bogY(bp);
+        float bHx = bogY(bp + vec2(0.9, 0.0));
+        float bHz = bogY(bp + vec2(0.0, 0.9));
+        vBog = bp;
+        vec3 objectNormal = normalize(vec3(-(bHx - bH) / 0.9, (bHz - bH) / 0.9, 1.0));
+        #ifdef USE_TANGENT
+          vec3 objectTangent = vec3( tangent.xyz );
+        #endif`)
+      .replace('#include <begin_vertex>', `#include <begin_vertex>
+        transformed.z += bH;
+        vMirrorPos = (modelMatrix * vec4(transformed, 1.0)).xyz;`);
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>
+        uniform vec3 uWater; uniform vec3 uLand;
+        varying vec2 vBog;
+        ${lookup}`)
+      .replace('#include <map_fragment>', `
+        // The surface's own picture is only detail: light and dark mottling, flecks of weed and strands of sedge.
+        vec4 bgA = texture2D( map, vMapUv );
+        vec4 bgB = texture2D( map, vMapUv * 0.21 + vec2( 0.31, 0.57 ) );
+        vec4 bgC = texture2D( map, vMapUv * 2.9 + vec2( 0.7, 0.2 ) );
+        // The shore wanders in and out a little finer than the map draws it.
+        float bgH = bogMap( vBog ) + ( bgC.g - 0.5 ) * 0.32 + ( bgB.g - 0.5 ) * 0.22;
+        float bgLand = smoothstep( 0.42, 0.52, bgH );
+        float bgBank = smoothstep( 0.18, 0.4, bgH ) * ( 1.0 - bgLand );
+        float bgScum = smoothstep( 0.5, 0.8, bgB.b + bgC.r * 0.25 ) * ( 1.0 - bgLand ) * ( 1.0 - bgBank );
+        vec3 bgWater = mix( uWater * ( 0.65 + 0.7 * bgA.g ), vec3( 0.07, 0.1, 0.02 ), bgScum * 0.8 );
+        vec3 bgMud = mix( uLand * 0.4, uWater * 1.5, 0.3 ) * ( 0.7 + 0.5 * bgA.r );
+        vec3 bgPeat = uLand * ( 0.4 + 0.7 * bgA.r ) * ( 0.8 + 0.4 * bgC.g );
+        diffuseColor.rgb = mix( mix( bgWater, bgMud, bgBank ), bgPeat, bgLand );`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+        roughnessFactor = mix( 0.18, 0.95, clamp( bgLand + bgBank * 0.7 + bgScum * 0.4, 0.0, 1.0 ) );`)
+      .replace('#include <opaque_fragment>', `
+        {
+          vec3 mV = normalize(vMirrorPos - cameraPosition);
+          vec3 mR = vec3(mV.x, -mV.y, mV.z);
+          float mF = mix(0.12, 0.85, pow(1.0 - clamp(-mV.y, 0.0, 1.0), 4.0)) * (1.0 - bgLand) * (1.0 - bgBank * 0.7) * (1.0 - bgScum * 0.6);
           outgoingLight = mix(outgoingLight, mirrorSky(vMirrorPos, mR), mF);
         }
         #include <opaque_fragment>`);

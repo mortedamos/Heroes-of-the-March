@@ -14,10 +14,13 @@ export interface DebugApi {
   pinned(): string | null;
   /** Hold a look fixed (null: follow the game again). */
   pin(id: string | null): void;
+  /** How thick the fog is now (a place may have an amount of its own), what the player has set it to (null: not set) and a way to set it (null: leave it to each place). */
   fog(): number;
-  setFog(level: number): void;
+  fogChosen(): number | null;
+  setFog(level: number | null): void;
   haze(): number;
-  setHaze(level: number): void;
+  hazeChosen(): number | null;
+  setHaze(level: number | null): void;
   /** Play one of this look's place sounds now; false when it has none. */
   playAmbience(): boolean;
   /** Show an image from disk as the sky of every place, to try a new painting (null: back to the real skies). Not saved. */
@@ -26,8 +29,9 @@ export interface DebugApi {
 
 const STORE = 'hotm.debug';
 
-export interface DebugPrefs { fog: number; haze: number; pinned: string | null }
-export const DEBUG_DEFAULTS: DebugPrefs = { fog: FOG_DEFAULT, haze: HAZE_DEFAULT, pinned: null };
+/** The fog and haze are null until the player moves them: each place then has its own amount. */
+export interface DebugPrefs { fog: number | null; haze: number | null; pinned: string | null }
+export const DEBUG_DEFAULTS: DebugPrefs = { fog: null, haze: null, pinned: null };
 
 export function debugEnabled(): boolean {
   try { return import.meta.env.DEV || new URLSearchParams(location.search).has('debug'); } catch { return false; }
@@ -36,13 +40,14 @@ export function debugEnabled(): boolean {
 export function loadDebugPrefs(): DebugPrefs {
   try {
     const v = JSON.parse(localStorage.getItem(STORE) ?? '{}') as Partial<DebugPrefs>;
-    const num = (x: unknown, d: number) => (typeof x === 'number' && x >= 0 && x <= 5 ? x : d);
-    return { fog: num(v.fog, DEBUG_DEFAULTS.fog), haze: num(v.haze, DEBUG_DEFAULTS.haze), pinned: typeof v.pinned === 'string' ? v.pinned : null };
+    // An older panel saved the usual amounts whether the player had moved the sliders or not: those count as not set.
+    const num = (x: unknown, usual: number): number | null => (typeof x === 'number' && x >= 0 && x <= 5 && x !== usual ? x : null);
+    return { fog: num(v.fog, FOG_DEFAULT), haze: num(v.haze, HAZE_DEFAULT), pinned: typeof v.pinned === 'string' ? v.pinned : null };
   } catch { return { ...DEBUG_DEFAULTS }; }
 }
 
 function savePrefs(api: DebugApi): void {
-  try { localStorage.setItem(STORE, JSON.stringify({ fog: api.fog(), haze: api.haze(), pinned: api.pinned() })); } catch { /* private mode */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ fog: api.fogChosen(), haze: api.hazeChosen(), pinned: api.pinned() })); } catch { /* private mode */ }
 }
 
 const panel = h('div', { class: 'debug-menu hidden', role: 'dialog', aria: { label: 'Debug' } });
@@ -86,8 +91,8 @@ function render(api: DebugApi): void {
       h('span', { class: 'debug-hint' }, 'Hold one place on the table, whatever the game reveals.')),
     h('label', { class: 'debug-row' }, h('span', { class: 'debug-label' }, 'Try a painting'), painting,
       h('span', { class: 'debug-hint' }, 'Show an image from your disk as the sky of every place, to see a new painting before it is added. Pick a look above to see it in each place; Reset puts the real skies back. Nothing is saved.')),
-    slider('Fog level', '0 = none, 0.5 = default, 1 = as each place was designed, higher = thicker. Moves how near the fog starts.', api.fog(), 4, (v) => { api.setFog(v); savePrefs(api); }),
-    slider('Horizon haze', '0 = the panorama runs to the ground, 0.5 = default, 1 = as designed, higher = more mist at the horizon.', api.haze(), 3, (v) => { api.setHaze(v); savePrefs(api); }),
+    slider('Fog level', '0 = none, 0.5 = the usual (some places have an amount of their own until you move this), 1 = as each place was designed, higher = thicker. Moves how near the fog starts.', api.fog(), 4, (v) => { api.setFog(v); savePrefs(api); }),
+    slider('Horizon haze', '0 = the panorama runs to the ground, 0.5 = the usual (some places have an amount of their own until you move this), 1 = as designed, higher = more mist at the horizon.', api.haze(), 3, (v) => { api.setHaze(v); savePrefs(api); }),
     h('div', { class: 'music-buttons' },
       h('button', { class: 'btn', title: 'Play one of this look\'s place sounds now', on: { click: (e) => { const b = e.currentTarget as HTMLButtonElement; b.textContent = api.playAmbience() ? 'Playing…' : 'No sound for this look'; setTimeout(() => { b.textContent = 'Play a place sound'; }, 1800); } } }, 'Play a place sound'),
       h('button', { class: 'btn', on: { click: () => { api.pin(null); api.tryPainting(null); api.setFog(DEBUG_DEFAULTS.fog); api.setHaze(DEBUG_DEFAULTS.haze); savePrefs(api); render(api); } } }, 'Reset')),

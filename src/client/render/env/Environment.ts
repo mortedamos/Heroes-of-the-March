@@ -109,8 +109,15 @@ export class Environment {
   private readonly fog: THREE.Fog;
   private readonly bg: THREE.Color;
   private readonly fogRgb = { r: 0, g: 0, b: 0 };
-  /** Debug: 1 = the fog each place was designed with, 0 = none, higher = thicker. */
+  /** How thick the fog is now: 1 = the fog each place was designed with, 0 = none, higher = thicker. It eases to `fogTarget`. */
   private fogLevel = FOG_DEFAULT;
+  private fogTarget = FOG_DEFAULT;
+  private hazeTarget = HAZE_DEFAULT;
+  /** How far the pool lifts the sky it mirrors (see GroundUniforms.lift): it eases to this. */
+  private liftTarget = 0;
+  /** What the player has set the fog and the haze to; null while they have not, so each place has the amount of its own (Theme.view). */
+  private fogUser: number | null = null;
+  private hazeUser: number | null = null;
   /** Debug: a place held fixed whatever the game reveals. */
   private pinnedTheme: ThemeId | null = null;
   private readonly dome: THREE.Mesh;
@@ -151,6 +158,7 @@ export class Environment {
   private readonly groundU: GroundUniforms = {
     time: { value: 0 },
     table: { value: new THREE.Vector4(9.5, 6.3, 0, 0) },
+    lift: { value: 0 },
     sky: this.domeUniforms,
     dome: { value: new THREE.Vector4(DOME.long, DOME.tall, DOME.short, 0) },
   };
@@ -372,7 +380,7 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * hz, 0.3
     const repeat = which === 'top' ? 1 / spec.tile : FLOOR_SIZE / spec.tile;
     const mat = surfaceMaterial(spec, repeat, this.aniso);
     const shape = THEMES[theme].floorShape;
-    if (which === 'floor' && shape) groundMaterial(mat, shape, this.groundU);
+    if (which === 'floor' && shape) groundMaterial(mat, shape, this.groundU, spec);
     const art = this.artOf(theme);
     const file = art[which];
     if (file) {
@@ -409,13 +417,28 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * hz, 0.3
     if (id) this.setTheme(id);
   }
   get fogAmount(): number { return this.fogLevel; }
-  /** 0 = no fog, 1 = as designed, higher = the fog starts nearer. */
-  setFogLevel(level: number): void {
-    this.fogLevel = Math.max(0, level);
+  /** What the player has set the fog to (null: they have not). */
+  get fogChosen(): number | null { return this.fogUser; }
+  /** 0 = no fog, 1 = as designed, higher = the fog starts nearer. null: leave it to each place. */
+  setFogLevel(level: number | null): void {
+    this.fogUser = level === null ? null : Math.max(0, level);
+    this.fogTarget = this.viewTarget('fog');
+    this.fogLevel = this.fogTarget;
     this.setCameraDistance(this.camDist);
   }
   get hazeAmount(): number { return this.domeUniforms.haze.value; }
-  setHaze(level: number): void { this.domeUniforms.haze.value = Math.max(0, level); }
+  get hazeChosen(): number | null { return this.hazeUser; }
+  setHaze(level: number | null): void {
+    this.hazeUser = level === null ? null : Math.max(0, level);
+    this.hazeTarget = this.viewTarget('haze');
+    this.domeUniforms.haze.value = this.hazeTarget;
+  }
+
+  /** The fog or haze for the place showing: what the player chose, else the place's own, else the usual. */
+  private viewTarget(which: 'fog' | 'haze'): number {
+    const chosen = which === 'fog' ? this.fogUser : this.hazeUser;
+    return chosen ?? THEMES[this.theme].view?.[which] ?? (which === 'fog' ? FOG_DEFAULT : HAZE_DEFAULT);
+  }
 
   /** Where the fog starts and ends, from the look's own numbers and the debug fog level. */
   private fogRange(n: { fogNear: number; fogFar: number }): { near: number; far: number } {
@@ -428,6 +451,10 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * hz, 0.3
     // Wait for the art list before the first themed location, so a panorama is not missed.
     void this.artReady.then(() => this.applySky(id, instant));
     this.theme = id;
+    this.fogTarget = this.viewTarget('fog');
+    this.hazeTarget = this.viewTarget('haze');
+    this.liftTarget = ((THEMES[id].mirrorLine ?? 0) * 2 * Math.PI) / 180;
+    if (instant) { this.fogLevel = this.fogTarget; this.domeUniforms.haze.value = this.hazeTarget; this.groundU.lift.value = this.liftTarget; }
     const th = THEMES[id];
     this.begin(this.topLayer, this.surface(id, 'top'), instant);
     this.begin(this.floorLayer, this.surface(id, 'floor'), instant);
@@ -611,6 +638,13 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * hz, 0.3
     // Some panoramas slide slowly round the sky, so the ships (or the clouds) in them pass by.
     this.domeUniforms.offTo.value = this.skyTo ? (this.time * (THEMES[this.skyTo].skyScroll ?? 0)) % 1 : 0;
     this.domeUniforms.offFrom.value = this.skyFrom ? (this.time * (THEMES[this.skyFrom].skyScroll ?? 0)) % 1 : 0;
+    // The fog and the haze ease to the amounts of the place showing.
+    const ease = Math.min(1, dt * 2.2);
+    this.fogLevel = Math.abs(this.fogLevel - this.fogTarget) > 0.002 ? this.fogLevel + (this.fogTarget - this.fogLevel) * ease : this.fogTarget;
+    const lift = this.groundU.lift;
+    lift.value = Math.abs(lift.value - this.liftTarget) > 0.0005 ? lift.value + (this.liftTarget - lift.value) * ease : this.liftTarget;
+    const hz = this.domeUniforms.haze;
+    hz.value = Math.abs(hz.value - this.hazeTarget) > 0.002 ? hz.value + (this.hazeTarget - hz.value) * ease : this.hazeTarget;
     this.pulseGlow();
     this.rock(this.time);
     this.apply(this.time);

@@ -1,3 +1,6 @@
+// (This file imports only types: the sound and sky scripts load it under plain Node, which cannot load three.js or the code that
+// builds with it. Keep it that way: see the test in themes.test.ts.)
+//
 // The look of every location: surface, light, weather and table. A theme is data; Environment turns it into a
 // 3D scene and blends between themes.
 //
@@ -7,6 +10,10 @@
 
 import type { SkylineKind, SurfaceSpec } from './surfaces';
 import type { GroundKind } from './ground';
+import type { FogSpec } from './fog';
+import type { GrassSpec } from './grass';
+import type { TavernwareSpec } from './tavernware';
+import type { TreeSpec } from './trees';
 
 /** The base environments, and the plain felt that shows before any location has been revealed. */
 export type FamilyId = 'felt' | 'tavern' | 'harbor' | 'snow' | 'crypt' | 'forge' | 'forest' | 'fortress' | 'archive' | 'plains' | 'sky';
@@ -30,14 +37,15 @@ export type ThemeId = 'felt' | LocationId;
 
 /**
  * What drifts through a place. Points (embers to butterflies) fall, rise or wander; `ripples` are rings spreading on
- * the ground, `shootingstar` a streak across the sky now and then, `page` one loose sheet that stirs on the floor.
+ * the ground, `drips` single drops that now and then fall from the dark above and ring the floor where they land, `shootingstar` a
+ * streak across the sky now and then, `page` one loose sheet that stirs on the floor.
  */
 export type FxKind =
   | 'embers' | 'sparks' | 'snow' | 'fireflies' | 'motes' | 'wisps' | 'leaves'
-  | 'petals' | 'ash' | 'lanterns' | 'butterflies' | 'ripples' | 'shootingstar' | 'page';
+  | 'petals' | 'ash' | 'lanterns' | 'butterflies' | 'ripples' | 'drips' | 'shootingstar' | 'page';
 
 /** The weather that can fall or blow indoors: nothing wet, nothing from a tree. (Ripples are a pool, the star is seen through an open dome.) */
-export const INDOOR_FX: readonly FxKind[] = ['embers', 'sparks', 'motes', 'wisps', 'ash', 'ripples', 'shootingstar', 'page'];
+export const INDOOR_FX: readonly FxKind[] = ['embers', 'sparks', 'motes', 'wisps', 'ash', 'ripples', 'drips', 'shootingstar', 'page'];
 
 /**
  * What the playing surface is the top of. `plain` is the felt slab (rim and plinth, see Environment); every
@@ -107,14 +115,34 @@ export interface Theme {
   /** Drifting mist: colour, count, strength. */
   mist: { color: string; n: number; strength: number } | null;
   table: TableSpec;
-  /** The ground is not a flat plane: rolling waves, rolling clouds, or jagged rock. */
+  /** The ground is not a flat plane: rolling waves, rolling clouds, jagged rock, still water, or a swamp of hammocks. */
   floorShape?: GroundKind;
+  /** Tall grass growing round the table, thin near it and thick in the distance where the ground fades into the fog. */
+  grass?: GrassSpec;
+  /** Patches of fog drifting slowly through the place. */
+  fog?: FogSpec;
+  /** Trees (models) standing in a ring round the table. */
+  trees?: TreeSpec;
+  /** Other tables and chairs in the distance, with mugs and lanterns on them. */
+  tavernware?: TavernwareSpec;
+  /**
+   * A pool that mirrors the sky: how high the waterline painted on the sky stands above the horizon, in degrees. The pool mirrors
+   * the sky about that line (so the trees show upside down, not the reflection already painted under them); without it, about the horizon.
+   */
+  mirrorLine?: number;
+  /** How thick the fog and the horizon haze are here until the player sets them (the usual are in Environment: FOG_DEFAULT, HAZE_DEFAULT). */
+  view?: { fog?: number; haze?: number };
   /** The sea and sky rock gently round the table, as if it were bobbing on the water: the peak tilt, in degrees. */
   sway?: number;
   /** The panorama slides round the sky in a loop, this many turns per second. Only for a panorama that wraps round. */
   skyScroll?: number;
   /** A painted silhouette ring for a place that has no panorama. Unused: every look is a painted sky or a plain gradient. */
   skyline: { kind: SkylineKind; far: string; near: string } | null;
+}
+
+/** The usual amount of drifting fog, in the given colour: `times` 2 is twice as much (twice the patches, a little thicker). */
+export function driftingFog(color: string, times = 1, o: Partial<FogSpec> = {}): FogSpec {
+  return { color, patches: Math.round(6 * times), strength: Math.min(0.6, 0.38 * (0.6 + 0.4 * times)), ...o };
 }
 
 const none: Accent = { color: '#000000', i: 0, pos: [0, 3, -5], flicker: 0 };
@@ -316,6 +344,12 @@ interface Override {
   mist?: Theme['mist'];
   table?: Partial<TableSpec>;
   floorShape?: GroundKind | null;
+  grass?: GrassSpec;
+  fog?: FogSpec;
+  trees?: TreeSpec;
+  tavernware?: TavernwareSpec;
+  mirrorLine?: number;
+  view?: Theme['view'];
   sway?: number | null;
   skyScroll?: number | null;
 }
@@ -336,6 +370,12 @@ function derive(family: FamilyId, o: Override = {}): Theme {
     skyline: null,
   };
   if (o.floorShape === null) delete out.floorShape; else if (o.floorShape) out.floorShape = o.floorShape;
+  if (o.grass) out.grass = o.grass;
+  if (o.fog) out.fog = o.fog;
+  if (o.trees) out.trees = o.trees;
+  if (o.tavernware) out.tavernware = o.tavernware;
+  if (o.view) out.view = o.view;
+  if (o.mirrorLine !== undefined) out.mirrorLine = o.mirrorLine;
   if (o.sway === null) delete out.sway; else if (o.sway !== undefined) out.sway = o.sway;
   if (o.skyScroll === null) delete out.skyScroll; else if (o.skyScroll !== undefined) out.skyScroll = o.skyScroll;
   return out;
@@ -350,11 +390,16 @@ export const THEMES: Record<ThemeId, Theme> = {
     look: { warmI: 44, exposure: 1.12 },
     fx: [fx('motes', 120, '#ffd9a0', 0.14)],
     mist: { color: '#8a6a4a', n: 5, strength: 0.14 },
+    // Other tables in the distance, between the painted room and the game table, with mugs and flickering lanterns.
+    tavernware: { tables: 9, wood: '#4e3220', lantern: '#ffbe70' },
   }),
 
   // -- Harbor --------------------------------------------------------------------------------
   // Outdoors on a quay: grey dawn, sea fog, a thread of cold gold. (A repainted sky that does not wrap round must switch the sliding sky off: skyScroll: null.)
+  // The ground is the loose grey shingle of the painted beach, not water: so it does not roll, and nothing rocks.
   'parting-strand': derive('harbor', {
+    floor: { kind: 'pebbles', a: '#4a5052', b: '#848c8e', tile: 9, rough: 0.9, metal: 0 },
+    floorShape: null, sway: null, skyScroll: null,
     look: {
       sky: '#6a7882', skyTop: '#38444e', fogNear: 6, fogFar: 17, hemiSky: '#cdd9e4', key: '#d9e4ee', keyI: 1.4, warm: '#ffd9a0', warmI: 11,
       accents: [light('#ffb36a', 20, [-8, 3, -5], 0.4), light('#8fb4d8', 8, [8, 3, -5], 0.1)],
@@ -366,6 +411,7 @@ export const THEMES: Record<ThemeId, Theme> = {
   // Outdoors, open downs at night under a sick-green moon: turf and wet earth underfoot.
   'the-barrowlands': derive('crypt', {
     floor: { kind: 'moss', a: '#0e1a14', b: '#1c2c22', tile: 5, rough: 1, opts: {} },
+    fog: driftingFog('#9ab8aa'),
   }),
 
   // Indoors, a sealed rib-vaulted tomb: slate and pale gold, the only crypt that is holy rather than haunted.
@@ -396,6 +442,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     fx: [fx('wisps', 44, '#9fd0ff', 0.5)],
     beams: { color: '#bcd6ff', n: 1, strength: 0.06 }, mist: { color: '#6a8aa8', n: 7, strength: 0.2 },
     table: { kind: 'dolmen', height: 4.6, glow: '#7fb8ff' },
+    // Low in the passage, round the standing stones.
+    fog: driftingFog('#7a9cc4', 1, { span: 80, reach: [-30, -3], rise: [0.4, 1.8], size: 0.7 }),
   }),
 
   // Indoors, a cavern too big to see the roof of: violet fungus and cyan glints on black water.
@@ -408,9 +456,11 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
     top: { kind: 'slab', a: '#3a3b4c', b: '#5c5e74', tile: 9.5, rough: 0.55, opts: {} },
     floor: { kind: 'soft', a: '#0b0b12', b: '#1c1c2c', tile: 14, rough: 0.25, metal: 0.15, opts: { blobs: 50, r: [24, 60] } },
-    fx: [fx('wisps', 50, '#b69cff', 0.35), fx('ripples', 10, '#a8b8ff', 1, false)],
+    // Drops fall now and then out of the dark and ring the black water where they land.
+    fx: [fx('wisps', 50, '#b69cff', 0.35), fx('ripples', 10, '#a8b8ff', 1, false), fx('drips', 16, '#c0ccff', 0.2)],
     beams: noBeams, mist: { color: '#4a3c80', n: 6, strength: 0.16 },
     table: { kind: 'altar', height: 4.6 },
+    fog: driftingFog('#6e5cb8', 1, { span: 90, reach: [-34, -3], rise: [0.5, 2], size: 0.8 }),
   }),
 
   // -- Forge: craft, quarry, wound, war --------------------------------------------------------
@@ -431,7 +481,8 @@ export const THEMES: Record<ThemeId, Theme> = {
       accents: [none, none],
     },
     top: { kind: 'slab', a: '#8f8a7e', b: '#b5afa0', tile: 9.5, rough: 0.9, metal: 0, opts: {} },
-    floor: { kind: 'slab', a: '#7d786c', b: '#a39d8e', tile: 10, rough: 0.95, opts: {} },
+    // The colour of the ground nearest the painted rim, a little browner.
+    floor: { kind: 'slab', a: '#3c342a', b: '#5a4e40', tile: 10, rough: 0.95, opts: {} },
     fx: [fx('motes', 70, '#e0d6c0', 0.12)],
     mist: { color: '#cfc8b8', n: 4, strength: 0.1 },
     table: { kind: 'block', height: 5 },
@@ -445,13 +496,17 @@ export const THEMES: Record<ThemeId, Theme> = {
       accents: [light('#ffe8a8', 24, [-9, 2.5, -6], 0.15), light('#a47bff', 18, [9, 2.5, -4], 0.2)],
     },
     top: { kind: 'slab', a: '#3a3a44', b: '#5e5e6c', tile: 9.5, rough: 0.8, metal: 0, opts: {} },
-    floor: { kind: 'magma', a: '#14121a', b: '#2c2833', glow: '#ffe2a0', tile: 16, rough: 0.95 },
+    // A grassy field under the torn sky (the forge's broken rock is switched off), the grass long and swaying.
+    floor: { kind: 'moss', a: '#26331f', b: '#43602f', tile: 5, rough: 1 },
+    floorShape: null,
+    grass: { foot: '#1e2c1c', tip: '#6c8c4a', straw: '#8c8a56', clumps: 1400, tall: 0.85 },
     fx: [fx('wisps', 40, '#ffe2a0', 0.3), fx('sparks', 50, '#ffd88a', 0.1)],
     beams: { color: '#fff0c0', n: 3, strength: 0.12 }, mist: { color: '#5a4a7a', n: 5, strength: 0.14 },
     table: { kind: 'altar', height: 5 },
   }),
 
-  // Outdoors, an orc fortress on a rocky rise over a marsh, under a sullen red sun: rock and mud, ash and gnats.
+  // Outdoors, an orc fortress on a rise over a swamp, under a sullen red sun: black water dotted with hammocks, tall marsh grass,
+  // ash and gnats.
   'gorewatch': derive('forge', {
     look: {
       sky: '#3a2a22', skyTop: '#1a1210', fogNear: 7, fogFar: 19, hemiSky: '#c8aa90', hemiGround: '#4a4034', hemi: 1.0,
@@ -460,8 +515,13 @@ export const THEMES: Record<ThemeId, Theme> = {
       accents: [light('#ff7a3a', 18, [-9, 2.5, -6], 0.5), light('#7aa060', 10, [9, 2.5, -4], 0.2)],
     },
     top: { kind: 'steel', a: '#4a4a50', b: '#74747e', tile: 6, rough: 0.5, metal: 0.2 },
-    floor: { kind: 'dirt', a: '#3a2c22', b: '#5a4636', tile: 6, rough: 1 },
-    fx: [fx('embers', 80, '#ff9a5a', 0.12), fx('ash', 70, '#a39d95', 0.12, false), fx('motes', 40, '#c9b890', 0.08)],
+    // The water is the first colour and the land the second (see the bog in ground.ts).
+    floor: { kind: 'swamp', a: '#16221a', b: '#34481f', tile: 5, rough: 0.9 },
+    floorShape: 'bog',
+    grass: { swamp: true, foot: '#202e18', tip: '#6c8840', straw: '#9a8c52', head: '#3a2414', clumps: 1700 },
+    fog: { color: '#8a9a80', patches: 7, strength: 0.45 },
+    // The fireflies twinkle amidst the grass and in the low sky over it (see ThemeScene.spots).
+    fx: [fx('embers', 80, '#ff9a5a', 0.12), fx('ash', 70, '#a39d95', 0.12, false), fx('motes', 40, '#c9b890', 0.08), fx('fireflies', 170, '#d8ff7a', 0.8)],
     mist: { color: '#6a7a5a', n: 8, strength: 0.2 },
     table: { kind: 'ironslab', height: 5 },
   }),
@@ -476,6 +536,12 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
     top: { kind: 'slab', a: '#6a7a5e', b: '#92a083', tile: 9.5, rough: 0.95, opts: { moss: true, lichen: true } },
     floor: { kind: 'moss', a: '#3c6a2a', b: '#6aa044', tile: 5, rough: 1 },
+    // Spring trees in leaf and in blossom, and lighter grass than the swamp's.
+    trees: {
+      kinds: [{ file: 'tree_03_spring_lime.glb', weight: 3 }, { file: 'tree_06_white_blossom.glb', weight: 2 }, { file: 'tree_11_pink_blossom.glb', weight: 2 }, { file: 'tree_01_umbrella_canopy.glb' }, { file: 'tree_09_round_green.glb' }],
+      count: 12, height: [18, 28], reach: [20, 46],
+    },
+    grass: { foot: '#2f5a24', tip: '#8ccc54', straw: '#c8c880', clumps: 800, tall: 0.7, dry: 0.15 },
     fx: [fx('motes', 110, '#ffe8a0', 0.12), fx('petals', 40, '#f6b9cf', 0.2, false), fx('butterflies', 14, '#ffe27a', 0.18, false)],
     beams: { color: '#fff1b8', n: 5, strength: 0.14 }, mist: { color: '#fff0d8', n: 4, strength: 0.1 },
     table: { cover: 'flowers' },
@@ -490,6 +556,10 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
     top: { kind: 'slab', a: '#586062', b: '#808a8a', tile: 9.5, rough: 0.95, opts: { moss: true, lichen: true } },
     floor: { kind: 'moss', a: '#1a2c26', b: '#2e4a40', tile: 5, rough: 1 },
+    // Pines at the edge of the wood, cold grey-green grass, and mist drifting through them.
+    trees: { kinds: [{ file: 'Pine_Tree.fbx', tint: '#b4ccd8' }], count: 16, height: [18, 30], reach: [22, 56], apart: 4.5 },
+    grass: { foot: '#1c2c26', tip: '#587a68', straw: '#8a9a88', clumps: 750, tall: 0.8, dry: 0.2 },
+    fog: driftingFog('#c8d8e8'),
     fx: [fx('leaves', 60, '#b0c860', 0.22, false)],
     beams: { color: '#d8e8ff', n: 4, strength: 0.12 }, mist: { color: '#c8d8e8', n: 8, strength: 0.22 },
   }),
@@ -503,6 +573,13 @@ export const THEMES: Record<ThemeId, Theme> = {
     },
     top: { kind: 'slab', a: '#6a6a50', b: '#8e8a6c', tile: 9.5, rough: 0.95, opts: { moss: true, lichen: true } },
     floor: { kind: 'moss', a: '#3a3a1a', b: '#6a5a24', tile: 5, rough: 1 },
+    // Colossal broad trees, green going to gold, with golden grass and a haze drifting under them.
+    trees: {
+      kinds: [{ file: 'tree_12_oak_green.glb', weight: 3 }, { file: 'tree_09_round_green.glb', weight: 2 }, { file: 'tree_05_flattop_amber.glb', weight: 2 }, { file: 'trees_a.glb' }, { file: 'trees_b.glb' }],
+      count: 10, height: [32, 52], reach: [28, 62], apart: 9,
+    },
+    grass: { foot: '#2c3a18', tip: '#9aaa48', straw: '#c0a850', clumps: 800, tall: 0.8, dry: 0.35 },
+    fog: driftingFog('#d6e2a8'),
     fx: [fx('motes', 110, '#ffe08a', 0.12), fx('leaves', 50, '#d8b040', 0.24, false, ['#e8c458', '#b88a2a'])],
     beams: { color: '#ffe9a0', n: 6, strength: 0.14 }, mist: { color: '#c8e0a0', n: 5, strength: 0.12 },
   }),
@@ -515,7 +592,9 @@ export const THEMES: Record<ThemeId, Theme> = {
       accents: [light('#bfe8ff', 12, [-8, 1.5, -4], 0.5), light('#d8f0ff', 10, [8, 1.5, -5], 0.5)],
     },
     floor: { kind: 'moss', a: '#34502e', b: '#587a48', tile: 5, rough: 1 },
-    fx: [fx('fireflies', 50, '#c8ecff', 0.22)],
+    // Overgrown: thick, long grass right up to the table's foot, the fey lights hovering over it.
+    grass: { foot: '#223820', tip: '#6c9a58', straw: '#8aa070', clumps: 2600, tall: 1.4, reach: [11, 66], dry: 0.15 },
+    fx: [fx('fireflies', 90, '#c8ecff', 0.6)],
     beams: { color: '#e8f4ee', n: 2, strength: 0.07 }, mist: { color: '#e8f0ec', n: 10, strength: 0.34 },
   }),
 
@@ -532,6 +611,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     beams: noBeams, mist: { color: '#3a4a7a', n: 5, strength: 0.12 },
     table: { cover: undefined },
     floorShape: 'mirror',
+    // Twice the usual amount of drifting fog over the black water.
+    fog: driftingFog('#7686c4', 2),
   }),
 
   // Outdoors in a flooded wood under flat pewter light: glossy still water, a bare slab, no mist.
@@ -547,6 +628,12 @@ export const THEMES: Record<ThemeId, Theme> = {
     beams: noBeams, mist: null,
     table: { cover: undefined },
     floorShape: 'mirror',
+    // No fog until the player asks for it, a thick horizon haze instead, and twice the usual drifting fog over the pool.
+    view: { fog: 0, haze: 1.5 },
+    fog: driftingFog('#b8c4c6', 2),
+    // The painting has its own waterline, about seven degrees up the sky, with the trees already reflected under it: the pool
+    // mirrors the trees above that line, upside down, and not the painted reflection (which it would turn the right way up again).
+    mirrorLine: 7,
   }),
 
   // Outdoors on a lake shore at lilac dusk: fireflies, floating lantern lights, lantern gold.
@@ -557,7 +644,9 @@ export const THEMES: Record<ThemeId, Theme> = {
       accents: [light('#ffc070', 16, [-8, 3, -4], 0.3), light('#ffb060', 14, [8, 3, -5], 0.3)],
     },
     top: { kind: 'slab', a: '#5e6458', b: '#868c7c', tile: 9.5, rough: 0.95, opts: { moss: true, lichen: true } },
-    floor: { kind: 'moss', a: '#243a2a', b: '#3e5a40', tile: 5, rough: 1 },
+    // Gentle moving lake water, the dark indigo of the painted lake nearest the table.
+    floor: { kind: 'soft', a: '#1f2136', b: '#3b3d62', tile: 14, rough: 0.22, metal: 0.2, opts: { blobs: 40, r: [30, 70] } },
+    floorShape: 'lake',
     fx: [fx('fireflies', 80, '#ffe890', 0.2), fx('lanterns', 16, '#ffc070', 1.0)],
     beams: { color: '#ffd8a0', n: 2, strength: 0.08 }, mist: { color: '#c8b8e8', n: 5, strength: 0.14 },
   }),
@@ -702,7 +791,8 @@ export const THEMES: Record<ThemeId, Theme> = {
       sky: '#b0b8c0', skyTop: '#6a8ab0', hemiSky: '#fff4e0', hemiGround: '#4a4430', hemi: 0.9, key: '#fff0d0', keyI: 1.8,
       warm: '#ffd8a0', warmI: 12, exposure: 1.1,
     },
-    floor: { kind: 'dirt', a: '#5a4630', b: '#8a7050', tile: 6, rough: 1 },
+    // Old paving stones, worn and uneven, with weeds in the joints: nothing polished and nothing carved.
+    floor: { kind: 'paving', a: '#4c473c', b: '#7e776a', tile: 10, rough: 0.95, opts: { rows: 5, moss: true } },
     fx: [fx('motes', 100, '#e8d4a8', 0.12), fx('leaves', 16, '#c8b070', 0.18, false, ['#d8c488', '#a89458'])],
     beams: { color: '#ffe8b0', n: 3, strength: 0.1 }, mist: { color: '#d8d0c0', n: 4, strength: 0.1 },
   }),

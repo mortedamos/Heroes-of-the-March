@@ -4,7 +4,11 @@
 
 import * as THREE from 'three';
 import { beamTexture, dotTexture, mixHex, paintSkyline, ringTexture, streakTexture } from './surfaces';
+import { addFogBanks } from './fog';
+import { addGrass } from './grass';
 import { buildTable } from './tables';
+import { addTavernware } from './tavernware';
+import { addTrees } from './trees';
 import type { FxKind, FxSpec, Theme } from './themes';
 
 export type Side = 'back' | 'left' | 'right' | 'front';
@@ -28,6 +32,13 @@ export class ThemeScene {
   private seed = 1;
   /** Height of the ground this scene stands on (the table's top is at 0). */
   ground = FLOOR_Y;
+  /**
+   * Places where small lights hover: the foot of a clump of marsh grass (relative to the table's middle) and how tall the grass is
+   * there. Empty unless the place has grass; fireflies then gather over it instead of round the table.
+   */
+  readonly spots: { x: number; y: number; z: number; h: number }[] = [];
+  /** Set once the scene is freed: anything still loading for it must not be added. */
+  disposed = false;
 
   reseed(n: number): void { this.seed = (Math.imul(n, 2654435761) + 1) >>> 0; }
 
@@ -98,6 +109,7 @@ export class ThemeScene {
   tick(t: number, dt: number): void { for (const fn of this.ticks) fn(t, dt); }
 
   dispose(): void {
+    this.disposed = true;
     this.group.traverse((o) => {
       const mesh = o as THREE.Mesh;
       if (!mesh.isMesh && !(o as THREE.Points).isPoints) return;
@@ -124,7 +136,7 @@ const DEFAULT_TINT: Partial<Record<FxKind, [string, string]>> = {
 /** How high each kind of particle reaches (the default is 9). */
 const POINT_TOP: Partial<Record<FxKind, number>> = { wisps: 5, sparks: 5, motes: 7, lanterns: 12 };
 
-function addParticles(ts: ThemeScene, spec: FxSpec, coarse: boolean): void {
+export function addParticles(ts: ThemeScene, spec: FxSpec, coarse: boolean): void {
   const n = coarse ? Math.ceil(spec.n * 0.6) : spec.n;
   const pos = new Float32Array(n * 3);
   const col = new Float32Array(n * 3);
@@ -135,10 +147,19 @@ function addParticles(ts: ThemeScene, spec: FxSpec, coarse: boolean): void {
   const range = spec.tint ?? DEFAULT_TINT[spec.kind];
   const top = POINT_TOP[spec.kind] ?? 9;
   const gy = ts.ground;
+  // Fireflies over a marsh hover amidst its grass and in the low sky above it, out where the grass is.
+  const hover = spec.kind === 'fireflies' && ts.spots.length > 0;
   for (let i = 0; i < n; i++) {
-    pos[i * 3] = ts.between(-13, 13);
-    pos[i * 3 + 1] = ts.between(gy, top);
-    pos[i * 3 + 2] = ts.between(-10, 10);
+    if (hover) {
+      const s = ts.spots[Math.floor(ts.rnd() * ts.spots.length)]!;
+      pos[i * 3] = s.x + ts.between(-1.5, 1.5);
+      pos[i * 3 + 1] = ts.rnd() < 0.3 ? ts.between(s.y + s.h, gy + 9) : ts.between(s.y + 0.4, s.y + s.h * 1.1);
+      pos[i * 3 + 2] = s.z + ts.between(-1.5, 1.5);
+    } else {
+      pos[i * 3] = ts.between(-13, 13);
+      pos[i * 3 + 1] = ts.between(gy, top);
+      pos[i * 3 + 2] = ts.between(-10, 10);
+    }
     ph[i] = ts.rnd() * 100;
     spd[i] = 0.5 + ts.rnd();
     const tint = range ? new THREE.Color(mixHex(range[0], range[1], ts.rnd())) : base;
@@ -154,6 +175,8 @@ function addParticles(ts: ThemeScene, spec: FxSpec, coarse: boolean): void {
   const pts = new THREE.Points(geom, mat);
   pts.frustumCulled = false;
   ts.group.add(pts);
+  // The marsh is measured from the table's middle, which may stand a little off the middle of the scene.
+  if (hover) ts.onLayout((_w, _d, cz) => { pts.position.z = cz; });
 
   const colAttr = geom.getAttribute('color') as THREE.BufferAttribute;
   const posAttr = geom.getAttribute('position') as THREE.BufferAttribute;
@@ -214,7 +237,7 @@ function addParticles(ts: ThemeScene, spec: FxSpec, coarse: boolean): void {
           x += Math.sin(t * 0.5 + p) * 0.6 * dt;
           y += Math.sin(t * 0.37 + p * 1.3) * 0.25 * dt;
           z += Math.cos(t * 0.45 + p) * 0.6 * dt;
-          y = Math.min(gy + 4, Math.max(gy + 0.4, y));
+          y = Math.min(gy + (hover ? 10 : 4), Math.max(gy + 0.4, y));
           b = Math.max(0, Math.sin(t * 1.3 * s + p * 3)) ** 3;
           break;
         case 'butterflies':
@@ -276,6 +299,68 @@ function addRipples(ts: ThemeScene, spec: FxSpec, coarse: boolean): void {
       const size = Math.max(0.05, u * r.reach * 2);
       r.mesh.scale.set(size, 1, size);
       r.mat.opacity = ts.fade * (1 - u) ** 1.6 * Math.min(1, u * 10) * 0.7;
+    }
+  });
+}
+
+/**
+ * Single drops that fall now and then out of the dark above and ring the floor where they land (water dripping from the roof of a
+ * cave). Each waits a while, falls in about a second, and sends one ring out over the floor; they land all round the table.
+ */
+export function addDrips(ts: ThemeScene, spec: FxSpec, coarse: boolean): void {
+  const n = coarse ? Math.ceil(spec.n * 0.6) : spec.n;
+  const FALL = 14;
+  const SECONDS = 1.05;
+  const y = ts.ground + 0.04;
+  const ringGeo = ts.geo('ripple', () => new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2));
+  const ringTex = ringTexture();
+  const drips = Array.from({ length: n }, () => {
+    const dropMat = ts.register(new THREE.SpriteMaterial({ map: dotTexture(), color: spec.color, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }), 0);
+    const drop = new THREE.Sprite(dropMat);
+    drop.scale.set(0.2, 0.95, 1);
+    drop.visible = false;
+    ts.group.add(drop);
+    const ringMat = ts.register(new THREE.MeshBasicMaterial({
+      map: ringTex, color: spec.color, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
+    }), 0);
+    const ring = new THREE.Mesh(ringGeo, ringMat);
+    ring.renderOrder = 2;
+    ring.visible = false;
+    ts.group.add(ring);
+    // Not the scene's seeded generator: it is too even for scattering a few drops.
+    return { drop, dropMat, ring, ringMat, next: Math.random() * 6, t0: -1, x: 0, z: 0, reach: 1.6 };
+  });
+  ts.onTick((t) => {
+    for (const d of drips) {
+      if (d.t0 < 0) {
+        if (t < d.next) continue;
+        // A new drop: somewhere on the floor round the table, never over its top.
+        for (let k = 0; k < 8; k++) {
+          d.x = -26 + Math.random() * 52;
+          d.z = -22 + Math.random() * 40;
+          if (Math.abs(d.x) > 11.5 || Math.abs(d.z) > 8) break;
+        }
+        d.t0 = t;
+        d.reach = 1.2 + Math.random() * 1.8;
+      }
+      const k = (t - d.t0) / SECONDS;
+      if (k < 1) {
+        // Falling, faster as it goes.
+        d.drop.visible = true;
+        d.ring.visible = false;
+        d.drop.position.set(d.x, y + FALL * (1 - k * k), d.z);
+        d.dropMat.opacity = ts.fade * Math.min(1, k * 6);
+      } else {
+        const u = (k - 1) * SECONDS / 3.4;
+        d.drop.visible = false;
+        if (u >= 1) { d.t0 = -1; d.next = t + 1.5 + Math.random() * 6; d.ring.visible = false; continue; }
+        d.ring.visible = true;
+        d.ring.position.set(d.x, y, d.z);
+        const size = Math.max(0.05, u * d.reach * 2);
+        d.ring.scale.set(size, 1, size);
+        d.ringMat.opacity = ts.fade * (1 - u) ** 1.6 * Math.min(1, u * 14) * 0.85;
+      }
     }
   });
 }
@@ -390,10 +475,15 @@ export function buildThemeScene(theme: Theme, ctx: SceneCtx, coarse: boolean, se
   ts.reseed(seed);
   ts.ground = -theme.table.height;
   buildTable(ts, theme.table, theme.top, ctx.aniso);
+  if (theme.trees) addTrees(ts, theme.trees, coarse);
+  if (theme.tavernware) addTavernware(ts, theme.tavernware, coarse);
+  if (theme.grass) addGrass(ts, theme.grass, coarse);
+  if (theme.fog) addFogBanks(ts, theme.fog, coarse);
   if (theme.beams.n) addBeams(ts, theme.beams.color, coarse ? Math.ceil(theme.beams.n / 2) : theme.beams.n, theme.beams.strength);
   if (theme.mist) addMist(ts, theme.mist.color, coarse ? Math.ceil(theme.mist.n / 2) : theme.mist.n, theme.mist.strength);
   for (const fx of theme.fx) {
     if (fx.kind === 'ripples') addRipples(ts, fx, coarse);
+    else if (fx.kind === 'drips') addDrips(ts, fx, coarse);
     else if (fx.kind === 'shootingstar') addShootingStars(ts, fx);
     else if (fx.kind === 'page') addPage(ts, fx);
     else addParticles(ts, fx, coarse);

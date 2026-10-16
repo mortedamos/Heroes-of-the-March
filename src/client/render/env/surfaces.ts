@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 
-export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'slab' | 'steel' | 'soft' | 'moss' | 'dirt' | 'magma' | 'leather' | 'channels' | 'cobbles';
+export type SurfaceKind = 'felt' | 'planks' | 'flagstone' | 'slab' | 'steel' | 'soft' | 'moss' | 'dirt' | 'magma' | 'leather' | 'channels' | 'cobbles' | 'swamp' | 'paving' | 'pebbles';
 
 /** Marks that glow in the stone: runes along a seam, a sigil circle, or the spirals pecked into a megalith. */
 export type GlyphStyle = 'runes' | 'sigils' | 'spirals';
@@ -350,6 +350,31 @@ function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasEle
       break;
     }
 
+    case 'swamp': {
+      // Only the detail of a bog: the bog ground (see ground.ts) colours it from the two colours of the spec and multiplies in
+      // this. Light and dark mottling, flecks of weed, strands of sedge and the dark specks of peat; neutral on its own.
+      g.fillStyle = '#c4c4b8';
+      g.fillRect(0, 0, SIZE, SIZE);
+      for (let i = 0; i < 110; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 14 + rnd() * 44, rnd() < 0.5 ? '#000000' : '#ffffff', 0.12 + rnd() * 0.14);
+      for (let i = 0; i < 1500; i++) {
+        const x = rnd() * SIZE;
+        const y = rnd() * SIZE;
+        const a = -Math.PI / 2 + (rnd() - 0.5) * 1.6;
+        const l = 3 + rnd() * 9;
+        g.strokeStyle = rgba(mixHex('#7a8a40', '#c8c07a', rnd()), 0.55);
+        g.lineWidth = 1;
+        wrapStroke(g, [[x, y], [x + Math.cos(a) * l, y + Math.sin(a) * l]]);
+      }
+      for (let i = 0; i < 260; i++) {
+        g.fillStyle = rgba('#000000', 0.2 + rnd() * 0.25);
+        g.beginPath();
+        g.ellipse(rnd() * SIZE, rnd() * SIZE, 1 + rnd() * 3, 1 + rnd() * 2, rnd() * 3, 0, Math.PI * 2);
+        g.fill();
+      }
+      speckle(g, 20, rnd);
+      break;
+    }
+
     case 'dirt': {
       for (let i = 0; i < 60; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 20 + rnd() * 40, spec.b, 0.3);
       for (let i = 0; i < 40; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 20 + rnd() * 40, '#2a1d10', 0.14);
@@ -445,6 +470,114 @@ function paint(spec: SurfaceSpec): { map: HTMLCanvasElement; glow: HTMLCanvasEle
       g.fillStyle = rgba('#050403', 0.95); g.fillRect(cx - 26, cy - 26, 52, 52);
       gg.fillStyle = rgba(hot, 0.3); gg.fillRect(cx - 26, cy - 26, 52, 52);
       gg.fillStyle = mixHex(hot, '#ffffff', 0.18); gg.fillRect(cx - 17, cy - 17, 34, 34);
+      break;
+    }
+
+    case 'paving': {
+      // Old road stones: irregular flags of every size, each its own grey-brown, their edges worn round and their joints
+      // filled with soil and weed. Worked out per pixel from the nearest stone's middle (Worley cells), so no two are alike.
+      const img = g.createImageData(SIZE, SIZE);
+      const N = o.rows ?? 5;
+      const cell = SIZE / N;
+      const seeds: { x: number; y: number; tone: number; warm: number }[] = [];
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) seeds.push({ x: (i + 0.2 + rnd() * 0.6) * cell, y: (j + 0.2 + rnd() * 0.6) * cell, tone: rnd(), warm: rnd() });
+      const [ar, ag, ab] = rgb(spec.a);
+      const [br, bg, bb] = rgb(spec.b);
+      const soil = rgb(mixHex(spec.a, '#1c140c', 0.6));
+      const noise = (x: number, y: number, sc: number, sd: number): number => {
+        const gx = x / sc;
+        const gy = y / sc;
+        const x0 = Math.floor(gx);
+        const y0 = Math.floor(gy);
+        const h = (ix: number, iy: number): number => { let v = Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + sd; v = Math.imul(v ^ (v >>> 13), 1274126177); return ((v ^ (v >>> 16)) >>> 0) / 4294967296; };
+        const fx = gx - x0;
+        const fy = gy - y0;
+        const u = fx * fx * (3 - 2 * fx);
+        const v = fy * fy * (3 - 2 * fy);
+        return (h(x0, y0) * (1 - u) + h(x0 + 1, y0) * u) * (1 - v) + (h(x0, y0 + 1) * (1 - u) + h(x0 + 1, y0 + 1) * u) * v;
+      };
+      for (let y = 0; y < SIZE; y++) {
+        for (let x = 0; x < SIZE; x++) {
+          // The two nearest stone-middles, the joints running where they are equally near. The outline is pushed about by noise.
+          const wx = x + (noise(x, y, 22, 5) - 0.5) * 16;
+          const wy = y + (noise(x, y, 22, 9) - 0.5) * 16;
+          const ci = Math.floor(x / cell);
+          const cj = Math.floor(y / cell);
+          let d1 = 1e9, d2 = 1e9, near = 0;
+          for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+            const k = (((cj + dj + N) % N) * N + ((ci + di + N) % N));
+            const sd = seeds[k]!;
+            const sx = sd.x + Math.floor((ci + di) / N) * SIZE;
+            const sy = sd.y + Math.floor((cj + dj) / N) * SIZE;
+            const d = Math.hypot(wx - sx, wy - sy);
+            if (d < d1) { d2 = d1; d1 = d; near = k; } else if (d < d2) d2 = d;
+          }
+          const stone = seeds[near]!;
+          const edge = d2 - d1;
+          const grain = 0.82 + noise(x, y, 7, 3) * 0.3 + noise(x, y, 2.5, 8) * 0.12;
+          const t = Math.min(1, Math.max(0, stone.tone * 0.8 + (noise(x, y, 60, 2) - 0.5) * 0.5));
+          let r = (ar + (br - ar) * t) * grain * (0.94 + stone.warm * 0.12);
+          let gg = (ag + (bg - ag) * t) * grain;
+          let bl = (ab + (bb - ab) * t) * grain * (1.06 - stone.warm * 0.12);
+          // Worn round at the edges (darker), with the joint itself soil, and a little weed growing in it.
+          const wear = Math.min(1, Math.max(0, edge / 9));
+          const joint = Math.min(1, Math.max(0, (6 - edge) / 4));
+          r *= 0.55 + 0.45 * wear; gg *= 0.55 + 0.45 * wear; bl *= 0.55 + 0.45 * wear;
+          r += (soil[0]! - r) * joint; gg += (soil[1]! - gg) * joint; bl += (soil[2]! - bl) * joint;
+          const weed = joint > 0.2 ? Math.max(0, noise(x, y, 5, 1) - 0.52) * 3.2 * Math.min(1, joint + 0.3) : 0;
+          if (weed > 0) { r += (84 - r) * Math.min(1, weed); gg += (110 - gg) * Math.min(1, weed); bl += (44 - bl) * Math.min(1, weed); }
+          // Pits and the odd lichen speckle.
+          const pit = noise(x, y, 3, 6);
+          if (pit > 0.86) { r *= 0.7; gg *= 0.7; bl *= 0.7; }
+          if (o.moss && noise(x, y, 14, 4) > 0.7 && joint < 0.5) { r += (92 - r) * 0.35; gg += (118 - gg) * 0.35; bl += (60 - bl) * 0.35; }
+          const p = (y * SIZE + x) * 4;
+          img.data[p] = Math.max(0, Math.min(255, r));
+          img.data[p + 1] = Math.max(0, Math.min(255, gg));
+          img.data[p + 2] = Math.max(0, Math.min(255, bl));
+          img.data[p + 3] = 255;
+        }
+      }
+      g.putImageData(img, 0, 0);
+      speckle(g, 12, rnd);
+      break;
+    }
+
+    case 'pebbles': {
+      // Loose beach stone: smooth rounded pebbles of every grey, heaped without any order, packed close, the dark gaps between
+      // them barely showing.
+      g.fillStyle = mixHex(spec.a, '#000000', 0.5);
+      g.fillRect(0, 0, SIZE, SIZE);
+      const layers: [number, number, number][] = [[19, 10, 210], [12, 6, 520], [7, 3.5, 900]];
+      for (const [rMax, rMin, count] of layers) {
+        for (let i = 0; i < count; i++) {
+          const x = rnd() * SIZE;
+          const yy = rnd() * SIZE;
+          const rx = rMin + rnd() * (rMax - rMin);
+          const ry = rx * (0.62 + rnd() * 0.3);
+          const tilt = rnd() * Math.PI;
+          const tone = rnd();
+          // Mostly grey, with the odd darker or paler stone and a warm one now and then.
+          const col = mixHex(mixHex(spec.a, spec.b, tone), rnd() < 0.07 ? '#9a8a78' : rnd() < 0.12 ? '#dfe4e6' : '#000000', rnd() < 0.22 ? 0.22 : rnd() < 0.1 ? 0.38 : 0.04);
+          for (const dx of [0, -SIZE, SIZE]) for (const dy of [0, -SIZE, SIZE]) {
+            const cx = x + dx;
+            const cy = yy + dy;
+            if (cx + rx < 0 || cx - rx > SIZE || cy + rx < 0 || cy - rx > SIZE) continue;
+            g.save();
+            g.translate(cx, cy);
+            g.rotate(tilt);
+            const gr = g.createRadialGradient(-rx * 0.28, -ry * 0.3, 0, 0, 0, rx);
+            gr.addColorStop(0, mixHex(col, '#ffffff', 0.12));
+            gr.addColorStop(0.6, col);
+            gr.addColorStop(1, mixHex(col, '#000000', 0.42));
+            g.fillStyle = gr;
+            g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.fill();
+            g.restore();
+          }
+        }
+      }
+      // Wet sheen and sand between the stones.
+      for (let i = 0; i < 24; i++) blob(g, rnd() * SIZE, rnd() * SIZE, 14 + rnd() * 30, mixHex(spec.b, '#c8c0a8', 0.4), 0.08);
+      speckle(g, 16, rnd);
       break;
     }
 

@@ -320,7 +320,7 @@ function pool(b: Build, edge: number, reach: number): void {
 
 // -- Chairs -----------------------------------------------------------------------------
 
-interface ChairStyle {
+export interface ChairStyle {
   w: number;
   d: number;
   legT: number;
@@ -333,7 +333,7 @@ interface ChairStyle {
 }
 
 /** One chair, standing on y = 0 and facing +z, as a wood geometry and (if cushioned) a cushion geometry. */
-function chairGeometry(st: ChairStyle, seatH: number): { wood: THREE.BufferGeometry; pad: THREE.BufferGeometry | null } {
+export function chairGeometry(st: ChairStyle, seatH: number): { wood: THREE.BufferGeometry; pad: THREE.BufferGeometry | null } {
   const { w, d, legT: t, seatT } = st;
   const wood: THREE.BufferGeometry[] = [];
   const box = (into: THREE.BufferGeometry[], bw: number, bh: number, bd: number, x: number, y: number, z: number): void => {

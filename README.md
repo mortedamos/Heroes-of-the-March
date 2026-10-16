@@ -15,6 +15,8 @@ npm run build      # production bundle in dist/
 
 Card data lives in `src/data/cards.json` (it is edited directly; the old spreadsheet pipeline is gone). Each card has a permanent number in `data/card-numbers.json` (`npm run numbers` numbers new cards). The party rework (heroes and companions became one kind of card) is described in [docs/PARTY-REWORK.md](docs/PARTY-REWORK.md); what it set aside is in `data/set-aside.json`.
 
+3D models (trees so far) are kept as they were made in `_build/art-work/models/` (not in git: they are about ten megabytes each); `npm run models` slims them into `public/models/`, which is what the game loads (see `scripts/models.ts` and `src/client/render/env/models.ts`).
+
 Card art comes from `_build/art`; each card names its art file in `cards.json` (`art`), and a card without one gets a drawn emblem.
 
 ## Layout
