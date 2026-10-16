@@ -360,7 +360,7 @@ export const ABILITIES: Record<string, Ability> = {
     }],
   },
   'thorgar-twice-buried': { status: 'full', unburied: true },
-  'aelthir-moonveil': { status: 'full', on: entersPlay(['Elf', 'Human'], true) },
+  'aelthir-moonveil': { status: 'full', on: entersPlay(['Human'], true) },
   'lord-vaelis-nightbloom': {
     status: 'full',
     activations: [{

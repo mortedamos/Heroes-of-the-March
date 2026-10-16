@@ -327,14 +327,24 @@ describe('forced stats', () => {
 });
 
 describe('silence, steal, negate, swap', () => {
-  it('Aelthir draws when an Elf or Human card enters play, but only once per turn', () => {
+  it('Aelthir draws when a Human card enters play, but only once per turn', () => {
     const g = newGame();
     standard(g, { hero: 'aelthir-moonveil' });
-    onTop(g.s, 'location', ['the-silverwood-hunt']); // Elf
+    onTop(g.s, 'location', ['kingsford']); // Human
     onTop(g.s, 'encounter', ['wren-the-covens-knife']); // Human
     restart(g);
     until(g, bidFor(g.A));
     expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Aelthir Moonveil')).toHaveLength(1);
+  });
+
+  it('Aelthir does not draw for an Elf card that is not Human', () => {
+    const g = newGame();
+    standard(g, { hero: 'aelthir-moonveil' });
+    onTop(g.s, 'location', ['the-silverwood-hunt']); // Elf
+    onTop(g.s, 'encounter', ['the-laughing-prince']); // Elf, Oathbreaker
+    restart(g);
+    until(g, bidFor(g.A));
+    expect(g.events.filter((e) => e.type === 'drew' && e.player === g.A && e.reason === 'Aelthir Moonveil')).toHaveLength(0);
   });
 
   it('Pip draws when an ability replaces the location', () => {

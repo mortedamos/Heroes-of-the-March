@@ -1,5 +1,5 @@
 {
- "version": "v0.9.1",
+ "version": "v0.9.2",
  "heroes": [
   {
    "id": "warchief-grukka-ironjaw",
@@ -63,10 +63,13 @@
     "G": 4
    },
    "abilityName": "Progenitor",
-   "abilityText": "Once per turn, when an Elf or Human card enters play, draw a resource.",
+   "abilityText": "Once per turn, when a Human card enters play, draw a resource.",
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/8/9); trigger and Kin bonus set aside.",
-   "number": 1003
+   "number": 1003,
+   "allied": [
+    "Elf"
+   ]
   },
   {
    "id": "lord-vaelis-nightbloom",
@@ -142,9 +145,6 @@
    },
    "abilityName": "The World Walks With Me",
    "abilityText": "Your party may have four heroes instead of three.",
-   "nemesis": [
-    "Skarra"
-   ],
    "kind": "hero",
    "revision": "Stats halved, rounded up (was 4/6/6); trigger and Kin bonus set aside.",
    "number": 1007
@@ -879,7 +879,7 @@
    "art": "portraits__tobin-quill-goose-keeper",
    "stats": {
     "P": 3,
-    "M": 4,
+    "M": 3,
     "G": 2
    },
    "abilityName": "Keeper of the Flock",
@@ -1060,7 +1060,7 @@
    "quote": null,
    "art": null,
    "stats": {
-    "P": 7,
+    "P": 6,
     "M": 1,
     "G": 3
    },

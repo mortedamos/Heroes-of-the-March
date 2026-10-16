@@ -30,7 +30,7 @@ export const SPECIAL_VALUE: Record<string, number> = {
 
 /** How much a hero's ability is worth on top of its stats (rough, in stat points). Allied, Nemesis and Companion To are priced separately (synergy). */
 const HERO_ABILITY: Record<string, number> = {
-  'warchief-grukka-ironjaw': 1.5, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 1.5, 'lord-vaelis-nightbloom': 3,
+  'warchief-grukka-ironjaw': 1.5, 'thorgar-twice-buried': 4, 'aelthir-moonveil': 1, 'lord-vaelis-nightbloom': 3,
   'pip-wanderfoot': 0.5, 'kazra-emberdeep': 1, 'ysolde-of-the-wellspring': 5, 'mayor-hobby-trickgrin': 2,
   'lord-paladin-aldric-ashcroft': 2.5, 'high-thane-brunna-stonefast': 2.5, 'loremaster-oskar-grimgate': 2,
   'queen-maren-ashcroft': 3, 'archmage-corvin-varro': 4, 'professor-barnaby-pickwort': 3, 'urzha-half-tusk': 2,
