@@ -152,7 +152,7 @@ export const RULE_NOTES: RuleNote[] = [
     ruling: 'Once per turn, on your bidding decision of any turn, look at the next two locations and swap one in for the current location (the old one is shuffled back). When the new location has rules text you may swap it in with that text ignored: it keeps its Renown and its tags (so Nemesis bonuses still follow them) but its text does nothing this turn. That also holds for text that works while it is in play, such as a changed challenge type or a bigger party, and for what happens when it is won. Ignoring is chosen with the swap and cannot be changed later. A Brunna counter stops the whole swap.' },
   { id: 'farmer-hobart', topic: 'Farmer Hobart (Goose & Company)',
     ruling: 'At the start of the turn of the player who controls him they draw one resource if any Goose card is in play anywhere (a hero in any party, the encounter or a minion). Several geese still give one.' },
-  { id: 'pariapt', topic: 'Pariapt of Peace',
+  { id: 'pariapt', topic: 'Periapt of Peace',
     ruling: 'When it is revealed or played face up, Allied and Nemesis give no bonuses to anyone for the rest of the turn. Companion To is not a bonus and is unaffected.' },
   { id: 'tome-of-nethrak', topic: 'The Tome of Nethrak',
     ruling: 'When revealed or played face up, an Undead minion is drawn from the encounter stack and joins the current encounter until the end of the turn. Its bonus raises the difficulty for every player (including the player of the Tome), and its own "comes into play" text applies. If there is no Undead card left in the stack nothing is drawn.' },

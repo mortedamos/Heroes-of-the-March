@@ -2010,7 +2010,7 @@ describe('Goldie, Brisa, Aelder, Grumma and the new places', () => {
   });
 });
 
-describe('the third sheet pass (v0.7): Grukka, Pariapt of Peace, The Tome of Nethrak, Immobilizing Word', () => {
+describe('the third sheet pass (v0.7): Grukka, Periapt of Peace, The Tome of Nethrak, Immobilizing Word', () => {
   const idle = ['gnash-the-butcher-of-bloodmire', 'nettle-burrows-trouble-maker', 'sister-aurelie-dane-physician']; // no Companion To among them
 
   it('Grukka: a Capital may be put into play for two resources, and the peek stays private', () => {
@@ -2075,7 +2075,7 @@ describe('the third sheet pass (v0.7): Grukka, Pariapt of Peace, The Tome of Net
     expect(total(g, g.A, g.A)).toBe(stat('warchief-grukka-ironjaw', st) + 2 + stat('pell-quillon-collegium-prodigy', st) + stat('moss-dire-wolf', st));
   });
 
-  it('Pariapt of Peace switches off Allied and Nemesis for everyone this turn, and only this turn', () => {
+  it('Periapt of Peace switches off Allied and Nemesis for everyone this turn, and only this turn', () => {
     const g = newGame();
     standard(g, { party: ['high-thane-brunna-stonefast', 'kazra-emberdeep', 'pell-quillon-collegium-prodigy'], hand: ['pariapt-of-peace'] }, { party: idle });
     restart(g);

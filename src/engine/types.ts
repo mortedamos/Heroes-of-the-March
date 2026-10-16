@@ -166,7 +166,7 @@ export interface TurnState {
   /** Seat index where the reveal round-robin continues. */
   revealCursor: number;
   wandsDisabled: boolean;
-  /** Pariapt of Peace: Allied and Nemesis give no bonuses this turn. */
+  /** Periapt of Peace: Allied and Nemesis give no bonuses this turn. */
   namedDisabled: boolean;
   noFalls: boolean;
   /** Players who must lose a hero at the end of this turn (whoever's turn it is). */

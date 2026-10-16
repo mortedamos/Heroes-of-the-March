@@ -44,7 +44,7 @@ Object.assign(find('encounters', 4058), { conditionText: 'When this card comes i
 find('resources', 5035).name = 'Amulet of the Phoenix';
 const added = [];
 for (const [number, name, groups, value, text] of [
-  [5086, 'Pariapt of Peace', ['Accord'], 2, 'Allied and Nemesis give no bonuses this turn.'],
+  [5086, 'Periapt of Peace', ['Accord'], 2, 'Allied and Nemesis give no bonuses this turn.'],
   [5087, 'The Tome of Nethrak', ['Undead', 'Collegium'], 4, 'When revealed or played face up, draw an Undead minion for this encounter.'],
   [5088, 'Immobilizing Word', ['Marchguard'], 1, 'Choose an opponent. Their Companion heroes are turned face down, cannot use their abilities, and contribute nothing this encounter.'],
 ]) {

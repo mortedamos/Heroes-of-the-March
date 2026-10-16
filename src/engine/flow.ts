@@ -518,7 +518,7 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
     if (t.extraLocations.length) ctx.returnToDeck('location', t.extraLocations);
     t.extraLocations = [];
 
-    // Pariapt of the Phoenix: may bring a hero back from the discard pile.
+    // Amulet of the Phoenix: may bring a hero back from the discard pile.
     const gauntletOwners = ctx.s.players.filter((p) => p.bids.some((b) => ctx.defId(b.card) === 'gauntlet-of-returning'));
 
     const borrowed: string[] = [];
@@ -549,8 +549,8 @@ const STEPS: Record<Step, (ctx: Ctx) => void> = {
       const pile = ctx.s.discards.hero;
       if (!pile.length) continue;
       ctx.queue({
-        t: 'choose', purpose: 'gauntlet', player: p.id, source: 'Pariapt of the Phoenix',
-        prompt: 'Pariapt of the Phoenix: bring a hero back from the discard pile?',
+        t: 'choose', purpose: 'gauntlet', player: p.id, source: 'Amulet of the Phoenix',
+        prompt: 'Amulet of the Phoenix: bring a hero back from the discard pile?',
         options: pile.map((c) => cardOption(ctx, c)), min: 0, max: 1,
       });
     }
@@ -1078,7 +1078,7 @@ export function applyChoice(
         if (!pile.includes(pick)) break;
         pile.splice(pile.indexOf(pick), 1);
         heroEnters(ctx, p, pick, null);
-        enforcePartyLimit(ctx, p, 'Pariapt of the Phoenix');
+        enforcePartyLimit(ctx, p, 'Amulet of the Phoenix');
         break;
       }
       case 'sigrunPick': {

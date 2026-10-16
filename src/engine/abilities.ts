@@ -853,7 +853,7 @@ export const ABILITIES: Record<string, Ability> = {
   'cold-iron-barrier': { status: 'full', onReveal: (ctx) => { ctx.s.turn.wandsDisabled = true; } },
   'null-rune-seal': { status: 'full', onReveal: (ctx) => { ctx.s.turn.wandsDisabled = true; } },
   'the-amulet-of-aesia': { status: 'full' }, // handled in flow.ts at resolution
-  // Pariapt of Peace: nobody's Allied or Nemesis bonus counts this turn (totals.ts reads the flag).
+  // Periapt of Peace: nobody's Allied or Nemesis bonus counts this turn (totals.ts reads the flag).
   'pariapt-of-peace': { status: 'full', onReveal: (ctx) => { ctx.s.turn.namedDisabled = true; } },
   // The Tome of Nethrak: an Undead minion joins this encounter, for everyone.
   'the-tome-of-nethrak': { status: 'full', onReveal: (ctx) => { drawMinionNow(ctx, 'Undead'); } },
