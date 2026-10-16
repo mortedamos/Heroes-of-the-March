@@ -14,8 +14,8 @@ export const HIDDEN_BID_ESTIMATE = 3.1;
  * for a player who hides it; measured over bot games: the second bid averages 3.0, later ones 2.7 to 2.9).
  */
 export const HIDDEN_BID_BY_ORDER = [2.2, 3.0, 2.9, 2.75, 2.7, 2.8];
-/** An easy bot's guess at one unseen card is off by up to this much either way (so it can be anything from 0 to 6). */
-export const EASY_GUESS_SPREAD = 3;
+/** An easy bot guesses every unseen card of an opponent's is worth somewhere between these two (the real average is 2.9): it undervalues them. */
+export const EASY_GUESS_RANGE = [2, 3] as const;
 /** Average hero stat, used to value Council cards. */
 export const AVG_HERO_STAT = 3.5;
 
@@ -127,7 +127,7 @@ export class Table {
   private noisyGuess(key: string): number {
     let v = this.noisy.get(key);
     if (v === undefined) {
-      v = Math.min(6, Math.max(0, HIDDEN_BID_ESTIMATE + (this.rand() - 0.5) * 2 * EASY_GUESS_SPREAD));
+      v = EASY_GUESS_RANGE[0] + this.rand() * (EASY_GUESS_RANGE[1] - EASY_GUESS_RANGE[0]);
       this.noisy.set(key, v);
     }
     return v;

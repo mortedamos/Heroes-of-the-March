@@ -2,7 +2,7 @@
 
 import { describe, expect, it } from 'vitest';
 import { botDecide } from '../bots/heuristic';
-import { EASY_GUESS_SPREAD, HIDDEN_BID_BY_ORDER, HIDDEN_BID_ESTIMATE, Table } from '../bots/knowledge';
+import { EASY_GUESS_RANGE, HIDDEN_BID_BY_ORDER, HIDDEN_BID_ESTIMATE, Table } from '../bots/knowledge';
 import { applyCommand, resume } from './commands';
 import { Ctx } from './context';
 import { discardHero, drawResources, fire, heroEnters, partyLoad, partySize, replaceLocation } from './effects';
@@ -2396,15 +2396,16 @@ describe('what bots assume about face-down bids, by level', () => {
     expect(t.estimate(b)).not.toBeCloseTo(new Table(view, 'normal', () => 0.5).estimate(b), 3);
   });
 
-  it('an easy bot guesses each face-down card anywhere from 0 to 6, and is consistent within a decision', () => {
+  it('an easy bot guesses each face-down card between 2 and 3 (undervaluing it), and is consistent within a decision', () => {
     const { g, view } = tableWithHiddenBids();
     const low = new Table(view, 'easy', () => 0);
     const high = new Table(view, 'easy', () => 1);
     const mid = new Table(view, 'easy', () => 0.5);
     const total = rivalOf(mid, g).projection!.total;
-    expect(low.estimate(rivalOf(low, g))).toBeCloseTo(total + 2 * (HIDDEN_BID_ESTIMATE - EASY_GUESS_SPREAD), 5);
-    expect(high.estimate(rivalOf(high, g))).toBeCloseTo(total + 2 * 6, 5);
-    expect(mid.estimate(rivalOf(mid, g))).toBeCloseTo(total + 2 * HIDDEN_BID_ESTIMATE, 5);
+    expect(low.estimate(rivalOf(low, g))).toBeCloseTo(total + 2 * EASY_GUESS_RANGE[0], 5);
+    expect(high.estimate(rivalOf(high, g))).toBeCloseTo(total + 2 * EASY_GUESS_RANGE[1], 5);
+    expect(mid.estimate(rivalOf(mid, g))).toBeCloseTo(total + 2 * 2.5, 5);
+    expect(mid.estimate(rivalOf(mid, g))).toBeLessThan(new Table(view, 'normal', () => 0.5).estimate(rivalOf(mid, g)));
     // Asked twice, the same table gives the same answer.
     let n = 0;
     const jumpy = new Table(view, 'easy', () => (n++ % 2 ? 0.9 : 0.1));

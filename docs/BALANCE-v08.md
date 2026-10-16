@@ -114,17 +114,17 @@ Spread: 0.73 to 1.55, standard deviation 0.15 (v0.7: 0.68 to 1.46, 0.16).
 
 ## Afterwards: what bots of each level assume about face-down bids
 
-An easy bot guesses each face-down card of a rival anywhere from 0 to 6 (a new guess every decision), a normal bot uses 3.1 for all of them (unchanged), a hard bot uses the average for the position the card was played in (2nd bid 3.0, 3rd 2.9, later 2.7 to 2.8; measured over bot games, where face-down bids average 2.9 in all). Win share of one seat at one level against two seats of another, 3 players, 1500 games each (fair 33.3%, margin 2.4 points), `scripts/balance/probe-levels.ts`:
+An easy bot guesses every unseen card of a rival's at between 2 and 3 (a new guess each decision), so it generally undervalues them; a normal bot uses 3.1 for all of them (unchanged); a hard bot uses the average for the position the card was played in (2nd bid 3.0, 3rd 2.9, later 2.7 to 2.8). Measured over bot games, face-down bids average 2.9. Win share of one seat at one level against two seats of another, 3 players, 1500 games each (fair 33.3%, margin 2.4 points), :
 
-| Seat | Others | Wins (new guesses) | Wins (flat 3.1 for everyone) |
-|---|---|---|---|
-| hard | normal | 35.6% | 34.5% |
-| easy | normal | 6.0% | 6.2% |
-| normal | normal | 33.2% | |
-| normal | easy | 80.3% | |
-| hard | easy | 81.2% | |
+| Seat | Others | Wins | Wins before (easy guessing 0 to 6) | Wins before (flat 3.1 for everyone) |
+|---|---|---|---|---|
+| hard | normal | 35.6% | 35.6% | 34.5% |
+| easy | normal | 4.3% | 6.0% | 6.2% |
+| normal | normal | 34.8% | 33.2% | |
+| normal | easy | 81.0% | 80.3% | |
+| hard | easy | 83.7% | 81.2% | |
 
-Easy bots were already far weaker than normal ones for other reasons (they play cards at random and often sit still), so the noisier guess hardly changes them.
+Easy bots were already far weaker than normal ones for other reasons (they play cards at random and often sit still); undervaluing rivals makes them a little weaker still.
 
 ## Afterwards: Barnaby, Tansy and Urzha (sheet of 16 October)
 
