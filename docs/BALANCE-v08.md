@@ -114,7 +114,7 @@ Spread: 0.73 to 1.55, standard deviation 0.15 (v0.7: 0.68 to 1.46, 0.16).
 
 ## Afterwards: what bots of each level assume about face-down bids
 
-An easy bot guesses every unseen card of a rival's at between 2 and 3 (a new guess each decision), so it generally undervalues them; a normal bot uses 3.1 for all of them (unchanged); a hard bot uses the average for the position the card was played in (2nd bid 3.0, 3rd 2.9, later 2.7 to 2.8). Measured over bot games, face-down bids average 2.9. Win share of one seat at one level against two seats of another, 3 players, 1500 games each (fair 33.3%, margin 2.4 points), :
+An easy bot guesses every unseen card of a rival's at between 2 and 3 (a new guess each decision), so it generally undervalues them; a normal bot uses 3.1 for all of them (unchanged); a hard bot uses the average for the position the card was played in (2nd bid 3.0, 3rd 2.9, later 2.7 to 2.8). Measured over bot games, face-down bids average 2.9. Win share of one seat at one level against two seats of another, 3 players, 1500 games each (fair 33.3%, margin 2.4 points), `scripts/balance/probe-levels.ts`:
 
 | Seat | Others | Wins | Wins before (easy guessing 0 to 6) | Wins before (flat 3.1 for everyone) |
 |---|---|---|---|---|
