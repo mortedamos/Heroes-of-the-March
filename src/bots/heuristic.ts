@@ -528,10 +528,9 @@ function choose(t: Table, c: ChooseDetail, level: BotLevel, rand: Rand): string[
       return [keepOrSwapLocation(t, card?.def ?? null, 'warchief-grukka-ironjaw') ? 'replace' : 'keep'];
     }
     case 'pickLocation': {
-      // Renown if the location is likely ours (or the other way round when a threat is about to take it), and whose Nemesis bonuses it switches on.
-      const active = t.view.players.find((p) => p.id === t.view.turn.active);
-      const denying = !t.isMyTurn && Boolean(active) && t.threat(active!) > 8;
-      const score = (def: string | null) => (denying ? -0.5 : 1) * locationScore(t, def) + NEMESIS_WEIGHT * nemesisSwing(t, def);
+      // Renown if the location is likely ours (the other way round when someone else is the favourite), and whose Nemesis bonuses it switches on.
+      const w = renownWeight(t);
+      const score = (def: string | null) => w * locationScore(t, def) + NEMESIS_WEIGHT * nemesisSwing(t, def);
       const scored = c.options.map((o) => ({ v: o.value, s: score(o.value === 'keep' ? t.view.turn.location?.def ?? null : o.card?.def ?? null) }));
       return [scored.sort((a, b) => b.s - a.s)[0]!.v];
     }
@@ -655,6 +654,19 @@ function locationScore(t: Table, def: string | null): number {
   return s;
 }
 
+/**
+ * Whether more Renown on the table helps us: only if we are the one likely to take it. +1 as the favourite, a little under zero as the
+ * underdog (better to hand the winner less), and a touch positive when it is close. Strength is the bids so far plus what each hand could add.
+ */
+function renownWeight(t: Table): number {
+  const top3 = t.view.hand.map((h) => t.handValue(h.card.id)).sort((a, b) => b - a).slice(0, 3).reduce((a, b) => a + b, 0);
+  const mine = t.myEstimate() + top3;
+  const rival = Math.max(-Infinity, ...t.others.map((p) => t.estimate(p) + Math.min(p.handCount, 3) * 2));
+  if (!Number.isFinite(rival)) return 1;
+  const lead = mine - rival;
+  return lead > 1.5 ? 1 : lead < -1.5 ? -0.7 : 0.1;
+}
+
 /** One Nemesis bonus is +1 to every stat of a hero: worth a bit under a point of Renown in a close fight. */
 const NEMESIS_WEIGHT = 0.8;
 
@@ -676,10 +688,8 @@ function keepOrSwapLocation(t: Table, peekedDef: string | null, _hero: string): 
   if (!peekedDef) return false;
   const cur = locationScore(t, t.view.turn.location?.def ?? null);
   const next = locationScore(t, peekedDef);
-  const active = t.view.players.find((p) => p.id === t.view.turn.active);
-  const denying = !t.isMyTurn && active && t.threat(active) > 8;
   // Strike the Heart also draws two resources with the new Capital.
-  return denying ? next < cur : next + 1.5 > cur;
+  return renownWeight(t) * (next - cur) + 1.5 > 0;
 }
 
 export type { PlayerPublicView };

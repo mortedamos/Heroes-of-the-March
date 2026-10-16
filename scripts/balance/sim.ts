@@ -125,6 +125,8 @@ export interface GameSpec {
   force?: { seat: number; def: string | string[] };
   /** Everyone drafts their opening party at random (neutral) instead of by bot preference. */
   randomDraft?: boolean;
+  /** A probe: called with every event as it happens (for one-off diagnostics). */
+  onEvent?: (e: GameEvent) => void;
 }
 
 export interface PlayerRecord {
@@ -197,6 +199,7 @@ export function playGame(spec: GameSpec, cards: AggMap): GameRecord {
   };
   const scan = (evs: GameEvent[]) => {
     for (const e of evs) {
+      spec.onEvent?.(e);
       if (e.type === 'turnStarted') {
         if (!startParty.length) startParty = state.players.map((p) => p.party.map((c) => state.cards[c]!));
         snapshot(); if (sabThisTurn) sabTurns++; sabThisTurn = false; turnNo = e.turn;
