@@ -10,10 +10,15 @@ float skyHaze(float haze, vec4 winA, vec4 winB, float wA, float wB) {
 }
 
 // The picture \`tex\` at dome position \`uv\` (x round, y up): its colour, and how much of it shows there.
-// A window with no width means a 2:1 panorama of the whole sky, which can slide round by \`off\`; otherwise \`win\` is the
+// A window with no width means a 2:1 panorama of the whole sky, which can slide round by \`off\` and be shown smaller than it was
+// painted: its \`win.w\` is how big it looks (0 or 1 as painted; 0.5 half the size, so twice as much of the room shows). It is
+// shrunk about the horizon and the way the camera looks, so what stands on the floor still stands on it. Otherwise \`win\` is the
 // patch of dome (x0, x1, y0, y1) a flat strip is stuck onto, and its edges fade away.
 vec4 skyTexel(sampler2D tex, vec4 win, float off, vec2 uv) {
-  if (win.y <= win.x) return vec4(texture2D(tex, vec2(uv.x + off, uv.y)).rgb, 1.0);
+  if (win.y <= win.x) {
+    float zoom = win.w > 0.0 ? win.w : 1.0;
+    return vec4(texture2D(tex, vec2(0.25 + (uv.x - 0.25) / zoom + off, 0.5 + (uv.y - 0.5) / zoom)).rgb, 1.0);
+  }
   vec2 q = vec2((uv.x - win.x) / (win.y - win.x), (uv.y - win.z) / (win.w - win.z));
   float m = smoothstep(0.0, 0.08, q.x) * smoothstep(0.0, 0.08, 1.0 - q.x) * smoothstep(0.0, 0.1, 1.0 - q.y) * smoothstep(-0.03, 0.0, q.y);
   return vec4(texture2D(tex, clamp(q, 0.0, 1.0)).rgb, m);

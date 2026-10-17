@@ -6,7 +6,8 @@
 // The models as they are made (about 100,000 triangles and ten megabytes each) are far too heavy to scatter through a scene:
 // the originals stay in _build/art-work/models/ (not in git) and the game loads the slim copies in public/models/. Each slim
 // copy keeps the colour picture, shrunk to 512 pixels (JPEG, or PNG where it has cut-outs), and drops the rest of the textures; its triangles are simplified to the
-// budget; its base sits at the origin and it is one unit tall (the game scales it to whatever height a place wants).
+// budget; its tap root is cut off and a long bare trunk is made short and stout (see cutTapRoot and shortenTrunk); its base sits at the
+// origin and it is one unit tall (the game scales it to whatever height a place wants).
 //
 // trees.glb holds ten trees of three kinds laid out in a field: it is split into trees_a, trees_b and trees_c, one of each kind.
 
@@ -133,6 +134,103 @@ function thinFoliage(prim: Primitive, target: number): boolean {
   return true;
 }
 
+/**
+ * Cut off the tap root. Some of the trees were made with a long thin spike under the trunk (a tap root, a fifth of the height or
+ * more), so that stood on the ground they have a stalk under a trunk. Where the tree stops being a spike and becomes a trunk (the
+ * first height wide enough to be a trunk) everything lower is flattened onto that height, so the trunk's
+ * foot is the foot of the tree. Returns the share of the height that was cut off.
+ */
+function cutTapRoot(doc: Document): number {
+  const prims = doc.getRoot().listMeshes().flatMap((m) => m.listPrimitives());
+  let bottom = Infinity, top = -Infinity;
+  for (const p of prims) {
+    const a = p.getAttribute('POSITION')!.getArray()!;
+    for (let i = 1; i < a.length; i += 3) { bottom = Math.min(bottom, a[i]!); top = Math.max(top, a[i]!); }
+  }
+  const height = top - bottom;
+  const BANDS = 40;
+  // The trunk's axis: the middle of the lowest tenth of the tree.
+  let cx = 0, cz = 0, n = 0;
+  for (const p of prims) {
+    const a = p.getAttribute('POSITION')!.getArray()!;
+    for (let i = 0; i < a.length; i += 3) if (a[i + 1]! - bottom < height * 0.1) { cx += a[i]!; cz += a[i + 2]!; n++; }
+  }
+  cx /= Math.max(1, n); cz /= Math.max(1, n);
+  const reach = new Array<number>(BANDS).fill(0);
+  for (const p of prims) {
+    const a = p.getAttribute('POSITION')!.getArray()!;
+    for (let i = 0; i < a.length; i += 3) {
+      const b = Math.min(BANDS - 1, Math.floor(((a[i + 1]! - bottom) / height) * BANDS));
+      reach[b] = Math.max(reach[b]!, Math.hypot(a[i]! - cx, a[i + 2]! - cz));
+    }
+  }
+  // The first band wide enough to be the trunk (or a flare of roots) and not a spike. Never more than a quarter of the height.
+  const first = reach.findIndex((r) => r >= 0.07 * height);
+  const cut = Math.min(first < 0 ? 0 : first, Math.floor(BANDS * 0.25));
+  if (cut <= 0) return 0;
+  const y0 = bottom + (cut / BANDS) * height;
+  for (const p of prims) {
+    const acc = p.getAttribute('POSITION')!;
+    const a = new Float32Array(acc.getArray()! as Float32Array);
+    for (let i = 1; i < a.length; i += 3) if (a[i]! < y0) a[i] = y0;
+    acc.setArray(a);
+  }
+  return cut / BANDS;
+}
+
+/** How much of a tree's height the bare trunk may take before the crown begins, as a fraction of the whole (0.28). */
+const TRUNK_CAP = 0.28;
+
+/** How much wider the trunk is made at its foot (it narrows back to its own width where the crown begins). */
+const TRUNK_FLARE = 1.9;
+
+/**
+ * Make a bare trunk short and stout. Several of the trees stand their crown on a long thin trunk (the crown only begins half way
+ * up), which at the size the game stands them looks like a tree on a stalk. The part below the crown is squeezed down (a smooth,
+ * continuous squeeze: nothing tears) until the trunk takes no more than TRUNK_CAP of the height, and widened towards the foot
+ * about the trunk's own axis, so it comes out short and sturdy. Returns how much it was squeezed (1: not at all).
+ */
+function shortenTrunk(doc: Document): number {
+  const prims = doc.getRoot().listMeshes().flatMap((m) => m.listPrimitives());
+  const ys: number[] = [];
+  for (const p of prims) {
+    const a = p.getAttribute('POSITION')!.getArray()!;
+    for (let i = 1; i < a.length; i += 3) ys.push(a[i]!);
+  }
+  ys.sort((x, y) => x - y);
+  const bottom = ys[0]!;
+  const height = ys[ys.length - 1]! - bottom;
+  // The crown begins where the vertices begin to crowd: the leaves are nearly all of them.
+  const start = bottom + (ys[Math.floor(ys.length * 0.05)]! - bottom);
+  const share = (start - bottom) / height;
+  if (share <= TRUNK_CAP) return 1;
+  const k = TRUNK_CAP / share;
+  // The trunk's axis: the middle of the lowest tenth of the tree.
+  let cx = 0, cz = 0, n = 0;
+  for (const p of prims) {
+    const a = p.getAttribute('POSITION')!.getArray()!;
+    for (let i = 0; i < a.length; i += 3) if (a[i + 1]! - bottom < height * 0.1) { cx += a[i]!; cz += a[i + 2]!; n++; }
+  }
+  cx /= n; cz /= n;
+  for (const p of prims) {
+    const acc = p.getAttribute('POSITION')!;
+    const a = new Float32Array(acc.getArray()! as Float32Array);
+    for (let i = 1; i < a.length; i += 3) {
+      const y = a[i]!;
+      if (y < start) {
+        // The nearer the foot, the wider (a flare that eases off to nothing where the crown begins).
+        const t = (y - bottom) / (start - bottom);
+        const widen = 1 + (TRUNK_FLARE - 1) * (1 - t * t * (3 - 2 * t));
+        a[i - 1] = cx + (a[i - 1]! - cx) * widen;
+        a[i + 1] = cz + (a[i + 1]! - cz) * widen;
+        a[i] = bottom + (y - bottom) * k;
+      } else a[i] = bottom + (start - bottom) * k + (y - start);
+    }
+    acc.setArray(a);
+  }
+  return k;
+}
+
 /** One mesh, simplified to `budget` triangles, one colour texture, standing on the origin and one unit tall. */
 async function slim(doc: Document, budget: number, format: 'jpeg' | 'png'): Promise<void> {
   await doc.transform(flatten());
@@ -142,6 +240,9 @@ async function slim(doc: Document, budget: number, format: 'jpeg' | 'png'): Prom
     m.setMetallicFactor(0).setRoughnessFactor(0.92).setEmissiveFactor([0, 0, 0]);
   }
   await doc.transform(weld(), dedup());
+  const cut = cutTapRoot(doc);
+  shortenTrunk(doc);
+  if (cut > 0) console.log(`  tap root cut: ${(cut * 100).toFixed(0)}% of the height`);
   const before = triangles(doc);
   if (before > budget) {
     for (const mesh of doc.getRoot().listMeshes()) {

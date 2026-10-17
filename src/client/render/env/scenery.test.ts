@@ -78,14 +78,36 @@ describe('the tavern in the distance', () => {
 
   it('stands tables, with chairs, mugs and a lantern on each (the lantern glass and the frame as one each)', () => {
     const ts = build(4);
-    const [tables, chairs, mugs, frames, glass] = meshes(ts) as [THREE.InstancedMesh, THREE.InstancedMesh, THREE.InstancedMesh, THREE.InstancedMesh, THREE.InstancedMesh];
-    expect(tables.count).toBeGreaterThanOrEqual(5);
-    expect(tables.count).toBeLessThanOrEqual(spec.tables);
-    expect(chairs.count).toBeGreaterThan(tables.count);
-    expect(mugs.count).toBeGreaterThanOrEqual(tables.count * 3);
-    expect(frames.count).toBe(tables.count);
-    expect(glass.count).toBe(tables.count);
-    expect(lights(ts)).toHaveLength(tables.count);
+    const [tables, chairs, frames, glass, ...vessels] = meshes(ts);
+    expect(tables!.count).toBeGreaterThanOrEqual(5);
+    expect(tables!.count).toBeLessThanOrEqual(spec.tables);
+    expect(chairs!.count).toBeGreaterThan(tables!.count);
+    expect(vessels.reduce((n, m) => n + m.count, 0)).toBeGreaterThanOrEqual(tables!.count * 3);
+    expect(frames!.count).toBe(tables!.count);
+    expect(glass!.count).toBe(tables!.count);
+    expect(lights(ts)).toHaveLength(tables!.count);
+  });
+
+  it('has vessels of several kinds, in several colours and sizes, not one mug repeated', () => {
+    const ts = build(4);
+    const vessels = meshes(ts).slice(4).filter((m) => m.count > 0);
+    expect(vessels.length).toBeGreaterThanOrEqual(4);
+    const colours = new Set<string>();
+    const heights = new Set<string>();
+    const m = new THREE.Matrix4();
+    const c = new THREE.Color();
+    const s = new THREE.Vector3();
+    for (const mesh of vessels) {
+      for (let i = 0; i < mesh.count; i++) {
+        mesh.getColorAt(i, c);
+        colours.add(c.getHexString());
+        mesh.getMatrixAt(i, m);
+        s.setFromMatrixScale(m);
+        heights.add(s.y.toFixed(2));
+      }
+    }
+    expect(colours.size).toBeGreaterThanOrEqual(6);
+    expect(heights.size).toBeGreaterThanOrEqual(6);
   });
 
   it('keeps the tables well clear of the game table and the camera in front of it', () => {

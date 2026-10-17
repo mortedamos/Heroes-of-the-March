@@ -183,6 +183,13 @@ describe('the places given new ground, grass, trees, fog and furniture', () => {
     for (const id of places) if (id !== 'the-goose-and-kettle') expect(THEMES[id].tavernware, id).toBeUndefined();
   });
 
+  it('shows the Goose & Kettle room smaller than it was painted, so the table does not look tiny in a giant hall', () => {
+    const scale = THEMES['the-goose-and-kettle'].skyScale!;
+    expect(scale).toBeGreaterThan(0.3);
+    expect(scale).toBeLessThan(0.5);
+    for (const id of places) if (id !== 'the-goose-and-kettle') expect(THEMES[id].skyScale, id).toBeUndefined();
+  });
+
   it('makes Parting Strand a beach of loose grey stone: no waves, no rocking, no sliding sky', () => {
     const t = THEMES['parting-strand'];
     expect(t.floor.kind).toBe('pebbles');
@@ -199,6 +206,11 @@ describe('the places given new ground, grass, trees, fog and furniture', () => {
     expect(drips).toEqual(['the-umbral-deep']);
     expect(THEMES['the-umbral-deep'].fx.find((f) => f.kind === 'drips')!.n).toBeGreaterThan(THEMES['the-umbral-deep'].fx.find((f) => f.kind === 'ripples')!.n);
     expect(INDOOR_FX).toContain('drips');
+  });
+
+  it('lays Barrowdeep on the warm grey-brown earth of the painted passage, warm enough to stay brown under its blue light', () => {
+    const f = THEMES.barrowdeep.floor;
+    for (const c of [f.a, f.b]) { const [r, , b] = rg(c); expect(r - b, c).toBeGreaterThanOrEqual(24); }
   });
 
   it('keeps the Old Quarry floor to the dark brown of the ground nearest the painted rim', () => {

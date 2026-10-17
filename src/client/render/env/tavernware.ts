@@ -1,8 +1,8 @@
 // The rest of the tavern: other tables and chairs standing in the distance, between the painted room and the game table, each
 // with a few mugs and a lantern on it. The lanterns flicker (a glow that wavers, in time with nothing else).
 //
-// Everything of one sort is one instanced mesh (all the tables, all the chairs, all the mugs), so a whole room of furniture costs a
-// few draw calls. The lanterns' light is a soft glow, not a real light: a real light more would make every material in the scene
+// Everything of one sort is one instanced mesh (all the tables, all the chairs, all the tankards, and so on), so a whole room of
+// furniture costs a few draw calls. The lanterns' light is a soft glow, not a real light: a real light more would make every material in the scene
 // compile again each time the place changes.
 
 import * as THREE from 'three';
@@ -37,13 +37,35 @@ function tableGeometry(): THREE.BufferGeometry {
   return g;
 }
 
-/** A mug: a tankard with a handle, standing on y = 0. */
-function mugGeometry(): THREE.BufferGeometry {
-  const body = new THREE.CylinderGeometry(0.3, 0.26, 0.62, 10).translate(0, 0.31, 0);
-  const handle = new THREE.TorusGeometry(0.17, 0.045, 5, 10, Math.PI).rotateZ(-Math.PI / 2).translate(0.28, 0.32, 0);
-  const g = mergeGeometries([body, handle])!;
-  body.dispose(); handle.dispose();
+const merged = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry => {
+  const g = mergeGeometries(parts)!;
+  parts.forEach((p) => p.dispose());
   return g;
+};
+const lathe = (profile: [number, number][]): THREE.BufferGeometry => new THREE.LatheGeometry(profile.map(([r, y]) => new THREE.Vector2(r, y)), 12);
+/** A handle on the side of a vessel (a half ring, on the +x side), at height `y`, `r` across, standing out from a body of radius `out`. */
+const handle = (out: number, y: number, r: number): THREE.BufferGeometry => new THREE.TorusGeometry(r, 0.045, 5, 10, Math.PI).rotateZ(-Math.PI / 2).translate(out, y, 0);
+
+/** What stands on the tables: each kind of vessel, with the colours it may be and how often it comes up. Every one stands on y = 0. */
+interface Vessel { name: string; geo: THREE.BufferGeometry; colors: string[]; weight: number }
+
+function vessels(): Vessel[] {
+  return [
+    // A tall pewter or wooden tankard, a little tapered.
+    { name: 'tankard', weight: 3, colors: ['#a8a49a', '#8e8a80', '#bdb7a8', '#6a4a2e'], geo: merged([new THREE.CylinderGeometry(0.3, 0.26, 0.78, 10).translate(0, 0.39, 0), handle(0.28, 0.42, 0.2)]) },
+    // A squat clay mug.
+    { name: 'mug', weight: 3, colors: ['#8a5a3a', '#a06a40', '#6e4630', '#c8b08a'], geo: merged([new THREE.CylinderGeometry(0.33, 0.29, 0.5, 10).translate(0, 0.25, 0), handle(0.31, 0.27, 0.17)]) },
+    // A stein: a fat tankard with a hinged lid and a thumb lever.
+    { name: 'stein', weight: 1.5, colors: ['#9a968c', '#7e7a70', '#b0a890', '#7a6a58'], geo: merged([
+      new THREE.CylinderGeometry(0.34, 0.31, 0.7, 10).translate(0, 0.35, 0), new THREE.CylinderGeometry(0.33, 0.33, 0.06, 10).translate(0, 0.73, 0),
+      new THREE.BoxGeometry(0.2, 0.06, 0.1).translate(0.38, 0.76, 0), handle(0.33, 0.38, 0.22)]) },
+    // A goblet on a stem.
+    { name: 'goblet', weight: 1, colors: ['#c8b060', '#b0a890', '#a0a0a8', '#8a6a3a'], geo: lathe([[0, 0], [0.22, 0], [0.24, 0.04], [0.08, 0.1], [0.06, 0.4], [0.2, 0.52], [0.3, 0.86], [0.27, 0.9], [0, 0.9]]) },
+    // A jug: a round belly, a narrow neck, a handle.
+    { name: 'jug', weight: 1.5, colors: ['#d8c8a0', '#a07850', '#7a5a3a', '#b8a888'], geo: merged([lathe([[0, 0], [0.3, 0], [0.4, 0.2], [0.42, 0.4], [0.3, 0.62], [0.17, 0.76], [0.2, 0.92], [0.24, 0.98], [0, 0.98]]), handle(0.4, 0.5, 0.24)]) },
+    // A bottle of dark glass.
+    { name: 'bottle', weight: 1, colors: ['#2a4a2a', '#3a2a1a', '#1a2a3a', '#4a2a1a'], geo: lathe([[0, 0], [0.22, 0], [0.24, 0.05], [0.24, 0.5], [0.1, 0.75], [0.08, 1.05], [0.1, 1.08], [0, 1.08]]) },
+  ];
 }
 
 /** A lantern's iron frame, standing on y = 0, 0.95 tall; the glass is a separate piece. */
@@ -79,14 +101,18 @@ export function addTavernware(ts: ThemeScene, spec: TavernwareSpec, coarse: bool
   const spots = tableSpots(ts, count);
   const wood = ts.mat(spec.wood, { flatShading: false, roughness: 0.8 });
   const chairWood = ts.mat(mixHex(spec.wood, '#000000', 0.12), { flatShading: false, roughness: 0.85 });
-  const ware = ts.mat('#cdb68a', { flatShading: false, roughness: 0.55 });
+  // One material for every vessel: each takes its own colour from its instance.
+  const ware = ts.mat('#ffffff', { flatShading: false, roughness: 0.5, metalness: 0.12 });
+  const kinds = vessels();
+  const kindWeight = kinds.reduce((n, v) => n + v.weight, 0);
   const iron = ts.mat('#241e1a', { flatShading: false, roughness: 0.6, metalness: 0.3 });
   const glassMat = ts.register(new THREE.MeshBasicMaterial({ color: spec.lantern ?? '#ffcf88', fog: false }));
 
   const tables = new THREE.InstancedMesh(tableGeometry(), wood, spots.length);
   const chairGeo = chairGeometry({ w: 2.2, d: 2.2, legT: 0.27, seatT: 0.24, backH: 2.5, back: 'rails' }, SEAT_H).wood;
   const seats: THREE.Matrix4[] = [];
-  const mugs: THREE.Matrix4[] = [];
+  /** Per kind of vessel: where each stands (and how big), and its colour. */
+  const standing: { at: THREE.Matrix4; color: THREE.Color }[][] = kinds.map(() => []);
   const lamps: THREE.Matrix4[] = [];
   const glows: { x: number; y: number; z: number }[] = [];
 
@@ -111,10 +137,21 @@ export function addTavernware(ts: ThemeScene, spec: TavernwareSpec, coarse: bool
       const face = Math.atan2(-(x - s.x), -(z - s.z)) + (ts.rnd() - 0.5) * 0.35;
       seats.push(new THREE.Matrix4().compose(new THREE.Vector3(x, gy, z), new THREE.Quaternion().setFromAxisAngle(up, face), one));
     }
-    // A few mugs scattered over the top, and a lantern near the middle.
-    for (let k = 0, n = 3 + Math.floor(ts.rnd() * 3); k < n; k++) {
+    // A few vessels scattered over the top, of every sort and size and colour, the odd one knocked over; and a lantern near the middle.
+    for (let k = 0, n = 3 + Math.floor(ts.rnd() * 4); k < n; k++) {
       const [x, z] = at((ts.rnd() - 0.5) * (TOP_W - 1.6), (ts.rnd() - 0.5) * (TOP_D - 1.2));
-      mugs.push(new THREE.Matrix4().compose(new THREE.Vector3(x, gy + TOP_Y, z), new THREE.Quaternion().setFromAxisAngle(up, ts.rnd() * 6.28), one));
+      let pick = ts.rnd() * kindWeight;
+      const kind = kinds.findIndex((v) => (pick -= v.weight) < 0);
+      const v = kinds[Math.max(0, kind)]!;
+      const size = ts.between(0.85, 1.3);
+      const fallen = ts.rnd() < 0.08;
+      const q2 = new THREE.Quaternion().setFromAxisAngle(up, ts.rnd() * 6.28);
+      // A fallen vessel lies on its side, on its rim's height above the wood.
+      if (fallen) q2.multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), Math.PI / 2));
+      standing[Math.max(0, kind)]!.push({
+        at: new THREE.Matrix4().compose(new THREE.Vector3(x, gy + TOP_Y + (fallen ? 0.3 * size : 0), z), q2, new THREE.Vector3(size, size * ts.between(0.9, 1.15), size)),
+        color: new THREE.Color(v.colors[Math.floor(ts.rnd() * v.colors.length)]!),
+      });
     }
     const [lx, lz] = at((ts.rnd() - 0.5) * 2.4, (ts.rnd() - 0.5) * 1);
     lamps.push(new THREE.Matrix4().compose(new THREE.Vector3(lx, gy + TOP_Y, lz), new THREE.Quaternion(), one));
@@ -130,7 +167,14 @@ export function addTavernware(ts: ThemeScene, spec: TavernwareSpec, coarse: bool
     return mesh;
   };
   tables.frustumCulled = false;
-  group.add(tables, instanced(chairGeo, chairWood, seats), instanced(mugGeometry(), ware, mugs), instanced(lanternFrame(), iron, lamps), instanced(lanternGlass(), glassMat, lamps));
+  group.add(tables, instanced(chairGeo, chairWood, seats), instanced(lanternFrame(), iron, lamps), instanced(lanternGlass(), glassMat, lamps));
+  kinds.forEach((v, i) => {
+    const list = standing[i]!;
+    const mesh = instanced(v.geo, ware, list.map((s) => s.at));
+    list.forEach((s, j) => mesh.setColorAt(j, s.color));
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    group.add(mesh);
+  });
 
   // The glow round each lantern: one soft sprite apiece, wavering.
   const glowMats = glows.map((g) => {

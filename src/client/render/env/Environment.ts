@@ -373,6 +373,8 @@ gl_FragColor.rgb = mix(gl_FragColor.rgb, fogOut, 1.0 - smoothstep(0.08 * hz, 0.3
     u.skyTo.value = (this.fileTo && this.skies.get(this.fileTo)) || this.blank;
     u.winFrom.value.copy((this.fileFrom && this.skyWin.get(this.fileFrom)) || NO_WINDOW);
     u.winTo.value.copy((this.fileTo && this.skyWin.get(this.fileTo)) || NO_WINDOW);
+    // A panorama (no window of its own) carries how big it should look in the window's last number.
+    for (const [win, id] of [[u.winFrom.value, this.skyFrom], [u.winTo.value, this.skyTo]] as const) if (win.y <= win.x) win.w = id ? THEMES[id].skyScale ?? 0 : 0;
   }
 
   private surface(theme: ThemeId, which: 'top' | 'floor'): THREE.MeshStandardMaterial {

@@ -136,6 +136,11 @@ export interface Theme {
   sway?: number;
   /** The panorama slides round the sky in a loop, this many turns per second. Only for a panorama that wraps round. */
   skyScroll?: number;
+  /**
+   * How big the painted room looks, for a 2:1 panorama: 1 as painted, 0.5 half the size (twice as much of the room shows).
+   * A room painted close up makes the table and the players look tiny in it; this puts the room back at a scale they fit.
+   */
+  skyScale?: number;
   /** A painted silhouette ring for a place that has no panorama. Unused: every look is a painted sky or a plain gradient. */
   skyline: { kind: SkylineKind; far: string; near: string } | null;
 }
@@ -344,6 +349,7 @@ interface Override {
   mist?: Theme['mist'];
   table?: Partial<TableSpec>;
   floorShape?: GroundKind | null;
+  skyScale?: number;
   grass?: GrassSpec;
   fog?: FogSpec;
   trees?: TreeSpec;
@@ -375,6 +381,7 @@ function derive(family: FamilyId, o: Override = {}): Theme {
   if (o.trees) out.trees = o.trees;
   if (o.tavernware) out.tavernware = o.tavernware;
   if (o.view) out.view = o.view;
+  if (o.skyScale !== undefined) out.skyScale = o.skyScale;
   if (o.mirrorLine !== undefined) out.mirrorLine = o.mirrorLine;
   if (o.sway === null) delete out.sway; else if (o.sway !== undefined) out.sway = o.sway;
   if (o.skyScroll === null) delete out.skyScroll; else if (o.skyScroll !== undefined) out.skyScroll = o.skyScroll;
@@ -392,6 +399,8 @@ export const THEMES: Record<ThemeId, Theme> = {
     mist: { color: '#8a6a4a', n: 5, strength: 0.14 },
     // Other tables in the distance, between the painted room and the game table, with mugs and flickering lanterns.
     tavernware: { tables: 9, wood: '#4e3220', lantern: '#ffbe70' },
+    // The painted room is shown smaller, so the table does not look like a toy in a giant hall.
+    skyScale: 0.44,
   }),
 
   // -- Harbor --------------------------------------------------------------------------------
@@ -438,7 +447,8 @@ export const THEMES: Record<ThemeId, Theme> = {
       accents: [light('#7fb8ff', 14, [-7, 2, -5], 0.4), light('#9cc8ff', 16, [8, -3.2, 4], 0.4)],
     },
     top: { kind: 'slab', a: '#4a4640', b: '#6b665c', tile: 9.5, rough: 0.95, opts: {} },
-    floor: { kind: 'dirt', a: '#2a2118', b: '#3d3024', tile: 5, rough: 1 },
+    // The packed earth of the painted passage: a grey-brown, not the warm brown of a field.
+    floor: { kind: 'dirt', a: '#745a42', b: '#957a5e', tile: 5, rough: 1 },
     fx: [fx('wisps', 44, '#9fd0ff', 0.5)],
     beams: { color: '#bcd6ff', n: 1, strength: 0.06 }, mist: { color: '#6a8aa8', n: 7, strength: 0.2 },
     table: { kind: 'dolmen', height: 4.6, glow: '#7fb8ff' },
